@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appearich Reading AI</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f2;
+    color: #080808;
+}
+
+/* HEADER */
+
+header {
+    height: 70px;
+    background: #080808;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.logo span {
+    color: #f3d000;
+}
+
+header button {
+    background: #f3d000;
+    border: none;
+    padding: 10px 17px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* MAIN */
+
+main {
+    max-width: 1100px;
+    margin: auto;
+    padding: 30px 20px;
+}
+
+.section {
+    display: none;
+}
+
+.section.active {
+    display: block;
+}
+
+.title {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+/* BOOK GRID */
+
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 20px;
+}
+
+.book-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,.08);
+    cursor: pointer;
+    transition: .2s;
+}
+
+.book-card:hover {
+    transform: translateY(-4px);
+}
+
+.book-cover {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    background: #eee;
+}
+
+.book-info {
+    padding: 15px;
+}
+
+.book-info h3 {
+    margin-bottom: 7px;
+}
+
+.book-info p {
+    color: #777;
+    font-size: 14px;
+}
+
+/* ADMIN */
+
+.admin-box {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    max-width: 650px;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    margin-bottom: 18px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+label {
+    font-weight: bold;
+}
+
+.primary {
+    background: #080808;
+    color: white;
+    border: none;
+    padding: 13px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.yellow {
+    background: #f3d000;
+    color: #080808;
+}
+
+/* BOOK VIEWER */
+
+.reader {
+    max-width: 800px;
+    margin: auto;
+    text-align: center;
+}
+
+.reader-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.page-container {
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.12);
+}
+
+.page-image {
+    width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+    display: block;
+}
+
+.reader-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* READING */
+
+.reading-screen {
+    max-width: 650px;
+    margin: auto;
+    text-align: center;
+}
+
+.mic-circle {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: #080808;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 50px auto 25px;
+    font-size: 48px;
+}
+
+.mic-circle.recording {
+    background: #d00000;
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(208,0,0,.5);
+    }
+    70% {
+        box-shadow: 0 0 0 25px rgba(208,0,0,0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(208,0,0,0);
+    }
+}
+
+.timer {
+    font-size: 35px;
+    font-weight: bold;
+    margin: 15px;
+}
+
+.status {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* EMPTY */
+
+.empty {
+    background: white;
+    padding: 40px;
+    text-align: center;
+    border-radius: 15px;
+    color: #777;
+}
+
+/* MOBILE */
+
+@media(max-width:600px) {
+
+    header {
+        padding: 0 15px;
+    }
+
+    .title {
+        font-size: 26px;
+    }
+
+    main {
+        padding: 20px 15px;
+    }
+
+    .book-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .book-cover {
+        height: 210px;
+    }
+
+}
+</style>
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        Appearich <span>Reading AI</span>
+    </div>
+
+    <button onclick="showSection('admin')">
+        + Add Book
+    </button>
+
+</header>
+
+
+<main>
+
+<!-- ========================= -->
+<!-- LIBRARY -->
+<!-- ========================= -->
+
+<section id="library" class="section active">
+
+    <h1 class="title">My Books</h1>
+
+    <p class="subtitle">
+        Select a book and start reading.
+    </p>
+
+    <div id="bookGrid" class="book-grid"></div>
+
+</section>
+
+
+<!-- ========================= -->
+<!-- ADMIN -->
+<!-- ========================= -->
+
+<section id="admin" class="section">
+
+    <h1 class="title">Add a Book</h1>
+
+    <p class="subtitle">
+        Upload the pages of a textbook in the correct order.
+    </p>
+
+    <div class="admin-box">
+
+        <label>Book title</label>
+
+        <input
+            id="bookTitle"
+            type="text"
+            placeholder="Example: English Grade 3"
+        >
+
+        <label>Description</label>
+
+        <textarea
+            id="bookDescription"
+            placeholder="Example: Primary English textbook"
+        ></textarea>
+
+        <label>Book pages</label>
+
+        <input
+            id="pageUpload"
+            type="file"
+            accept="image/*"
+            multiple
+        >
+
+        <p id="selectedPages"
+           style="color:#777;margin-bottom:20px;">
+            No pages selected.
+        </p>
+
+        <button
+            class="primary yellow"
+            onclick="createBook()">
+            Create Book
+        </button>
+
+        <button
+            class="primary"
+            onclick="showSection('library')"
+            style="margin-left:8px;">
+            Cancel
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- ========================= -->
+<!-- BOOK VIEWER -->
+<!-- ========================= -->
+
+<section id="bookViewer" class="section">
+
+    <div class="reader">
+
+        <div class="reader-header">
+
+            <button
+                class="primary"
+                onclick="showSection('library')">
+                ← Books
+            </button>
+
+            <strong id="pageNumber">
+                Page 1
+            </strong>
+
+        </div>
+
+        <div class="page-container">
+
+            <img
+                id="pageImage"
+                class="page-image"
+                src=""
+                alt="Book page">
+
+        </div>
+
+        <div class="reader-controls">
+
+            <button
+                class="primary"
+                onclick="previousPage()">
+                ← Previous
+            </button>
+
+            <button
+                class="primary yellow"
+                onclick="startReading()">
+                🎙 Start Reading
+            </button>
+
+            <button
+                class="primary"
+                onclick="nextPage()">
+                Next →
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ========================= -->
+<!-- READING -->
+<!-- ========================= -->
+
+<section id="reading" class="section">
+
+    <div class="reading-screen">
+
+        <button
+            class="primary"
+            onclick="stopReadingAndReturn()">
+            ← Back
+        </button>
+
+        <h1
+            class="title"
+            style="margin-top:30px;">
+            Reading Time
+        </h1>
+
+        <p class="subtitle">
+            Read the page in your physical textbook aloud.
+        </p>
+
+        <div
+            id="micCircle"
+            class="mic-circle">
+            🎙️
+        </div>
+
+        <div
+            id="timer"
+            class="timer">
+            00:00
+        </div>
+
+        <p
+            id="recordingStatus"
+            class="status">
+            Press the button when you are ready.
+        </p>
+
+        <button
+            id="recordButton"
+            class="primary yellow"
+            onclick="toggleRecording()">
+            🎙 Start Recording
+        </button>
+
+        <p
+            id="recordingResult"
+            style="margin-top:25px;">
+        </p>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<script>
+
+/* ==========================================
+   DATA
+========================================== */
+
+let books = JSON.parse(
+    localStorage.getItem("appearich_books")
+) || [];
+
+let currentBook = null;
+let currentPage = 0;
+
+let mediaRecorder = null;
+let audioChunks = [];
+let recording = false;
+
+let timerInterval = null;
+let recordingSeconds = 0;
+
+
+/* ==========================================
+   NAVIGATION
+========================================== */
+
+function showSection(id) {
+
+    document
+        .querySelectorAll(".section")
+        .forEach(section => {
+            section.classList.remove("active");
+        });
+
+    document
+        .getElementById(id)
+        .classList.add("active");
+
+}
+
+
+/* ==========================================
+   PAGE UPLOAD
+========================================== */
+
+document
+    .getElementById("pageUpload")
+    .addEventListener("change", function() {
+
+        const count = this.files.length;
+
+        document.getElementById("selectedPages")
+            .textContent =
+            count === 0
+            ? "No pages selected."
+            : count + " page(s) selected.";
+
+    });
+
+
+/* ==========================================
+   CREATE BOOK
+========================================== */
+
+function createBook() {
+
+    const title =
+        document.getElementById("bookTitle")
+        .value.trim();
+
+    const description =
+        document.getElementById("bookDescription")
+        .value.trim();
+
+    const files =
+        document.getElementById("pageUpload")
+        .files;
+
+    if (!title) {
+
+        alert("Please enter a book title.");
+
+        return;
+    }
+
+    if (!files.length) {
+
+        alert("Please upload the book pages.");
+
+        return;
+    }
+
+
+    const pages = [];
+
+    let remaining = files.length;
+
+
+    Array.from(files)
+        .sort((a,b) =>
+            a.name.localeCompare(
+                b.name,
+                undefined,
+                {numeric:true}
+            )
+        )
+        .forEach((file, index) => {
+
+            const reader =
+                new FileReader();
+
+            reader.onload = function(e) {
+
+                pages[index] = {
+
+                    pageNumber: index + 1,
+
+                    image: e.target.result,
+
+                    referenceText: ""
+
+                };
+
+
+                remaining--;
+
+                if (remaining === 0) {
+
+                    const book = {
+
+                        id: Date.now(),
+
+                        title: title,
+
+                        description:
+                            description,
+
+                        cover:
+                            pages[0].image,
+
+                        pages: pages,
+
+                        createdAt:
+                            new Date().toISOString()
+
+                    };
+
+
+                    books.push(book);
+
+                    localStorage.setItem(
+                        "appearich_books",
+                        JSON.stringify(books)
+                    );
+
+
+                    alert(
+                        "Book created successfully!"
+                    );
+
+
+                    document
+                        .getElementById("bookTitle")
+                        .value = "";
+
+                    document
+                        .getElementById("bookDescription")
+                        .value = "";
+
+                    document
+                        .getElementById("pageUpload")
+                        .value = "";
+
+                    document
+                        .getElementById("selectedPages")
+                        .textContent =
+                        "No pages selected.";
+
+
+                    loadBooks();
+
+                    showSection("library");
+
+                }
+
+            };
+
+            reader.readAsDataURL(file);
+
+        });
+
+}
+
+
+/* ==========================================
+   LOAD BOOKS
+========================================== */
+
+function loadBooks() {
+
+    const grid =
+        document.getElementById("bookGrid");
+
+    grid.innerHTML = "";
+
+
+    if (!books.length) {
+
+        grid.innerHTML = `
+            <div class="empty">
+                <h3>No books yet</h3>
+                <p>
+                    Add your first textbook to begin.
+                </p>
+            </div>
+        `;
+
+        return;
+    }
+
+
+    books.forEach(book => {
+
+        const card =
+            document.createElement("div");
+
+        card.className = "book-card";
+
+
+        card.innerHTML = `
+
+            <img
+                class="book-cover"
+                src="${book.cover}"
+                alt="${book.title}"
+            >
+
+            <div class="book-info">
+
+                <h3>
+                    ${book.title}
+                </h3>
+
+                <p>
+                    ${book.pages.length} pages
+                </p>
+
+                <p>
+                    ${book.description || ""}
+                </p>
+
+            </div>
+
+        `;
+
+
+        card.onclick = function() {
+
+            openBook(book.id);
+
+        };
+
+
+        grid.appendChild(card);
+
+    });
+
+}
+
+
+/* ==========================================
+   OPEN BOOK
+========================================== */
+
+function openBook(bookId) {
+
+    currentBook =
+        books.find(
+            book => book.id === bookId
+        );
+
+    currentPage = 0;
+
+    updatePage();
+
+    showSection("bookViewer");
+
+}
+
+
+/* ==========================================
+   UPDATE PAGE
+========================================== */
+
+function updatePage() {
+
+    if (!currentBook) return;
+
+
+    const page =
+        currentBook.pages[currentPage];
+
+
+    document
+        .getElementById("pageImage")
+        .src = page.image;
+
+
+    document
+        .getElementById("pageNumber")
+        .textContent =
+        `Page ${currentPage + 1} of ${currentBook.pages.length}`;
+
+}
+
+
+/* ==========================================
+   PAGE CONTROLS
+========================================== */
+
+function nextPage() {
+
+    if (
+        currentPage <
+        currentBook.pages.length - 1
+    ) {
+
+        currentPage++;
+
+        updatePage();
+
+    }
+
+}
+
+
+function previousPage() {
+
+    if (currentPage > 0) {
+
+        currentPage--;
+
+        updatePage();
+
+    }
+
+}
+
+
+/* ==========================================
+   START READING
+========================================== */
+
+function startReading() {
+
+    showSection("reading");
+
+    resetRecordingUI();
+
+}
+
+
+/* ==========================================
+   MICROPHONE
+========================================== */
+
+async function toggleRecording() {
+
+    if (!recording) {
+
+        await startRecording();
+
+    } else {
+
+        stopRecording();
+
+    }
+
+}
+
+
+async function startRecording() {
+
+    try {
+
+        const stream =
+            await navigator.mediaDevices
+            .getUserMedia({
+                audio: true
+            });
+
+
+        mediaRecorder =
+            new MediaRecorder(stream);
+
+
+        audioChunks = [];
+
+
+        mediaRecorder
+            .ondataavailable =
+            event => {
+
+                if (event.data.size > 0) {
+
+                    audioChunks.push(
+                        event.data
+                    );
+
+                }
+
+            };
+
+
+        mediaRecorder
+            .onstop =
+            saveRecording;
+
+
+        mediaRecorder.start();
+
+
+        recording = true;
+
+
+        document
+            .getElementById("recordButton")
+            .textContent =
+            "⏹ Stop Recording";
+
+
+        document
+            .getElementById("micCircle")
+            .classList
+            .add("recording");
+
+
+        document
+            .getElementById("recordingStatus")
+            .textContent =
+            "Listening... Read the page aloud.";
+
+
+        startTimer();
+
+    }
+
+    catch(error) {
+
+        alert(
+            "Microphone permission is required."
+        );
+
+        console.error(error);
+
+    }
+
+}
+
+
+function stopRecording() {
+
+    if (
+        mediaRecorder &&
+        recording
+    ) {
+
+        mediaRecorder.stop();
+
+        recording = false;
+
+        mediaRecorder
+            .stream
+            .getTracks()
+            .forEach(
+                track => track.stop()
+            );
+
+        stopTimer();
+
+
+        document
+            .getElementById("recordButton")
+            .textContent =
+            "🎙 Start Recording";
+
+
+        document
+            .getElementById("micCircle")
+            .classList
+            .remove("recording");
+
+
+        document
+            .getElementById("recordingStatus")
+            .textContent =
+            "Recording completed.";
+
+    }
+
+}
+
+
+/* ==========================================
+   SAVE RECORDING
+========================================== */
+
+function saveRecording() {
+
+    const audioBlob =
+        new Blob(
+            audioChunks,
+            {
+                type: "audio/webm"
+            }
+        );
+
+
+    const audioURL =
+        URL.createObjectURL(
+            audioBlob
+        );
+
+
+    document
+        .getElementById("recordingResult")
+        .innerHTML = `
+
+            <audio
+                controls
+                src="${audioURL}">
+            </audio>
+
+            <p style="margin-top:10px;color:#666;">
+                Recording saved for analysis.
+            </p>
+
+        `;
+
+
+    /*
+       NEXT STAGE:
+
+       audioBlob
+            ↓
+       Speech recognition
+            ↓
+       Compare with:
+       currentBook.pages[currentPage].referenceText
+            ↓
+       Detect reading errors
+    */
+
+}
+
+
+/* ==========================================
+   TIMER
+========================================== */
+
+function startTimer() {
+
+    recordingSeconds = 0;
+
+    updateTimer();
+
+
+    timerInterval =
+        setInterval(() => {
+
+            recordingSeconds++;
+
+            updateTimer();
+
+        }, 1000);
+
+}
+
+
+function stopTimer() {
+
+    clearInterval(
+        timerInterval
+    );
+
+}
+
+
+function updateTimer() {
+
+    const minutes =
+        Math.floor(
+            recordingSeconds / 60
+        );
+
+    const seconds =
+        recordingSeconds % 60;
+
+
+    document
+        .getElementById("timer")
+        .textContent =
+        String(minutes).padStart(2,"0")
+        + ":" +
+        String(seconds).padStart(2,"0");
+
+}
+
+
+/* ==========================================
+   RESET READING UI
+========================================== */
+
+function resetRecordingUI() {
+
+    document
+        .getElementById("recordingResult")
+        .innerHTML = "";
+
+
+    document
+        .getElementById("recordingStatus")
+        .textContent =
+        "Press the button when you are ready.";
+
+
+    document
+        .getElementById("recordButton")
+        .textContent =
+        "🎙 Start Recording";
+
+
+    document
+        .getElementById("micCircle")
+        .classList
+        .remove("recording");
+
+
+    document
+        .getElementById("timer")
+        .textContent =
+        "00:00";
+
+}
+
+
+/* ==========================================
+   INITIALIZE
+========================================== */
+
+loadBooks();
+
+</script>
+
+</body>
+</html>

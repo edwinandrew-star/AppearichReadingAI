@@ -6,1183 +6,1181 @@
 
 <title>Appearich Reading AI</title>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <style>
-
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-body{
-    font-family:Arial,Helvetica,sans-serif;
-    background:#f5f5f2;
-    color:#080808;
-}
-
-/* HEADER */
-
-header{
-    height:70px;
-    background:#080808;
-    color:white;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding:0 25px;
-}
-
-.logo{
-    font-size:21px;
-    font-weight:bold;
-}
-
-.logo span{
-    color:#f3d000;
-}
-
-header button{
-    background:#f3d000;
-    border:0;
-    padding:11px 17px;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-/* MAIN */
-
-main{
-    max-width:1100px;
-    margin:auto;
-    padding:30px 20px;
-}
-
-.section{
-    display:none;
-}
-
-.section.active{
-    display:block;
-}
-
-.title{
-    font-size:32px;
-    margin-bottom:8px;
-}
-
-.subtitle{
-    color:#666;
-    margin-bottom:30px;
-}
-
-/* BUTTONS */
-
-button{
-    cursor:pointer;
-}
-
-.primary{
-    border:0;
-    background:#080808;
-    color:white;
-    padding:12px 18px;
-    border-radius:8px;
-    font-weight:bold;
-}
-
-.yellow{
-    background:#f3d000;
-    color:#080808;
-}
-
-/* BOOK GRID */
-
-.book-grid{
-    display:grid;
-    grid-template-columns:
-        repeat(auto-fill,minmax(210px,1fr));
-
-    gap:20px;
-}
-
-.book-card{
-    background:white;
-    border-radius:14px;
-    overflow:hidden;
-
-    box-shadow:
-        0 4px 15px rgba(0,0,0,.08);
-
-    cursor:pointer;
-    transition:.2s;
-}
-
-.book-card:hover{
-    transform:translateY(-4px);
-}
-
-.book-cover{
-    width:100%;
-    height:260px;
-    object-fit:cover;
-    background:#eee;
-}
-
-.book-info{
-    padding:15px;
-}
-
-.book-info h3{
-    margin-bottom:7px;
-}
-
-.book-info p{
-    color:#777;
-    font-size:14px;
-    margin-top:4px;
-}
-
-/* ADMIN */
-
-.admin-box{
-    background:white;
-    padding:25px;
-    border-radius:15px;
-    max-width:700px;
-}
-
-label{
-    font-weight:bold;
-    display:block;
-    margin-top:15px;
-}
-
-input,
-textarea{
-    width:100%;
-
-    padding:12px;
-
-    margin-top:8px;
-
-    border:1px solid #ddd;
-
-    border-radius:8px;
-
-    font-size:15px;
-}
-
-textarea{
-    min-height:110px;
-    resize:vertical;
-}
-
-.page-editor{
-    margin-top:20px;
-}
-
-.page-edit{
-    background:#f7f7f7;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:15px;
-}
-
-.page-edit img{
-    width:120px;
-    height:150px;
-    object-fit:cover;
-    border-radius:6px;
-    margin-bottom:10px;
-}
-
-/* BOOK */
-
-.reader{
-    max-width:800px;
-    margin:auto;
-    text-align:center;
-}
-
-.reader-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    margin-bottom:20px;
-}
-
-.page-container{
-    background:white;
-    padding:12px;
-
-    border-radius:10px;
-
-    box-shadow:
-        0 5px 25px rgba(0,0,0,.12);
-}
-
-.page-image{
-    width:100%;
-    max-height:75vh;
-
-    object-fit:contain;
-
-    display:block;
-}
-
-.reader-controls{
-    margin-top:20px;
-
-    display:flex;
-    justify-content:center;
-
-    gap:10px;
-
-    flex-wrap:wrap;
-}
-
-/* READING */
-
-.reading-screen{
-    max-width:700px;
-    margin:auto;
-    text-align:center;
-}
-
-.mic-circle{
-    width:130px;
-    height:130px;
-
-    border-radius:50%;
-
-    background:#080808;
-
-    color:white;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    margin:45px auto 25px;
-
-    font-size:48px;
-}
-
-.mic-circle.recording{
-    background:#d00000;
-
-    animation:pulse 1.2s infinite;
-}
-
-@keyframes pulse{
-
-    0%{
-        box-shadow:
-            0 0 0 0 rgba(208,0,0,.5);
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
     }
 
-    70%{
-        box-shadow:
-            0 0 0 25px rgba(208,0,0,0);
+    body {
+        background: #f5f5f2;
+        color: #080808;
+        min-height: 100vh;
     }
 
-    100%{
-        box-shadow:
-            0 0 0 0 rgba(208,0,0,0);
+    button,
+    input {
+        font: inherit;
     }
 
-}
-
-.timer{
-    font-size:35px;
-    font-weight:bold;
-    margin:15px;
-}
-
-.status{
-    color:#666;
-    margin-bottom:20px;
-}
-
-/* REFERENCE */
-
-.reference-box{
-    background:white;
-
-    border-radius:12px;
-
-    padding:20px;
-
-    margin:20px 0;
-
-    text-align:left;
-}
-
-.reference-box h3{
-    margin-bottom:10px;
-}
-
-.reference-text{
-    line-height:1.8;
-    color:#444;
-}
-
-/* RESULTS */
-
-.results{
-    margin-top:30px;
-    text-align:left;
-}
-
-.score-card{
-    background:white;
-    padding:20px;
-    border-radius:12px;
-    margin-bottom:20px;
-}
-
-.score{
-    font-size:40px;
-    font-weight:bold;
-}
-
-.word-results{
-    background:white;
-    padding:20px;
-    border-radius:12px;
-}
-
-.word-list{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-top:15px;
-}
-
-.word{
-    padding:7px 10px;
-    border-radius:6px;
-    font-size:14px;
-}
-
-.correct{
-    background:#dff5df;
-    color:#176617;
-}
-
-.skipped{
-    background:#fff0c2;
-    color:#765900;
-}
-
-.substituted{
-    background:#ffdede;
-    color:#8b0000;
-}
-
-.extra{
-    background:#dcecff;
-    color:#084b8a;
-}
-
-/* EMPTY */
-
-.empty{
-    background:white;
-    padding:40px;
-
-    text-align:center;
-
-    border-radius:15px;
-
-    color:#777;
-}
-
-/* MOBILE */
-
-@media(max-width:600px){
-
-    header{
-        padding:0 15px;
+    button {
+        cursor: pointer;
     }
 
-    .title{
-        font-size:26px;
+    .hidden {
+        display: none !important;
     }
 
-    main{
-        padding:20px 15px;
+    /* HEADER */
+
+    header {
+        height: 70px;
+        background: #080808;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 30px;
+        position: sticky;
+        top: 0;
+        z-index: 50;
     }
 
-    .book-grid{
-        grid-template-columns:repeat(2,1fr);
-        gap:12px;
+    .brand {
+        font-size: 22px;
+        font-weight: 800;
     }
 
-    .book-cover{
-        height:210px;
+    .brand span {
+        color: #f3d000;
     }
 
-}
+    nav {
+        display: flex;
+        gap: 10px;
+    }
 
+    nav button {
+        border: 0;
+        background: transparent;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+
+    nav button:hover,
+    nav button.active {
+        background: #f3d000;
+        color: #080808;
+    }
+
+    /* MAIN */
+
+    main {
+        max-width: 1200px;
+        margin: auto;
+        padding: 30px 20px;
+    }
+
+    .hero {
+        background: white;
+        border-radius: 18px;
+        padding: 35px;
+        margin-bottom: 25px;
+        border: 1px solid #e2e2e2;
+    }
+
+    .hero h1 {
+        font-size: 38px;
+        margin-bottom: 10px;
+    }
+
+    .hero p {
+        color: #666;
+        max-width: 700px;
+        line-height: 1.6;
+    }
+
+    .card {
+        background: white;
+        border: 1px solid #e3e3e3;
+        border-radius: 16px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .card h2 {
+        margin-bottom: 12px;
+    }
+
+    .card p {
+        color: #666;
+        line-height: 1.5;
+    }
+
+    /* BUTTONS */
+
+    .btn {
+        border: none;
+        border-radius: 9px;
+        padding: 12px 18px;
+        font-weight: 700;
+        margin-top: 15px;
+    }
+
+    .primary {
+        background: #f3d000;
+        color: #080808;
+    }
+
+    .dark {
+        background: #080808;
+        color: white;
+    }
+
+    .blue {
+        background: #2779d8;
+        color: white;
+    }
+
+    .danger {
+        background: #d93636;
+        color: white;
+    }
+
+    .btn:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    /* UPLOAD */
+
+    .upload-box {
+        border: 2px dashed #bbb;
+        border-radius: 14px;
+        padding: 35px;
+        text-align: center;
+        background: #fafafa;
+    }
+
+    .upload-box input {
+        margin-top: 20px;
+        width: 100%;
+    }
+
+    .book-title-input {
+        width: 100%;
+        padding: 13px;
+        border: 1px solid #ccc;
+        border-radius: 9px;
+        margin: 15px 0;
+        outline: none;
+    }
+
+    /* OCR */
+
+    .progress {
+        width: 100%;
+        height: 12px;
+        background: #e7e7e7;
+        border-radius: 20px;
+        overflow: hidden;
+        margin-top: 15px;
+    }
+
+    .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: #f3d000;
+        transition: width .2s;
+    }
+
+    .status {
+        margin-top: 12px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    /* BOOKS */
+
+    .books-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+    }
+
+    .book {
+        border: 1px solid #ddd;
+        border-radius: 14px;
+        overflow: hidden;
+        background: white;
+    }
+
+    .book-cover {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+        background: #eee;
+    }
+
+    .book-content {
+        padding: 18px;
+    }
+
+    .book-content h3 {
+        margin-bottom: 8px;
+    }
+
+    .book-content p {
+        color: #666;
+        font-size: 14px;
+    }
+
+    /* READER */
+
+    .reader {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 20px;
+    }
+
+    .page-area {
+        background: #ddd;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        min-height: 650px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .page-image {
+        max-width: 100%;
+        max-height: 80vh;
+        object-fit: contain;
+        border-radius: 6px;
+        box-shadow: 0 5px 20px rgba(0,0,0,.15);
+    }
+
+    .reader-panel {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 20px;
+        height: fit-content;
+        position: sticky;
+        top: 90px;
+    }
+
+    .reader-panel h2 {
+        margin-bottom: 8px;
+    }
+
+    .page-number {
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .reference {
+        background: #f5f5f2;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 15px 0;
+        line-height: 1.6;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+
+    .recording-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 15px 0;
+        font-weight: bold;
+    }
+
+    .dot {
+        width: 12px;
+        height: 12px;
+        background: #aaa;
+        border-radius: 50%;
+    }
+
+    .dot.recording {
+        background: red;
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        50% {
+            transform: scale(1.4);
+            opacity: .5;
+        }
+    }
+
+    .transcript {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        min-height: 100px;
+        line-height: 1.6;
+        margin-top: 15px;
+    }
+
+    /* RESULTS */
+
+    .result-box {
+        margin-top: 20px;
+        border-radius: 14px;
+        padding: 20px;
+        background: #f5f5f2;
+    }
+
+    .score {
+        font-size: 45px;
+        font-weight: 800;
+        margin: 10px 0;
+    }
+
+    .word-results {
+        line-height: 2;
+        margin-top: 15px;
+    }
+
+    .word {
+        display: inline-block;
+        padding: 2px 7px;
+        margin: 2px;
+        border-radius: 5px;
+    }
+
+    .correct {
+        background: #d9f5d9;
+        color: #176b17;
+    }
+
+    .missing {
+        background: #ffe0e0;
+        color: #b00000;
+        text-decoration: line-through;
+    }
+
+    .extra {
+        background: #fff0bd;
+        color: #765b00;
+    }
+
+    .changed {
+        background: #dcecff;
+        color: #14569b;
+    }
+
+    /* CONTROLS */
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    /* EMPTY */
+
+    .empty {
+        text-align: center;
+        padding: 50px 20px;
+        color: #777;
+    }
+
+    /* RESPONSIVE */
+
+    @media(max-width: 800px) {
+        header {
+            padding: 0 15px;
+        }
+
+        nav button {
+            padding: 8px;
+        }
+
+        .hero h1 {
+            font-size: 30px;
+        }
+
+        .reader {
+            grid-template-columns: 1fr;
+        }
+
+        .reader-panel {
+            position: static;
+        }
+
+        .page-area {
+            min-height: 400px;
+        }
+    }
 </style>
 </head>
 
-
 <body>
-
 
 <header>
 
-<div class="logo">
-    Appearich <span>Reading AI</span>
-</div>
+    <div class="brand">
+        Appearich <span>Reading AI</span>
+    </div>
 
-<button onclick="showSection('admin')">
-    + Add Book
-</button>
+    <nav>
+        <button id="navBooks" class="active" onclick="showSection('booksSection')">
+            Books
+        </button>
+
+        <button id="navUpload" onclick="showSection('uploadSection')">
+            Upload
+        </button>
+    </nav>
 
 </header>
 
-
 <main>
 
+    <!-- BOOKS -->
 
-<!-- ======================================
-     LIBRARY
-====================================== -->
+    <section id="booksSection">
 
-<section id="library" class="section active">
+        <div class="hero">
 
-<h1 class="title">
-    My Books
-</h1>
+            <h1>📚 Reading AI</h1>
 
-<p class="subtitle">
-    Select a book and start reading.
-</p>
+            <p>
+                Upload textbook pages, let Appearich automatically extract
+                the text, then let students read the physical book while
+                the app listens and compares their reading.
+            </p>
 
-<div id="bookGrid" class="book-grid"></div>
+            <button class="btn primary" onclick="showSection('uploadSection')">
+                + Upload New Book
+            </button>
 
-</section>
+        </div>
 
+        <div class="card">
 
+            <h2>Your Books</h2>
 
-<!-- ======================================
-     ADMIN
-====================================== -->
+            <div id="booksGrid" class="books-grid"></div>
 
-<section id="admin" class="section">
+        </div>
 
-<h1 class="title">
-    Add a Book
-</h1>
+    </section>
 
-<p class="subtitle">
-    Upload textbook pages and add the expected
-    reading text.
-</p>
 
+    <!-- UPLOAD -->
 
-<div class="admin-box">
+    <section id="uploadSection" class="hidden">
 
-<label>
-    Book title
-</label>
+        <div class="hero">
 
-<input
-    id="bookTitle"
-    type="text"
-    placeholder="Example: English Grade 3"
->
+            <h1>📖 Upload Book</h1>
 
+            <p>
+                Select all the page images of a textbook. Appearich will
+                automatically OCR each page and create the book.
+            </p>
 
-<label>
-    Description
-</label>
+        </div>
 
-<textarea
-    id="bookDescription"
-    placeholder="Example: Primary English textbook"
-></textarea>
+        <div class="card">
 
+            <label>
+                <strong>Book title</strong>
+            </label>
 
-<label>
-    Book pages
-</label>
+            <input
+                id="bookTitle"
+                class="book-title-input"
+                type="text"
+                placeholder="e.g. English Standard 3"
+            >
 
-<input
-    id="pageUpload"
-    type="file"
-    accept="image/*"
-    multiple
->
+            <div class="upload-box">
 
+                <h2>🖼️ Select Page Images</h2>
 
-<p
-id="selectedPages"
-style="color:#777;margin-top:8px;">
-No pages selected.
-</p>
+                <p>
+                    Select multiple JPG, JPEG, PNG or WEBP page images.
+                </p>
 
+                <input
+                    id="pageFiles"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                >
 
-<div
-id="pageEditor"
-class="page-editor">
-</div>
+            </div>
 
+            <div id="ocrStatus" class="status hidden"></div>
 
-<button
-class="primary yellow"
-onclick="createBook()">
+            <div id="progressContainer" class="progress hidden">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
 
-Create Book
+            <button
+                id="startOCRButton"
+                class="btn primary"
+                onclick="startOCR()"
+            >
+                Extract Text & Create Book
+            </button>
 
-</button>
+        </div>
 
+        <div id="ocrResults" class="card hidden">
 
-<button
-class="primary"
-onclick="showSection('library')"
-style="margin-left:8px;">
+            <h2>Extracted Pages</h2>
 
-Cancel
+            <div id="pageResults"></div>
 
-</button>
+            <button
+                class="btn dark"
+                onclick="saveBook()"
+            >
+                Save Book
+            </button>
 
-</div>
+        </div>
 
-</section>
+    </section>
 
 
+    <!-- READER -->
 
-<!-- ======================================
-     BOOK VIEWER
-====================================== -->
+    <section id="readerSection" class="hidden">
 
-<section id="bookViewer" class="section">
+        <div class="hero">
 
-<div class="reader">
+            <h1 id="readerBookTitle">Book</h1>
 
-<div class="reader-header">
+            <p>
+                Read the physical textbook aloud. Keep the phone near you.
+                Appearich will convert your voice into text and compare it
+                with the page.
+            </p>
 
-<button
-class="primary"
-onclick="showSection('library')">
+        </div>
 
-← Books
+        <div class="reader">
 
-</button>
+            <div class="page-area">
 
-<strong id="pageNumber">
-Page 1
-</strong>
+                <img
+                    id="currentPageImage"
+                    class="page-image"
+                    src=""
+                    alt="Book page"
+                >
 
-</div>
+            </div>
 
+            <div class="reader-panel">
 
-<div class="page-container">
+                <h2 id="readerPageNumber">
+                    Page 1
+                </h2>
 
-<img
-id="pageImage"
-class="page-image"
-src=""
-alt="Book page">
+                <div class="page-number">
+                    Read this page from your physical textbook.
+                </div>
 
-</div>
+                <strong>Reference text detected by OCR:</strong>
 
+                <div
+                    id="referenceText"
+                    class="reference"
+                >
+                </div>
 
-<div class="reader-controls">
+                <div class="recording-indicator">
 
-<button
-class="primary"
-onclick="previousPage()">
+                    <span
+                        id="recordingDot"
+                        class="dot"
+                    ></span>
 
-← Previous
+                    <span id="recordingText">
+                        Microphone ready
+                    </span>
 
-</button>
+                </div>
 
+                <div class="controls">
 
-<button
-class="primary yellow"
-onclick="startReading()">
+                    <button
+                        id="recordButton"
+                        class="btn primary"
+                        onclick="toggleRecording()"
+                    >
+                        🎤 Start Reading
+                    </button>
 
-🎙 Start Reading
+                    <button
+                        class="btn dark"
+                        onclick="stopRecording()"
+                    >
+                        Stop
+                    </button>
 
-</button>
+                </div>
 
+                <h3 style="margin-top:20px;">
+                    Spoken text
+                </h3>
 
-<button
-class="primary"
-onclick="nextPage()">
+                <div
+                    id="spokenText"
+                    class="transcript"
+                >
+                    Your speech will appear here...
+                </div>
 
-Next →
+                <button
+                    id="compareButton"
+                    class="btn blue"
+                    onclick="compareCurrentPage()"
+                    disabled
+                >
+                    ⚖️ Compare Reading
+                </button>
 
-</button>
+                <div
+                    id="resultBox"
+                    class="result-box hidden"
+                ></div>
 
-</div>
+                <div class="controls">
 
-</div>
+                    <button
+                        class="btn dark"
+                        onclick="previousPage()"
+                    >
+                        ← Previous
+                    </button>
 
-</section>
+                    <button
+                        class="btn dark"
+                        onclick="nextPage()"
+                    >
+                        Next →
+                    </button>
 
+                </div>
 
+                <button
+                    class="btn"
+                    onclick="showSection('booksSection')"
+                >
+                    ← Back to Books
+                </button>
 
-<!-- ======================================
-     READING
-====================================== -->
+            </div>
 
-<section id="reading" class="section">
+        </div>
 
-<div class="reading-screen">
-
-
-<button
-class="primary"
-onclick="leaveReading()">
-
-← Back
-
-</button>
-
-
-<h1
-class="title"
-style="margin-top:30px;">
-
-Reading Time
-
-</h1>
-
-
-<p class="subtitle">
-
-Read the page in your physical textbook
-aloud.
-
-</p>
-
-
-<!-- EXPECTED TEXT -->
-
-<div class="reference-box">
-
-<h3>
-Expected Reading
-</h3>
-
-<p
-id="referenceText"
-class="reference-text">
-</p>
-
-</div>
-
-
-<div
-id="micCircle"
-class="mic-circle">
-
-🎙️
-
-</div>
-
-
-<div
-id="timer"
-class="timer">
-
-00:00
-
-</div>
-
-
-<p
-id="recordingStatus"
-class="status">
-
-Press the button when you are ready.
-
-</p>
-
-
-<button
-id="recordButton"
-class="primary yellow"
-onclick="toggleRecording()">
-
-🎙 Start Recording
-
-</button>
-
-
-<div
-id="results"
-class="results">
-</div>
-
-
-</div>
-
-</section>
-
+    </section>
 
 </main>
 
 
-
 <script>
 
-/* =====================================================
-   DATA
-===================================================== */
+let books = JSON.parse(localStorage.getItem("appearich_books") || "[]");
 
-let books =
-JSON.parse(
-    localStorage.getItem(
-        "appearich_books"
-    )
-) || [];
-
+let extractedPages = [];
 
 let currentBook = null;
-
-let currentPage = 0;
-
-
-let mediaRecorder = null;
-
-let audioChunks = [];
-
-let recording = false;
-
-
-let timerInterval = null;
-
-let recordingSeconds = 0;
-
+let currentPageIndex = 0;
 
 let recognition = null;
-
-let recognizedText = "";
-
-
-/* =====================================================
-   NAVIGATION
-===================================================== */
-
-function showSection(id){
-
-    document
-        .querySelectorAll(".section")
-        .forEach(section => {
-
-            section.classList.remove(
-                "active"
-            );
-
-        });
+let isRecording = false;
+let finalTranscript = "";
+let interimTranscript = "";
 
 
-    document
-        .getElementById(id)
-        .classList.add("active");
+/* =========================================================
+   SECTION NAVIGATION
+========================================================= */
+
+function showSection(id) {
+
+    document.querySelectorAll("main > section").forEach(section => {
+        section.classList.add("hidden");
+    });
+
+    document.getElementById(id).classList.remove("hidden");
+
+    document.querySelectorAll("nav button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    if (id === "booksSection") {
+        document.getElementById("navBooks").classList.add("active");
+        renderBooks();
+    }
+
+    if (id === "uploadSection") {
+        document.getElementById("navUpload").classList.add("active");
+    }
 
 }
 
 
-/* =====================================================
-   FILE UPLOAD
-===================================================== */
+/* =========================================================
+   FILE SORTING
+========================================================= */
 
-document
-.getElementById("pageUpload")
-.addEventListener(
-    "change",
-    preparePages
-);
+function naturalSort(files) {
 
+    return [...files].sort((a, b) => {
 
-function preparePages(){
-
-    const files =
-        Array.from(
-            document
-            .getElementById("pageUpload")
-            .files
-        );
-
-
-    const editor =
-        document
-        .getElementById("pageEditor");
-
-
-    editor.innerHTML = "";
-
-
-    if(!files.length){
-
-        document
-        .getElementById("selectedPages")
-        .textContent =
-        "No pages selected.";
-
-        return;
-    }
-
-
-    files.sort(
-        (a,b)=>
-        a.name.localeCompare(
+        return a.name.localeCompare(
             b.name,
             undefined,
-            {numeric:true}
-        )
-    );
-
-
-    document
-    .getElementById("selectedPages")
-    .textContent =
-    files.length +
-    " page(s) selected.";
-
-
-    files.forEach(
-        (file,index)=>{
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function(e){
-
-                    const div =
-                        document.createElement(
-                            "div"
-                        );
-
-
-                    div.className =
-                        "page-edit";
-
-
-                    div.innerHTML = `
-
-                        <strong>
-                            Page ${index+1}
-                        </strong>
-
-                        <br><br>
-
-                        <img
-                            src="${e.target.result}"
-                        >
-
-                        <label>
-                            Expected text
-                        </label>
-
-                        <textarea
-                            class="reference-input"
-                            data-page="${index}"
-                            placeholder="Type the exact text the student should read on this page..."
-                        ></textarea>
-
-                    `;
-
-
-                    editor.appendChild(
-                        div
-                    );
-
-                };
-
-
-            reader.readAsDataURL(file);
-
-        }
-    );
-
-}
-
-
-/* =====================================================
-   CREATE BOOK
-===================================================== */
-
-async function createBook(){
-
-    const title =
-        document
-        .getElementById("bookTitle")
-        .value
-        .trim();
-
-
-    const description =
-        document
-        .getElementById("bookDescription")
-        .value
-        .trim();
-
-
-    const files =
-        Array.from(
-            document
-            .getElementById("pageUpload")
-            .files
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
         );
-
-
-    if(!title){
-
-        alert(
-            "Please enter a book title."
-        );
-
-        return;
-    }
-
-
-    if(!files.length){
-
-        alert(
-            "Please upload the book pages."
-        );
-
-        return;
-    }
-
-
-    const inputs =
-        Array.from(
-            document
-            .querySelectorAll(
-                ".reference-input"
-            )
-        );
-
-
-    const references =
-        {};
-
-
-    inputs.forEach(input=>{
-
-        references[
-            input.dataset.page
-        ] =
-        input.value.trim();
 
     });
 
-
-    files.sort(
-        (a,b)=>
-        a.name.localeCompare(
-            b.name,
-            undefined,
-            {numeric:true}
-        )
-    );
+}
 
 
-    const pages = [];
+/* =========================================================
+   OCR
+========================================================= */
 
+async function startOCR() {
 
-    for(
-        let i=0;
-        i<files.length;
-        i++
-    ){
+    const titleInput = document.getElementById("bookTitle");
 
-        const image =
-            await readFile(files[i]);
+    const fileInput = document.getElementById("pageFiles");
 
+    const files = naturalSort(fileInput.files);
 
-        pages.push({
+    const status = document.getElementById("ocrStatus");
 
-            pageNumber:i+1,
+    const progressContainer =
+        document.getElementById("progressContainer");
 
-            image:image,
+    const progressBar =
+        document.getElementById("progressBar");
 
-            referenceText:
-                references[i] || ""
+    const results =
+        document.getElementById("ocrResults");
 
-        });
+    const startButton =
+        document.getElementById("startOCRButton");
+
+    if (!titleInput.value.trim()) {
+
+        alert("Please enter a book title.");
+
+        return;
 
     }
 
+    if (!files.length) {
+
+        alert("Please select the textbook page images.");
+
+        return;
+
+    }
+
+    extractedPages = [];
+
+    results.classList.remove("hidden");
+
+    status.classList.remove("hidden");
+
+    progressContainer.classList.remove("hidden");
+
+    startButton.disabled = true;
+
+    startButton.textContent = "Processing...";
+
+    const pageResults =
+        document.getElementById("pageResults");
+
+    pageResults.innerHTML = "";
+
+    try {
+
+        for (let i = 0; i < files.length; i++) {
+
+            const file = files[i];
+
+            status.textContent =
+                `Reading page ${i + 1} of ${files.length}: ${file.name}`;
+
+            progressBar.style.width =
+                `${(i / files.length) * 100}%`;
+
+            const imageUrl =
+                await fileToDataURL(file);
+
+            let extractedText = "";
+
+            try {
+
+                const result = await Tesseract.recognize(
+                    imageUrl,
+                    "eng",
+                    {
+                        logger: message => {
+
+                            if (message.status === "recognizing text") {
+
+                                const pageProgress =
+                                    message.progress || 0;
+
+                                const totalProgress =
+                                    ((i + pageProgress) / files.length) * 100;
+
+                                progressBar.style.width =
+                                    `${totalProgress}%`;
+
+                            }
+
+                        }
+                    }
+                );
+
+                extractedText =
+                    cleanOCRText(result.data.text);
+
+            } catch (ocrError) {
+
+                console.error(ocrError);
+
+                extractedText =
+                    "OCR failed for this page.";
+
+            }
+
+            extractedPages.push({
+
+                pageNumber: i + 1,
+
+                image: imageUrl,
+
+                text: extractedText
+
+            });
+
+            addOCRResult(
+                i + 1,
+                imageUrl,
+                extractedText
+            );
+
+        }
+
+        progressBar.style.width = "100%";
+
+        status.textContent =
+            `Finished. ${files.length} pages processed.`;
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+            "An error occurred while processing the book.";
+
+    }
+
+    startButton.disabled = false;
+
+    startButton.textContent =
+        "Extract Text & Create Book";
+
+}
+
+
+/* =========================================================
+   OCR TEXT CLEANING
+========================================================= */
+
+function cleanOCRText(text) {
+
+    return text
+        .replace(/\r/g, " ")
+        .replace(/\n+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+}
+
+
+/* =========================================================
+   FILE TO DATA URL
+========================================================= */
+
+function fileToDataURL(file) {
+
+    return new Promise((resolve, reject) => {
+
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+
+        reader.onerror = reject;
+
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
+
+/* =========================================================
+   SHOW OCR RESULT
+========================================================= */
+
+function addOCRResult(
+    pageNumber,
+    image,
+    text
+) {
+
+    const container =
+        document.getElementById("pageResults");
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.style.display = "grid";
+    wrapper.style.gridTemplateColumns = "140px 1fr";
+    wrapper.style.gap = "15px";
+    wrapper.style.padding = "15px 0";
+    wrapper.style.borderBottom = "1px solid #ddd";
+
+    const img =
+        document.createElement("img");
+
+    img.src = image;
+
+    img.style.width = "140px";
+    img.style.height = "180px";
+    img.style.objectFit = "cover";
+    img.style.borderRadius = "8px";
+
+    const content =
+        document.createElement("div");
+
+    const title =
+        document.createElement("strong");
+
+    title.textContent =
+        `Page ${pageNumber}`;
+
+    const textArea =
+        document.createElement("textarea");
+
+    textArea.value = text;
+
+    textArea.style.width = "100%";
+    textArea.style.minHeight = "150px";
+    textArea.style.marginTop = "10px";
+    textArea.style.padding = "10px";
+    textArea.style.border = "1px solid #ccc";
+    textArea.style.borderRadius = "8px";
+
+    textArea.dataset.page =
+        pageNumber;
+
+    content.appendChild(title);
+
+    content.appendChild(textArea);
+
+    wrapper.appendChild(img);
+
+    wrapper.appendChild(content);
+
+    container.appendChild(wrapper);
+
+}
+
+
+/* =========================================================
+   SAVE BOOK
+========================================================= */
+
+function saveBook() {
+
+    const title =
+        document.getElementById("bookTitle")
+            .value.trim();
+
+    if (!extractedPages.length) {
+
+        alert("No pages have been processed.");
+
+        return;
+
+    }
+
+    const textAreas =
+        document.querySelectorAll(
+            "#pageResults textarea"
+        );
+
+    textAreas.forEach((textarea, index) => {
+
+        if (extractedPages[index]) {
+
+            extractedPages[index].text =
+                textarea.value.trim();
+
+        }
+
+    });
 
     const book = {
 
-        id:Date.now(),
+        id:
+            Date.now(),
 
-        title:title,
-
-        description:description,
-
-        cover:pages[0].image,
-
-        pages:pages,
+        title,
 
         createdAt:
-            new Date().toISOString()
+            new Date().toISOString(),
+
+        pages:
+            extractedPages
 
     };
 
-
     books.push(book);
-
 
     localStorage.setItem(
         "appearich_books",
         JSON.stringify(books)
     );
 
-
     alert(
         "Book created successfully!"
     );
 
+    document.getElementById("bookTitle").value = "";
 
-    document
-    .getElementById("bookTitle")
-    .value="";
+    document.getElementById("pageFiles").value = "";
 
+    document.getElementById("pageResults").innerHTML = "";
 
-    document
-    .getElementById("bookDescription")
-    .value="";
+    document.getElementById("ocrResults")
+        .classList.add("hidden");
 
+    extractedPages = [];
 
-    document
-    .getElementById("pageUpload")
-    .value="";
-
-
-    document
-    .getElementById("pageEditor")
-    .innerHTML="";
-
-
-    loadBooks();
-
-    showSection("library");
+    showSection("booksSection");
 
 }
 
 
-function readFile(file){
+/* =========================================================
+   DISPLAY BOOKS
+========================================================= */
 
-    return new Promise(
-        resolve=>{
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                e=>resolve(
-                    e.target.result
-                );
-
-
-            reader.readAsDataURL(file);
-
-        }
-    );
-
-}
-
-
-/* =====================================================
-   LOAD BOOKS
-===================================================== */
-
-function loadBooks(){
+function renderBooks() {
 
     const grid =
-        document
-        .getElementById("bookGrid");
+        document.getElementById("booksGrid");
 
+    grid.innerHTML = "";
 
-    grid.innerHTML="";
-
-
-    if(!books.length){
+    if (!books.length) {
 
         grid.innerHTML = `
-
             <div class="empty">
-
-                <h3>
-                    No books yet
-                </h3>
-
-                <p>
-                    Add your first textbook.
-                </p>
-
+                <h2>No books yet</h2>
+                <p>Upload your first textbook to begin.</p>
             </div>
-
         `;
 
         return;
+
     }
 
-
-    books.forEach(book=>{
+    books.forEach(book => {
 
         const card =
-            document.createElement(
-                "div"
-            );
+            document.createElement("div");
 
+        card.className = "book";
 
-        card.className =
-            "book-card";
+        const cover =
+            document.createElement("img");
 
+        cover.className = "book-cover";
 
-        card.innerHTML = `
+        cover.src =
+            book.pages[0]?.image || "";
 
-            <img
-                class="book-cover"
-                src="${book.cover}"
-            >
+        const content =
+            document.createElement("div");
 
-            <div class="book-info">
+        content.className =
+            "book-content";
 
-                <h3>
-                    ${escapeHTML(book.title)}
-                </h3>
+        content.innerHTML = `
+            <h3>${escapeHTML(book.title)}</h3>
 
-                <p>
-                    ${book.pages.length}
-                    pages
-                </p>
-
-                <p>
-                    ${escapeHTML(
-                        book.description || ""
-                    )}
-                </p>
-
-            </div>
-
+            <p>
+                ${book.pages.length} page(s)
+            </p>
         `;
 
+        const open =
+            document.createElement("button");
 
-        card.onclick =
-            ()=>openBook(book.id);
+        open.className =
+            "btn primary";
 
+        open.textContent =
+            "Start Reading";
+
+        open.onclick =
+            () => openBook(book.id);
+
+        const deleteButton =
+            document.createElement("button");
+
+        deleteButton.className =
+            "btn danger";
+
+        deleteButton.textContent =
+            "Delete";
+
+        deleteButton.onclick =
+            () => deleteBook(book.id);
+
+        content.appendChild(open);
+
+        content.appendChild(deleteButton);
+
+        card.appendChild(cover);
+
+        card.appendChild(content);
 
         grid.appendChild(card);
 
@@ -1191,1179 +1189,824 @@ function loadBooks(){
 }
 
 
-/* =====================================================
-   OPEN BOOK
-===================================================== */
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
 
-function openBook(id){
+function escapeHTML(text) {
 
-    currentBook =
-        books.find(
-            book=>book.id===id
-        );
-
-
-    currentPage=0;
-
-
-    updatePage();
-
-
-    showSection(
-        "bookViewer"
-    );
+    return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 
 }
 
 
-/* =====================================================
-   UPDATE PAGE
-===================================================== */
+/* =========================================================
+   DELETE BOOK
+========================================================= */
 
-function updatePage(){
+function deleteBook(id) {
 
-    if(!currentBook)
+    if (!confirm("Delete this book?")) {
         return;
-
-
-    const page =
-        currentBook.pages[
-            currentPage
-        ];
-
-
-    document
-    .getElementById("pageImage")
-    .src=page.image;
-
-
-    document
-    .getElementById("pageNumber")
-    .textContent=
-    `Page ${currentPage+1} of ${currentBook.pages.length}`;
-
-}
-
-
-/* =====================================================
-   PAGE NAVIGATION
-===================================================== */
-
-function nextPage(){
-
-    if(
-        currentPage <
-        currentBook.pages.length-1
-    ){
-
-        currentPage++;
-
-        updatePage();
-
     }
 
-}
+    books =
+        books.filter(book => book.id !== id);
 
-
-function previousPage(){
-
-    if(currentPage>0){
-
-        currentPage--;
-
-        updatePage();
-
-    }
-
-}
-
-
-/* =====================================================
-   START READING
-===================================================== */
-
-function startReading(){
-
-    const page =
-        currentBook.pages[
-            currentPage
-        ];
-
-
-    document
-    .getElementById("referenceText")
-    .textContent =
-        page.referenceText ||
-        "No reference text has been entered for this page.";
-
-
-    resetReadingUI();
-
-
-    showSection(
-        "reading"
+    localStorage.setItem(
+        "appearich_books",
+        JSON.stringify(books)
     );
 
+    renderBooks();
+
 }
 
 
-/* =====================================================
-   SPEECH RECOGNITION
-===================================================== */
+/* =========================================================
+   OPEN BOOK
+========================================================= */
 
-function setupRecognition(){
+function openBook(id) {
+
+    const found =
+        books.find(book => book.id === id);
+
+    if (!found) {
+        return;
+    }
+
+    currentBook = found;
+
+    currentPageIndex = 0;
+
+    showSection("readerSection");
+
+    loadCurrentPage();
+
+}
+
+
+/* =========================================================
+   LOAD CURRENT PAGE
+========================================================= */
+
+function loadCurrentPage() {
+
+    if (!currentBook) {
+        return;
+    }
+
+    const page =
+        currentBook.pages[currentPageIndex];
+
+    if (!page) {
+        return;
+    }
+
+    document.getElementById(
+        "readerBookTitle"
+    ).textContent =
+        currentBook.title;
+
+    document.getElementById(
+        "readerPageNumber"
+    ).textContent =
+        `Page ${page.pageNumber} of ${currentBook.pages.length}`;
+
+    document.getElementById(
+        "currentPageImage"
+    ).src =
+        page.image;
+
+    document.getElementById(
+        "referenceText"
+    ).textContent =
+        page.text || "No text detected.";
+
+    document.getElementById(
+        "spokenText"
+    ).textContent =
+        "Your speech will appear here...";
+
+    document.getElementById(
+        "resultBox"
+    ).classList.add("hidden");
+
+    document.getElementById(
+        "compareButton"
+    ).disabled = true;
+
+    finalTranscript = "";
+
+    interimTranscript = "";
+
+}
+
+
+/* =========================================================
+   NEXT PAGE
+========================================================= */
+
+function nextPage() {
+
+    stopRecording();
+
+    if (
+        currentPageIndex <
+        currentBook.pages.length - 1
+    ) {
+
+        currentPageIndex++;
+
+        loadCurrentPage();
+
+    }
+
+}
+
+
+/* =========================================================
+   PREVIOUS PAGE
+========================================================= */
+
+function previousPage() {
+
+    stopRecording();
+
+    if (currentPageIndex > 0) {
+
+        currentPageIndex--;
+
+        loadCurrentPage();
+
+    }
+
+}
+
+
+/* =========================================================
+   SPEECH RECOGNITION SETUP
+========================================================= */
+
+function setupSpeechRecognition() {
 
     const SpeechRecognition =
         window.SpeechRecognition ||
         window.webkitSpeechRecognition;
 
+    if (!SpeechRecognition) {
 
-    if(!SpeechRecognition){
+        alert(
+            "Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge."
+        );
 
         return null;
 
     }
 
-
-    const r =
+    const rec =
         new SpeechRecognition();
 
+    rec.lang = "en-US";
 
-    r.continuous=true;
+    rec.continuous = true;
 
-    r.interimResults=true;
+    rec.interimResults = true;
 
-    r.lang="en-US";
+    rec.maxAlternatives = 1;
 
+    rec.onstart = () => {
 
-    r.onresult =
-        function(event){
+        isRecording = true;
 
-            let finalText="";
+        document.getElementById(
+            "recordingDot"
+        ).classList.add("recording");
 
+        document.getElementById(
+            "recordingText"
+        ).textContent =
+            "Listening...";
 
-            for(
-                let i=0;
-                i<event.results.length;
-                i++
-            ){
+        document.getElementById(
+            "recordButton"
+        ).textContent =
+            "🔴 Recording";
 
-                finalText +=
-                    event.results[i][0]
-                    .transcript + " ";
+    };
 
-            }
 
+    rec.onresult = event => {
 
-            recognizedText =
-                finalText.trim();
+        let interim = "";
 
+        for (
+            let i = event.resultIndex;
+            i < event.results.length;
+            i++
+        ) {
 
-            document
-            .getElementById("recordingStatus")
-            .textContent =
-            "Listening: " +
-            recognizedText;
+            const transcript =
+                event.results[i][0].transcript;
 
-        };
+            if (
+                event.results[i].isFinal
+            ) {
 
+                finalTranscript +=
+                    " " + transcript;
 
-    r.onerror =
-        function(event){
+            } else {
 
-            console.error(
-                "Speech recognition:",
-                event.error
-            );
-
-        };
-
-
-    return r;
-
-}
-
-
-/* =====================================================
-   RECORDING
-===================================================== */
-
-async function toggleRecording(){
-
-    if(!recording){
-
-        await startRecording();
-
-    }else{
-
-        stopRecording();
-
-    }
-
-}
-
-
-/* =====================================================
-   START RECORDING
-===================================================== */
-
-async function startRecording(){
-
-    if(
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-    ){
-
-        alert(
-            "Microphone is unavailable. Open the app through HTTPS or localhost."
-        );
-
-        return;
-
-    }
-
-
-    try{
-
-        const stream =
-            await navigator
-            .mediaDevices
-            .getUserMedia({
-                audio:true
-            });
-
-
-        mediaRecorder =
-            new MediaRecorder(
-                stream
-            );
-
-
-        audioChunks=[];
-
-        recognizedText="";
-
-
-        mediaRecorder.ondataavailable =
-            event=>{
-
-                if(
-                    event.data.size>0
-                ){
-
-                    audioChunks.push(
-                        event.data
-                    );
-
-                }
-
-            };
-
-
-        mediaRecorder.onstop =
-            function(){
-
-                saveRecording();
-
-                analyzeReading();
-
-            };
-
-
-        mediaRecorder.start();
-
-
-        /* SPEECH RECOGNITION */
-
-        recognition =
-            setupRecognition();
-
-
-        if(recognition){
-
-            try{
-
-                recognition.start();
-
-            }catch(e){
-
-                console.log(
-                    "Recognition already started."
-                );
+                interim +=
+                    " " + transcript;
 
             }
 
         }
 
+        interimTranscript =
+            interim;
 
-        recording=true;
+        const display =
+            (
+                finalTranscript +
+                " " +
+                interimTranscript
+            ).trim();
 
+        document.getElementById(
+            "spokenText"
+        ).textContent =
+            display || "Listening...";
 
-        document
-        .getElementById(
-            "recordButton"
-        )
-        .textContent =
-        "⏹ Stop Recording";
+        if (finalTranscript.trim()) {
 
+            document.getElementById(
+                "compareButton"
+            ).disabled = false;
 
-        document
-        .getElementById(
-            "micCircle"
-        )
-        .classList
-        .add("recording");
+        }
 
-
-        document
-        .getElementById(
-            "recordingStatus"
-        )
-        .textContent =
-        "Listening... Read the page aloud.";
+    };
 
 
-        startTimer();
-
-    }
-
-    catch(error){
+    rec.onerror = event => {
 
         console.error(
-            error
+            "Speech recognition error:",
+            event.error
         );
 
-
-        alert(
-            "Could not access microphone: "
-            + error.name
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   STOP RECORDING
-===================================================== */
-
-function stopRecording(){
-
-    if(
-        !mediaRecorder ||
-        !recording
-    )
-        return;
-
-
-    mediaRecorder.stop();
-
-
-    if(recognition){
-
-        try{
-
-            recognition.stop();
-
-        }catch(e){}
-
-    }
-
-
-    recording=false;
-
-
-    mediaRecorder
-    .stream
-    .getTracks()
-    .forEach(
-        track=>track.stop()
-    );
-
-
-    stopTimer();
-
-
-    document
-    .getElementById(
-        "recordButton"
-    )
-    .textContent =
-    "🎙 Start Recording";
-
-
-    document
-    .getElementById(
-        "micCircle"
-    )
-    .classList
-    .remove("recording");
-
-
-    document
-    .getElementById(
-        "recordingStatus"
-    )
-    .textContent =
-    "Analyzing your reading...";
-
-}
-
-
-/* =====================================================
-   SAVE AUDIO
-===================================================== */
-
-function saveRecording(){
-
-    const blob =
-        new Blob(
-            audioChunks,
-            {
-                type:"audio/webm"
-            }
-        );
-
-
-    const url =
-        URL.createObjectURL(
-            blob
-        );
-
-
-    const old =
         document.getElementById(
-            "results"
-        );
+            "recordingText"
+        ).textContent =
+            "Microphone error: " + event.error;
+
+    };
 
 
-    old.innerHTML = `
+    rec.onend = () => {
 
-        <div class="score-card">
+        isRecording = false;
 
-            <h3>
-                Your Recording
-            </h3>
+        document.getElementById(
+            "recordingDot"
+        ).classList.remove("recording");
 
-            <br>
+        document.getElementById(
+            "recordingText"
+        ).textContent =
+            "Microphone ready";
 
-            <audio
-                controls
-                src="${url}">
-            </audio>
+        document.getElementById(
+            "recordButton"
+        ).textContent =
+            "🎤 Start Reading";
 
-        </div>
+    };
 
-    `;
+    return rec;
 
 }
 
 
-/* =====================================================
-   ANALYZE READING
-===================================================== */
+/* =========================================================
+   START / STOP RECORDING
+========================================================= */
 
-function analyzeReading(){
+function toggleRecording() {
 
-    const page =
-        currentBook.pages[
-            currentPage
-        ];
+    if (isRecording) {
 
-
-    const expected =
-        normalizeText(
-            page.referenceText
-        );
-
-
-    const heard =
-        normalizeText(
-            recognizedText
-        );
-
-
-    if(!expected){
-
-        showNoReference();
+        stopRecording();
 
         return;
 
     }
 
+    if (!recognition) {
 
-    if(!heard){
+        recognition =
+            setupSpeechRecognition();
 
-        document
-        .getElementById("results")
-        .innerHTML += `
-
-            <div class="score-card">
-
-                <h3>
-                    No speech detected
-                </h3>
-
-                <p>
-                    Try reading the page again.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
+        if (!recognition) {
+            return;
+        }
 
     }
 
+    finalTranscript = "";
 
-    const expectedWords =
-        expected.split(" ");
+    interimTranscript = "";
 
+    document.getElementById(
+        "spokenText"
+    ).textContent =
+        "Listening...";
 
-    const heardWords =
-        heard.split(" ");
+    try {
 
+        recognition.start();
 
-    const comparison =
-        compareWords(
-            expectedWords,
-            heardWords
-        );
+    } catch (error) {
 
+        console.log(error);
 
-    displayResults(
-        comparison,
-        heard
-    );
+    }
 
 }
 
 
-/* =====================================================
+function stopRecording() {
+
+    if (recognition && isRecording) {
+
+        recognition.stop();
+
+    }
+
+}
+
+
+/* =========================================================
    TEXT NORMALIZATION
-===================================================== */
+========================================================= */
 
-function normalizeText(text){
+function normalizeText(text) {
 
     return text
         .toLowerCase()
-        .replace(/[.,!?;:"'()]/g,"")
-        .replace(/\s+/g," ")
+        .replace(/[“”‘’]/g, "'")
+        .replace(/[^a-z0-9'\s]/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
 
 }
 
 
-/* =====================================================
-   WORD COMPARISON
-===================================================== */
+function tokenize(text) {
 
-function compareWords(
-    expected,
-    heard
-){
+    const normalized =
+        normalizeText(text);
 
-    const results=[];
-
-
-    let i=0;
-
-    let j=0;
-
-
-    let correct=0;
-
-    let skipped=0;
-
-    let substituted=0;
-
-    let extra=0;
-
-
-    while(
-        i<expected.length &&
-        j<heard.length
-    ){
-
-        if(
-            expected[i] ===
-            heard[j]
-        ){
-
-            results.push({
-
-                type:"correct",
-
-                expected:expected[i],
-
-                heard:heard[j]
-
-            });
-
-
-            correct++;
-
-            i++;
-
-            j++;
-
-            continue;
-
-        }
-
-
-        /*
-        Check whether the expected word
-        appears immediately after the
-        current heard word.
-
-        Example:
-
-        Expected:
-        the environment is important
-
-        Heard:
-        the is important
-
-        */
-
-        if(
-            j+1<heard.length &&
-            expected[i] === heard[j+1]
-        ){
-
-            results.push({
-
-                type:"extra",
-
-                expected:"",
-
-                heard:heard[j]
-
-            });
-
-
-            extra++;
-
-            j++;
-
-            continue;
-
-        }
-
-
-        /*
-        Check whether the next expected
-        word is what was actually heard.
-
-        Example:
-
-        Expected:
-        environment
-
-        Heard:
-        environmental
-        */
-
-        if(
-            i+1<expected.length &&
-            expected[i+1] === heard[j]
-        ){
-
-            results.push({
-
-                type:"skipped",
-
-                expected:expected[i],
-
-                heard:""
-
-            });
-
-
-            skipped++;
-
-            i++;
-
-            continue;
-
-        }
-
-
-        /*
-        Otherwise treat as substitution.
-        */
-
-        results.push({
-
-            type:"substituted",
-
-            expected:expected[i],
-
-            heard:heard[j]
-
-        });
-
-
-        substituted++;
-
-        i++;
-
-        j++;
-
+    if (!normalized) {
+        return [];
     }
 
-
-    /*
-    Remaining expected words
-    */
-
-    while(
-        i<expected.length
-    ){
-
-        results.push({
-
-            type:"skipped",
-
-            expected:expected[i],
-
-            heard:""
-
-        });
-
-
-        skipped++;
-
-        i++;
-
-    }
-
-
-    /*
-    Remaining heard words
-    */
-
-    while(
-        j<heard.length
-    ){
-
-        results.push({
-
-            type:"extra",
-
-            expected:"",
-
-            heard:heard[j]
-
-        });
-
-
-        extra++;
-
-        j++;
-
-    }
-
-
-    const total =
-        expected.length;
-
-
-    const score =
-        total === 0
-        ? 0
-        : Math.round(
-            (correct / total) * 100
-        );
-
-
-    return {
-
-        results,
-
-        correct,
-
-        skipped,
-
-        substituted,
-
-        extra,
-
-        score
-
-    };
+    return normalized.split(" ");
 
 }
 
 
-/* =====================================================
-   DISPLAY RESULTS
-===================================================== */
+/* =========================================================
+   WORD DISTANCE
+========================================================= */
 
-function displayResults(
-    comparison,
-    heard
-){
+function levenshtein(a, b) {
+
+    const matrix = [];
+
+    for (let i = 0; i <= b.length; i++) {
+
+        matrix[i] = [i];
+
+    }
+
+    for (let j = 0; j <= a.length; j++) {
+
+        matrix[0][j] = j;
+
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+
+        for (let j = 1; j <= a.length; j++) {
+
+            if (
+                b[i - 1] ===
+                a[j - 1]
+            ) {
+
+                matrix[i][j] =
+                    matrix[i - 1][j - 1];
+
+            } else {
+
+                matrix[i][j] =
+                    Math.min(
+
+                        matrix[i - 1][j] + 1,
+
+                        matrix[i][j - 1] + 1,
+
+                        matrix[i - 1][j - 1] + 1
+
+                    );
+
+            }
+
+        }
+
+    }
+
+    return matrix[b.length][a.length];
+
+}
+
+
+/* =========================================================
+   WORD SIMILARITY
+========================================================= */
+
+function wordSimilarity(a, b) {
+
+    if (a === b) {
+        return 1;
+    }
+
+    const distance =
+        levenshtein(a, b);
+
+    return 1 -
+        distance /
+        Math.max(a.length, b.length);
+
+}
+
+
+/* =========================================================
+   COMPARE READING
+========================================================= */
+
+function compareCurrentPage() {
+
+    const page =
+        currentBook.pages[currentPageIndex];
+
+    const reference =
+        tokenize(page.text);
+
+    const spoken =
+        tokenize(finalTranscript);
+
+    if (!reference.length) {
+
+        alert(
+            "There is no OCR reference text for this page."
+        );
+
+        return;
+
+    }
+
+    if (!spoken.length) {
+
+        alert(
+            "No speech was detected."
+        );
+
+        return;
+
+    }
+
+    const comparison =
+        alignWords(reference, spoken);
+
+    showResults(
+        comparison,
+        reference,
+        spoken
+    );
+
+}
+
+
+/* =========================================================
+   ALIGN WORDS
+========================================================= */
+
+function alignWords(reference, spoken) {
+
+    const n = reference.length;
+
+    const m = spoken.length;
+
+    const dp =
+        Array.from(
+            { length: n + 1 },
+            () =>
+                Array(m + 1).fill(0)
+        );
+
+    for (let i = 0; i <= n; i++) {
+        dp[i][0] = i;
+    }
+
+    for (let j = 0; j <= m; j++) {
+        dp[0][j] = j;
+    }
+
+    for (let i = 1; i <= n; i++) {
+
+        for (let j = 1; j <= m; j++) {
+
+            const cost =
+                reference[i - 1] === spoken[j - 1]
+                    ? 0
+                    : 1;
+
+            dp[i][j] =
+                Math.min(
+
+                    dp[i - 1][j] + 1,
+
+                    dp[i][j - 1] + 1,
+
+                    dp[i - 1][j - 1] + cost
+
+                );
+
+        }
+
+    }
+
+    const operations = [];
+
+    let i = n;
+
+    let j = m;
+
+    while (i > 0 || j > 0) {
+
+        if (
+            i > 0 &&
+            j > 0 &&
+            reference[i - 1] === spoken[j - 1]
+        ) {
+
+            operations.unshift({
+
+                type: "correct",
+
+                expected:
+                    reference[i - 1],
+
+                spoken:
+                    spoken[j - 1]
+
+            });
+
+            i--;
+
+            j--;
+
+        }
+
+        else if (
+            i > 0 &&
+            j > 0 &&
+            dp[i][j] ===
+            dp[i - 1][j - 1] + 1
+        ) {
+
+            const similarity =
+                wordSimilarity(
+                    reference[i - 1],
+                    spoken[j - 1]
+                );
+
+            operations.unshift({
+
+                type:
+                    similarity >= 0.65
+                        ? "changed"
+                        : "substitution",
+
+                expected:
+                    reference[i - 1],
+
+                spoken:
+                    spoken[j - 1]
+
+            });
+
+            i--;
+
+            j--;
+
+        }
+
+        else if (
+            i > 0 &&
+            dp[i][j] === dp[i - 1][j] + 1
+        ) {
+
+            operations.unshift({
+
+                type: "missing",
+
+                expected:
+                    reference[i - 1],
+
+                spoken: ""
+
+            });
+
+            i--;
+
+        }
+
+        else {
+
+            operations.unshift({
+
+                type: "extra",
+
+                expected: "",
+
+                spoken:
+                    spoken[j - 1]
+
+            });
+
+            j--;
+
+        }
+
+    }
+
+    return operations;
+
+}
+
+
+/* =========================================================
+   SHOW RESULTS
+========================================================= */
+
+function showResults(
+    operations,
+    reference,
+    spoken
+) {
+
+    const result =
+        document.getElementById("resultBox");
+
+    result.classList.remove("hidden");
+
+    let correct = 0;
+
+    let missing = 0;
+
+    let extra = 0;
+
+    let changed = 0;
+
+    operations.forEach(op => {
+
+        if (op.type === "correct") {
+            correct++;
+        }
+
+        if (op.type === "missing") {
+            missing++;
+        }
+
+        if (
+            op.type === "changed" ||
+            op.type === "substitution"
+        ) {
+            changed++;
+        }
+
+        if (op.type === "extra") {
+            extra++;
+        }
+
+    });
+
+    const score =
+        Math.max(
+            0,
+            Math.round(
+                (correct / reference.length) * 100
+            )
+        );
 
     let html = `
 
-        <div class="score-card">
+        <h2>Reading Result</h2>
 
-            <h2>
-                Reading Result
-            </h2>
-
-            <br>
-
-            <div class="score">
-                ${comparison.score}%
-            </div>
-
-            <p>
-                Reading accuracy
-            </p>
-
-            <br>
-
-            <p>
-                ✓ Correct:
-                ${comparison.correct}
-            </p>
-
-            <p>
-                ⚠ Skipped:
-                ${comparison.skipped}
-            </p>
-
-            <p>
-                🔴 Substituted:
-                ${comparison.substituted}
-            </p>
-
-            <p>
-                🔵 Extra:
-                ${comparison.extra}
-            </p>
-
+        <div class="score">
+            ${score}%
         </div>
 
-
-        <div class="score-card">
-
-            <h3>
-                What Appearich Heard
-            </h3>
-
-            <p style="margin-top:10px;line-height:1.7;">
-                ${escapeHTML(heard)}
-            </p>
-
-        </div>
-
+        <p>
+            ${correct} correct
+            · ${missing} missing
+            · ${changed} changed
+            · ${extra} extra
+        </p>
 
         <div class="word-results">
-
-            <h3>
-                Word Analysis
-            </h3>
-
-            <div class="word-list">
     `;
 
+    operations.forEach(op => {
 
-    comparison.results.forEach(
-        item=>{
+        if (op.type === "correct") {
 
-            if(
-                item.type==="correct"
-            ){
-
-                html += `
-
-                    <span class="word correct">
-                        ✓ ${escapeHTML(
-                            item.expected
-                        )}
-                    </span>
-
-                `;
-
-            }
-
-
-            else if(
-                item.type==="skipped"
-            ){
-
-                html += `
-
-                    <span class="word skipped">
-                        ⚠ Skipped:
-                        ${escapeHTML(
-                            item.expected
-                        )}
-                    </span>
-
-                `;
-
-            }
-
-
-            else if(
-                item.type==="substituted"
-            ){
-
-                html += `
-
-                    <span class="word substituted">
-                        🔴
-                        ${escapeHTML(
-                            item.expected
-                        )}
-                        →
-                        ${escapeHTML(
-                            item.heard
-                        )}
-                    </span>
-
-                `;
-
-            }
-
-
-            else if(
-                item.type==="extra"
-            ){
-
-                html += `
-
-                    <span class="word extra">
-                        🔵 Extra:
-                        ${escapeHTML(
-                            item.heard
-                        )}
-                    </span>
-
-                `;
-
-            }
+            html += `
+                <span class="word correct">
+                    ✓ ${escapeHTML(op.expected)}
+                </span>
+            `;
 
         }
-    );
 
+        else if (op.type === "missing") {
+
+            html += `
+                <span class="word missing">
+                    ✗ ${escapeHTML(op.expected)}
+                </span>
+            `;
+
+        }
+
+        else if (op.type === "extra") {
+
+            html += `
+                <span class="word extra">
+                    + ${escapeHTML(op.spoken)}
+                </span>
+            `;
+
+        }
+
+        else {
+
+            html += `
+                <span class="word changed">
+                    ${escapeHTML(op.expected)}
+                    → 
+                    ${escapeHTML(op.spoken)}
+                </span>
+            `;
+
+        }
+
+    });
 
     html += `
-
-            </div>
-
         </div>
 
+        <p style="margin-top:15px;color:#666;">
+            Green = correctly read
+            · Red = missing
+            · Blue = changed
+            · Yellow = extra
+        </p>
     `;
 
-
-    document
-    .getElementById("results")
-    .innerHTML += html;
+    result.innerHTML =
+        html;
 
 }
 
 
-/* =====================================================
-   NO REFERENCE
-===================================================== */
-
-function showNoReference(){
-
-    document
-    .getElementById("results")
-    .innerHTML += `
-
-        <div class="score-card">
-
-            <h3>
-                Reference text missing
-            </h3>
-
-            <p>
-                This page does not have expected
-                reading text yet.
-            </p>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   TIMER
-===================================================== */
-
-function startTimer(){
-
-    recordingSeconds=0;
-
-    updateTimer();
-
-
-    timerInterval =
-        setInterval(
-            ()=>{
-
-                recordingSeconds++;
-
-                updateTimer();
-
-            },
-            1000
-        );
-
-}
-
-
-function stopTimer(){
-
-    clearInterval(
-        timerInterval
-    );
-
-}
-
-
-function updateTimer(){
-
-    const minutes =
-        Math.floor(
-            recordingSeconds/60
-        );
-
-
-    const seconds =
-        recordingSeconds%60;
-
-
-    document
-    .getElementById("timer")
-    .textContent =
-        String(minutes)
-        .padStart(2,"0")
-        +
-        ":"
-        +
-        String(seconds)
-        .padStart(2,"0");
-
-}
-
-
-/* =====================================================
-   RESET
-===================================================== */
-
-function resetReadingUI(){
-
-    recognizedText="";
-
-
-    document
-    .getElementById("results")
-    .innerHTML="";
-
-
-    document
-    .getElementById(
-        "recordingStatus"
-    )
-    .textContent =
-    "Press the button when you are ready.";
-
-
-    document
-    .getElementById(
-        "recordButton"
-    )
-    .textContent =
-    "🎙 Start Recording";
-
-
-    document
-    .getElementById(
-        "micCircle"
-    )
-    .classList
-    .remove("recording");
-
-
-    document
-    .getElementById(
-        "timer"
-    )
-    .textContent =
-    "00:00";
-
-}
-
-
-/* =====================================================
-   LEAVE READING
-===================================================== */
-
-function leaveReading(){
-
-    if(recording){
-
-        stopRecording();
-
-    }
-
-
-    showSection(
-        "bookViewer"
-    );
-
-}
-
-
-/* =====================================================
-   ESCAPE HTML
-===================================================== */
-
-function escapeHTML(text){
-
-    return String(text)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-/* =====================================================
+/* =========================================================
    INITIALIZE
-===================================================== */
+========================================================= */
 
-loadBooks();
+renderBooks();
 
 </script>
 

@@ -2,13 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Appearich AI Reading Supervisor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>AI Reading Supervision</title>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
+        type="module"></script>
+
+<!-- Tesseract OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
-*{box-sizing:border-box}
+*{
+    box-sizing:border-box;
+}
 
 body{
     margin:0;
@@ -19,188 +27,315 @@ body{
 
 header{
     background:#080808;
-    color:#fff;
-    padding:18px 24px;
+    color:white;
+    padding:18px 25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
 }
 
-header h1{
-    margin:0;
-    font-size:21px;
+.logo{
+    font-size:22px;
+    font-weight:bold;
 }
 
-header span{
-    color:#f3d000;
+.brand{
+    font-size:13px;
+    opacity:.75;
 }
 
-main{
-    max-width:1100px;
+.container{
+    max-width:1150px;
     margin:auto;
     padding:25px;
 }
 
-.section{display:none}
-.section.active{display:block}
-
 .card{
-    background:#fff;
+    background:white;
     padding:22px;
-    border-radius:18px;
-    margin-bottom:18px;
-    box-shadow:0 3px 15px rgba(0,0,0,.06);
+    border-radius:16px;
+    margin-bottom:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,.06);
 }
 
-.grid{
-    display:grid;
-    grid-template-columns:
-    repeat(auto-fit,minmax(240px,1fr));
-    gap:18px;
+h1,h2,h3{
+    margin-top:0;
 }
 
-button{
-    border:0;
-    border-radius:11px;
-    padding:12px 18px;
-    cursor:pointer;
-    font-size:15px;
-    font-weight:600;
-    margin:4px;
-}
-
-.primary{
-    background:#080808;
-    color:#fff;
-}
-
-.secondary{
-    background:#f3d000;
-    color:#080808;
-}
-
-.danger{
-    background:#c62828;
-    color:#fff;
-}
-
-.light{
-    background:#fff;
-    border:1px solid #ddd;
-}
-
-.big-button{
-    padding:16px 24px;
-    font-size:17px;
-}
-
-input{
+input[type=text]{
     width:100%;
     padding:13px;
     border:1px solid #ddd;
     border-radius:10px;
-    margin:7px 0 15px;
+    margin:8px 0 15px;
+    font-size:16px;
+}
+
+input[type=file]{
+    width:100%;
+    padding:15px;
+    border:2px dashed #bbb;
+    border-radius:12px;
+    background:#fafafa;
+    margin:10px 0 15px;
+}
+
+button{
+    border:0;
+    border-radius:10px;
+    padding:12px 18px;
+    cursor:pointer;
+    background:#080808;
+    color:white;
+    margin:4px;
     font-size:15px;
 }
 
-.book-card,
-.chapter-card{
-    background:#fff;
-    border:1px solid #ddd;
-    border-radius:15px;
-    padding:18px;
+button:hover{
+    opacity:.9;
 }
 
-.reader-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-.page-preview{
-    width:100%;
-    max-height:650px;
-    object-fit:contain;
-    background:#eee;
-    border-radius:12px;
-}
-
-.progress-container{
-    height:14px;
-    background:#ddd;
-    border-radius:20px;
-    overflow:hidden;
-    margin:12px 0;
-}
-
-.progress-bar{
-    height:100%;
-    width:0%;
+button.yellow{
     background:#f3d000;
-    transition:.3s;
+    color:#080808;
 }
 
-.status{
-    padding:14px;
-    border-radius:10px;
-    background:#f7f7f7;
-    margin:12px 0;
-    font-weight:600;
+button.secondary{
+    background:#eee;
+    color:#080808;
 }
 
-.status.listening{
-    background:#e3f7e7;
+button.danger{
+    background:#d93025;
 }
 
-.status.paused{
-    background:#fff3c4;
-}
-
-.status.long-pause{
-    background:#ffdede;
-}
-
-.transcript{
-    min-height:110px;
-    background:#fafafa;
-    border:1px solid #eee;
-    border-radius:12px;
-    padding:15px;
-    line-height:1.7;
-}
-
-.interim{
-    color:#777;
-    font-style:italic;
-    margin-top:8px;
+button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
 }
 
 .hidden{
     display:none!important;
 }
 
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:16px;
+}
+
+.bookCard,
+.chapterCard{
+    background:white;
+    border:1px solid #e8e8e8;
+    border-radius:15px;
+    overflow:hidden;
+}
+
+.bookCard img,
+.chapterCard img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    background:#eee;
+}
+
+.body{
+    padding:16px;
+}
+
 .small{
-    font-size:13px;
     color:#666;
+    font-size:13px;
+}
+
+.pageList{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:15px;
+}
+
+.pageCard{
+    background:white;
+    border:1px solid #ddd;
+    border-radius:12px;
+    overflow:hidden;
+}
+
+.pageCard img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    background:#eee;
+}
+
+.pageCard .body{
+    padding:12px;
+}
+
+.readerGrid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.bookPage{
+    background:white;
+    padding:15px;
+    border-radius:15px;
+}
+
+.bookPage img{
+    width:100%;
+    max-height:650px;
+    object-fit:contain;
+    border-radius:10px;
+    background:#eee;
+}
+
+.reference{
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:15px;
+    line-height:1.7;
+    max-height:300px;
+    overflow:auto;
+}
+
+.transcript{
+    background:#080808;
+    color:white;
+    border-radius:12px;
+    padding:15px;
+    min-height:130px;
+    line-height:1.7;
+}
+
+.status{
+    background:#eee;
+    border-radius:10px;
+    padding:13px;
+    margin:10px 0;
+}
+
+.status.listening{
+    background:#ffe3e3;
+}
+
+.progressOuter{
+    height:18px;
+    background:#ddd;
+    border-radius:20px;
+    overflow:hidden;
+    margin:10px 0;
+}
+
+.progressInner{
+    height:100%;
+    width:0%;
+    background:#f3d000;
+    transition:.3s;
+}
+
+.score{
+    font-size:50px;
+    font-weight:bold;
+}
+
+.good{
+    color:#14833b;
+}
+
+.warning{
+    color:#b77700;
+}
+
+.bad{
+    color:#c62828;
+}
+
+.statGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;
+}
+
+.stat{
+    background:#f5f5f2;
+    border-radius:12px;
+    padding:15px;
+}
+
+.stat strong{
+    display:block;
+    font-size:25px;
+}
+
+.resultBox{
+    background:white;
+    border:1px solid #ddd;
+    border-radius:15px;
+    padding:20px;
+    margin-top:20px;
+}
+
+.wordResults{
+    line-height:2;
+}
+
+.word{
+    display:inline-block;
+    margin:2px;
+    padding:2px 7px;
+    border-radius:5px;
+}
+
+.word.correct{
+    background:#d8f5df;
+    color:#12652d;
+}
+
+.word.missing{
+    background:#ffdcdc;
+    color:#9d1c1c;
+    text-decoration:line-through;
+}
+
+.word.changed{
+    background:#fff0b3;
+    color:#795d00;
+}
+
+.word.extra{
+    background:#e4e4e4;
+    color:#555;
 }
 
 .center{
     text-align:center;
 }
 
-.score{
-    font-size:44px;
-    font-weight:bold;
+.fileInfo{
+    background:#f5f5f2;
+    border-radius:10px;
+    padding:12px;
+    margin-top:10px;
 }
 
-.report-stat{
-    background:#f7f7f7;
-    padding:16px;
-    border-radius:12px;
-}
+@media(max-width:750px){
 
-@media(max-width:600px){
-    main{padding:14px}
-    .card{padding:16px}
+    .readerGrid{
+        grid-template-columns:1fr;
+    }
+
+    .container{
+        padding:15px;
+    }
+
+    header{
+        padding:15px;
+    }
 }
 </style>
 </head>
@@ -208,345 +343,416 @@ input{
 <body>
 
 <header>
-    <h1>Appearich <span>AI Reading Supervisor</span></h1>
+    <div class="logo">AI Reading Supervision</div>
+    <div class="brand">Appearich</div>
 </header>
 
-<main>
+<div class="container">
 
-<!-- HOME -->
-<section id="homeSection" class="section active">
+<!-- =====================================================
+HOME
+===================================================== -->
 
-    <div class="card center">
+<section id="homeSection">
 
-        <h2>AI Reading Supervisor</h2>
+<div class="card">
 
-        <p>
-            The child reads the physical school book while
-            the app listens and supervises the reading.
-        </p>
+<h1>AI Reading Supervision</h1>
 
-        <button class="primary big-button"
-                onclick="openBooks()">
-            Open Books
-        </button>
+<p>
+Upload a textbook by chapters. The system automatically
+extracts the pages and creates a reading reference for AI
+supervision.
+</p>
 
-    </div>
+<button class="yellow"
+        onclick="showSection('createBookSection')">
+Create Book
+</button>
 
-</section>
+</div>
 
+<div class="card">
 
-<!-- BOOKS -->
-<section id="booksSection" class="section">
+<h2>Your Books</h2>
 
-    <div class="reader-top">
+<div id="booksContainer" class="grid"></div>
 
-        <h2>Books</h2>
-
-        <button class="primary"
-                onclick="showSection('createBookSection')">
-            + Create Book
-        </button>
-
-    </div>
-
-    <div id="booksContainer" class="grid"></div>
+</div>
 
 </section>
 
 
-<!-- CREATE BOOK -->
-<section id="createBookSection" class="section">
+<!-- =====================================================
+CREATE BOOK
+===================================================== -->
 
-    <div class="card">
+<section id="createBookSection" class="hidden">
 
-        <h2>Create Book</h2>
+<div class="card">
 
-        <label>Book title</label>
+<h2>Create Book</h2>
 
-        <input id="bookTitle"
-               placeholder="Example: English Standard Five">
+<label>Book name</label>
 
-        <button class="primary"
-                onclick="createBook()">
-            Create Book
-        </button>
+<input id="bookTitle"
+       type="text"
+       placeholder="Example: English Standard Five">
 
-        <button class="light"
-                onclick="openBooks()">
-            Cancel
-        </button>
+<button class="yellow"
+        onclick="createBook()">
+Create Book
+</button>
 
-    </div>
+<button class="secondary"
+        onclick="showSection('homeSection')">
+Cancel
+</button>
 
-</section>
-
-
-<!-- BOOK -->
-<section id="bookSection" class="section">
-
-    <div class="reader-top">
-
-        <div>
-            <h2 id="bookTitleDisplay"></h2>
-            <div id="bookInfo"></div>
-        </div>
-
-        <button class="secondary"
-                onclick="showSection('createChapterSection')">
-            + Add Chapter
-        </button>
-
-    </div>
-
-    <div id="chaptersContainer" class="grid"></div>
-
-    <br>
-
-    <button class="light"
-            onclick="openBooks()">
-        ← Back
-    </button>
+</div>
 
 </section>
 
 
-<!-- CREATE CHAPTER -->
-<section id="createChapterSection" class="section">
+<!-- =====================================================
+BOOK
+===================================================== -->
 
-    <div class="card">
+<section id="bookSection" class="hidden">
 
-        <h2>Create Chapter</h2>
+<div class="card">
 
-        <label>Chapter title</label>
+<button class="secondary"
+        onclick="showSection('homeSection')">
+← Books
+</button>
 
-        <input id="chapterTitle"
-               placeholder="Example: Chapter One">
+<h2 id="bookTitleDisplay"></h2>
 
-        <label>Select pages</label>
+<button class="yellow"
+        onclick="showSection('createChapterSection')">
++ Add Chapter
+</button>
 
-        <input id="pageFiles"
-               type="file"
-               multiple
-               accept="image/*,.pdf">
+</div>
 
-        <p class="small">
-            You can select multiple images, PDFs,
-            or a mixture of both.
-        </p>
+<div class="card">
 
-        <div id="selectedFiles"
-             class="small">
-            No files selected.
-        </div>
+<h2>Chapters</h2>
 
-        <br>
+<div id="chaptersContainer" class="grid"></div>
 
-        <button id="processButton"
-                class="primary"
-                onclick="createChapter()">
-            Create Chapter & Extract Pages
-        </button>
-
-        <button class="light"
-                onclick="openBook(currentBookId)">
-            Cancel
-        </button>
-
-        <div id="processingStatus"
-             class="status hidden">
-        </div>
-
-    </div>
+</div>
 
 </section>
 
 
-<!-- CHAPTER -->
-<section id="chapterSection" class="section">
+<!-- =====================================================
+CREATE CHAPTER
+===================================================== -->
 
-    <div class="reader-top">
+<section id="createChapterSection" class="hidden">
 
-        <div>
-            <h2 id="chapterTitleDisplay"></h2>
-            <div id="chapterInfo"></div>
-        </div>
+<div class="card">
 
-        <button class="primary big-button"
-                onclick="startReading()">
-            ▶ Start Reading
-        </button>
+<h2>Add Chapter</h2>
 
-    </div>
+<label>Chapter name</label>
 
-    <div id="chapterPages"
-         class="grid">
-    </div>
+<input id="chapterTitle"
+       type="text"
+       placeholder="Example: Chapter 1 - The New School">
 
-    <br>
+<label>Upload chapter pages</label>
 
-    <button class="light"
-            onclick="openBook(currentBookId)">
-        ← Back
-    </button>
+<input id="chapterFiles"
+       type="file"
+       multiple
+       accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
 
-</section>
+<div class="fileInfo">
 
+<strong>Supported:</strong>
 
-<!-- READER -->
-<section id="readerSection" class="section">
+<br>
 
-    <div class="card">
+📄 PDF files
 
-        <div class="reader-top">
+<br>
 
-            <div>
+🖼️ JPG / JPEG / PNG / WEBP images
 
-                <h2 id="readerChapterTitle"></h2>
+<br><br>
 
-                <div id="readerPageNumber"></div>
+You can select multiple files at once.
 
-            </div>
+A PDF can contain many pages.
 
-            <button class="danger"
-                    onclick="endReading()">
-                End Chapter
-            </button>
+</div>
 
-        </div>
+<div id="selectedFiles"></div>
 
+<div id="ocrStatus"></div>
 
-        <div class="progress-container">
+<button class="yellow"
+        id="extractButton"
+        onclick="processChapterFiles()">
+Extract Chapter
+</button>
 
-            <div id="chapterProgress"
-                 class="progress-bar">
-            </div>
+<button class="secondary"
+        onclick="openBook(currentBookId)">
+Cancel
+</button>
 
-        </div>
+</div>
 
-
-        <div id="readerStatus"
-             class="status">
-            Preparing...
-        </div>
-
-
-        <img id="readerImage"
-             class="page-preview"
-             alt="Current book page">
-
-
-        <div class="card">
-
-            <h3>Reading transcript</h3>
-
-            <div id="transcript"
-                 class="transcript">
-                Nothing spoken yet.
-            </div>
-
-            <div id="interim"
-                 class="interim">
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h3>Current page progress</h3>
-
-            <div id="wordPercent">
-                0%
-            </div>
-
-            <div class="progress-container">
-
-                <div id="wordProgress"
-                     class="progress-bar">
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- LONG PAUSE -->
-        <div id="longPauseCard"
-             class="card center hidden">
-
-            <h3>Reading Paused</h3>
-
-            <p>
-                You have been away for a while.
-            </p>
-
-            <p>
-                Tap below when you are ready to continue.
-            </p>
-
-            <button class="primary big-button"
-                    onclick="continueReading()">
-                ▶ Continue Reading
-            </button>
-
-        </div>
-
-
-        <button id="pauseButton"
-                class="secondary"
-                onclick="manualPause()">
-            Pause
-        </button>
-
-    </div>
+<div id="ocrPreview"></div>
 
 </section>
 
 
-<!-- REPORT -->
-<section id="reportSection" class="section">
+<!-- =====================================================
+CHAPTER
+===================================================== -->
 
-    <div class="card center">
+<section id="chapterSection" class="hidden">
 
-        <h2 id="reportTitle"></h2>
+<div class="card">
 
-        <div id="overallScore"
-             class="score">
-            0%
-        </div>
+<button class="secondary"
+        onclick="openBook(currentBookId)">
+← Book
+</button>
 
-        <p>
-            Chapter Reading Score
-        </p>
+<h2 id="chapterTitleDisplay"></h2>
 
-    </div>
+<p id="chapterDetails"></p>
 
-    <div id="reportStats"
-         class="grid">
-    </div>
+<button class="yellow"
+        onclick="startChapter()">
+Start / Continue Reading
+</button>
 
-    <div class="card">
+</div>
 
-        <h3>Page Results</h3>
+<div class="card">
 
-        <div id="pageResults"></div>
+<h3>Chapter Pages</h3>
 
-    </div>
+<div id="chapterPages"
+     class="pageList">
+</div>
 
-    <button class="primary"
-            onclick="openBook(currentBookId)">
-        Back to Book
-    </button>
+</div>
 
 </section>
 
-</main>
+
+<!-- =====================================================
+READER
+===================================================== -->
+
+<section id="readerSection" class="hidden">
+
+<div class="card">
+
+<button class="secondary"
+        onclick="openChapter(currentBookId,currentChapterId)">
+← Exit Reading
+</button>
+
+<h2 id="readerChapterTitle"></h2>
+
+<div id="readingStatus"
+     class="status">
+Ready
+</div>
+
+<p>
+Chapter progress:
+<strong id="progressText">0%</strong>
+</p>
+
+<div class="progressOuter">
+
+<div id="progressBar"
+     class="progressInner">
+</div>
+
+</div>
+
+</div>
+
+
+<div class="readerGrid">
+
+<!-- PAGE -->
+<div class="bookPage">
+
+<h3 id="readerPageTitle">
+Page 1
+</h3>
+
+<img id="readerImage">
+
+<p class="small">
+
+Read from the physical textbook.
+The phone acts as the AI supervisor.
+
+</p>
+
+</div>
+
+
+<!-- AI -->
+<div>
+
+<div class="card">
+
+<h3>Reading Supervision</h3>
+
+<button id="startButton"
+        class="yellow"
+        onclick="startRecording()">
+🎤 Start Reading
+</button>
+
+<button id="stopButton"
+        class="danger"
+        onclick="stopRecording()"
+        disabled>
+Stop & Check
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h3>Text AI Is Expecting</h3>
+
+<div id="referenceText"
+     class="reference">
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h3>What AI Heard</h3>
+
+<div id="liveTranscript"
+     class="transcript">
+Nothing recorded yet.
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div id="pageResult"></div>
+
+</section>
+
+
+<!-- =====================================================
+REPORT
+===================================================== -->
+
+<section id="reportSection" class="hidden">
+
+<div class="card center">
+
+<h1>Chapter Completed 🎉</h1>
+
+<h2 id="reportChapterName"></h2>
+
+<div id="overallScore"
+     class="score">
+0%
+</div>
+
+<p>
+Overall reading accuracy
+</p>
+
+</div>
+
+
+<div class="card">
+
+<h2>Chapter Report</h2>
+
+<div class="statGrid">
+
+<div class="stat">
+<strong id="reportPages">0</strong>
+Pages
+</div>
+
+<div class="stat">
+<strong id="reportCorrect">0</strong>
+Correct
+</div>
+
+<div class="stat">
+<strong id="reportMissing">0</strong>
+Missing
+</div>
+
+<div class="stat">
+<strong id="reportChanged">0</strong>
+Changed
+</div>
+
+<div class="stat">
+<strong id="reportExtra">0</strong>
+Extra
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Page-by-Page Results</h3>
+
+<div id="reportPagesList"></div>
+
+</div>
+
+
+<div class="card center">
+
+<button class="yellow"
+        onclick="openChapter(currentBookId,currentChapterId)">
+Back to Chapter
+</button>
+
+<button class="secondary"
+        onclick="openBook(currentBookId)">
+Back to Book
+</button>
+
+</div>
+
+</section>
+
+</div>
 
 
 <script type="module">
 
 /* =====================================================
-   IMPORT PDF.JS
+PDF.JS
 ===================================================== */
 
 import * as pdfjsLib from
@@ -557,3505 +763,2528 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 
 /* =====================================================
-   INDEXED DB
+DATA
 ===================================================== */
 
-const DB_NAME = "AppearichReadingDB";
-const DB_VERSION = 1;
-
-let db = null;
-
-const BOOK_STORE = "books";
-const PAGE_STORE = "pages";
-
-
-function openDatabase(){
-
-    return new Promise((resolve,reject)=>{
-
-        const request =
-            indexedDB.open(
-                DB_NAME,
-                DB_VERSION
-            );
-
-        request.onupgradeneeded =
-        function(event){
-
-            const database =
-                event.target.result;
-
-            if(!database.objectStoreNames.contains(BOOK_STORE)){
-
-                database.createObjectStore(
-                    BOOK_STORE,
-                    {keyPath:"id"}
-                );
-            }
-
-            if(!database.objectStoreNames.contains(PAGE_STORE)){
-
-                const pageStore =
-                    database.createObjectStore(
-                        PAGE_STORE,
-                        {keyPath:"id"}
-                    );
-
-                pageStore.createIndex(
-                    "chapterId",
-                    "chapterId",
-                    {unique:false}
-                );
-            }
-        };
-
-        request.onsuccess =
-        function(){
-
-            db =
-                request.result;
-
-            resolve(db);
-        };
-
-        request.onerror =
-        function(){
-
-            reject(
-                request.error
-            );
-        };
-    });
-}
-
-
-function dbPut(storeName,value){
-
-    return new Promise((resolve,reject)=>{
-
-        const tx =
-            db.transaction(
-                storeName,
-                "readwrite"
-            );
-
-        tx.objectStore(storeName)
-            .put(value);
-
-        tx.oncomplete =
-            () => resolve();
-
-        tx.onerror =
-            () => reject(tx.error);
-    });
-}
-
-
-function dbGet(storeName,key){
-
-    return new Promise((resolve,reject)=>{
-
-        const tx =
-            db.transaction(
-                storeName,
-                "readonly"
-            );
-
-        const request =
-            tx.objectStore(storeName)
-                .get(key);
-
-        request.onsuccess =
-            () => resolve(request.result);
-
-        request.onerror =
-            () => reject(request.error);
-    });
-}
-
-
-function dbGetAll(storeName){
-
-    return new Promise((resolve,reject)=>{
-
-        const tx =
-            db.transaction(
-                storeName,
-                "readonly"
-            );
-
-        const request =
-            tx.objectStore(storeName)
-                .getAll();
-
-        request.onsuccess =
-            () => resolve(request.result);
-
-        request.onerror =
-            () => reject(request.error);
-    });
-}
-
-
-function dbDelete(storeName,key){
-
-    return new Promise((resolve,reject)=>{
-
-        const tx =
-            db.transaction(
-                storeName,
-                "readwrite"
-            );
-
-        tx.objectStore(storeName)
-            .delete(key);
-
-        tx.oncomplete =
-            () => resolve();
-
-        tx.onerror =
-            () => reject(tx.error);
-    });
-}
-
-
-function dbGetPages(chapterId){
-
-    return new Promise((resolve,reject)=>{
-
-        const tx =
-            db.transaction(
-                PAGE_STORE,
-                "readonly"
-            );
-
-        const index =
-            tx.objectStore(PAGE_STORE)
-              .index("chapterId");
-
-        const request =
-            index.getAll(chapterId);
-
-        request.onsuccess =
-            () => {
-
-                const pages =
-                    request.result
-                        .sort(
-                            (a,b) =>
-                            a.pageNumber -
-                            b.pageNumber
-                        );
-
-                resolve(pages);
-            };
-
-        request.onerror =
-            () => reject(request.error);
-    });
-}
-
-
-/* =====================================================
-   APP STATE
-===================================================== */
-
-let books = [];
+let books =
+JSON.parse(
+localStorage.getItem("appearich_reading_books") || "[]"
+);
 
 let currentBookId = null;
 let currentChapterId = null;
 
 let currentPageIndex = 0;
 
-let currentPageTranscript = "";
-
 let recognition = null;
 
-let recognitionRunning = false;
-let recognitionRestarting = false;
+let isRecording = false;
 
-let readingActive = false;
-let manualPauseState = false;
-let longPauseState = false;
-let chapterFinished = false;
+let finalTranscript = "";
 
-let lastSpeechTime = 0;
-
-let silenceTimer = null;
-let reminderTimer = null;
-let longPauseTimer = null;
-let pageCompletionTimer = null;
-
-let ignoreSpeechUntil = 0;
+let shouldCompareAfterStop = false;
 
 
 /* =====================================================
-   INITIALIZATION
+STORAGE
 ===================================================== */
 
-await openDatabase();
+function saveBooks(){
 
-await loadBooks();
+localStorage.setItem(
+"appearich_reading_books",
+JSON.stringify(books)
+);
 
-renderBooks();
-
-
-/* =====================================================
-   BOOK DATA
-===================================================== */
-
-async function loadBooks(){
-
-    books =
-        await dbGetAll(BOOK_STORE);
-}
-
-
-async function saveBook(book){
-
-    await dbPut(
-        BOOK_STORE,
-        book
-    );
-}
-
-
-async function getBook(id){
-
-    return await dbGet(
-        BOOK_STORE,
-        id
-    );
-}
-
-
-async function getChapter(){
-
-    const book =
-        await getBook(currentBookId);
-
-    if(!book)
-        return null;
-
-    return book.chapters.find(
-        c => c.id === currentChapterId
-    );
 }
 
 
 /* =====================================================
-   NAVIGATION
+SECTION NAVIGATION
 ===================================================== */
 
-window.showSection =
-function(id){
+window.showSection = function(id){
 
-    document
-        .querySelectorAll(".section")
-        .forEach(
-            s => s.classList.remove("active")
-        );
+document.querySelectorAll("section")
+.forEach(s=>s.classList.add("hidden"));
 
-    document
-        .getElementById(id)
-        .classList.add("active");
-};
+document.getElementById(id)
+.classList.remove("hidden");
 
-
-window.openBooks =
-async function(){
-
-    await loadBooks();
-
-    renderBooks();
-
-    showSection("booksSection");
 };
 
 
 /* =====================================================
-   BOOKS
+BOOKS
 ===================================================== */
 
 function renderBooks(){
 
-    const container =
-        document.getElementById(
-            "booksContainer"
-        );
+const container =
+document.getElementById("booksContainer");
 
-    container.innerHTML = "";
+container.innerHTML="";
 
-    if(books.length === 0){
+if(books.length===0){
 
-        container.innerHTML = `
-            <div class="card">
-                <h3>No books yet</h3>
-                <p>Create your first book.</p>
-            </div>
-        `;
+container.innerHTML=`
+<p class="small">
+No books created yet.
+</p>
+`;
 
-        return;
-    }
+return;
+}
 
+books.forEach(book=>{
 
-    books.forEach(book => {
+let cover="";
 
-        const card =
-            document.createElement("div");
+for(const chapter of book.chapters){
 
-        card.className =
-            "book-card";
+if(chapter.pages.length){
 
-        card.innerHTML = `
+cover =
+chapter.pages[0].image;
 
-            <h3>
-                ${escapeHTML(book.title)}
-            </h3>
+break;
 
-            <p>
-                ${book.chapters.length}
-                chapter(s)
-            </p>
+}
 
-            <button class="primary">
-                Open
-            </button>
+}
 
-            <button class="danger">
-                Delete
-            </button>
-        `;
+const div =
+document.createElement("div");
 
+div.className="bookCard";
 
-        card.querySelector(
-            ".primary"
-        ).onclick =
-        () => openBook(book.id);
+div.innerHTML=`
 
+${
+cover
+?
+`<img src="${cover}">`
+:
+`<div style="height:180px;background:#eee"></div>`
+}
 
-        card.querySelector(
-            ".danger"
-        ).onclick =
-        () => deleteBook(book.id);
+<div class="body">
 
+<h3>
+${escapeHTML(book.title)}
+</h3>
 
-        container.appendChild(card);
-    });
+<p class="small">
+${book.chapters.length} chapter(s)
+</p>
+
+<button class="yellow"
+onclick="openBook('${book.id}')">
+Open
+</button>
+
+<button class="danger"
+onclick="deleteBook('${book.id}')">
+Delete
+</button>
+
+</div>
+`;
+
+container.appendChild(div);
+
+});
+
 }
 
 
-window.createBook =
-async function(){
+window.createBook = function(){
 
-    const title =
-        document
-        .getElementById("bookTitle")
-        .value
-        .trim();
+const title =
+document.getElementById("bookTitle")
+.value.trim();
 
-    if(!title){
+if(!title){
 
-        alert("Enter a book title.");
+alert("Enter a book title.");
 
-        return;
-    }
+return;
 
+}
 
-    const book = {
+const book={
 
-        id:uid(),
+id:Date.now().toString(),
 
-        title,
+title:title,
 
-        chapters:[]
-    };
+chapters:[]
 
+};
 
-    await saveBook(book);
+books.push(book);
 
-    books.push(book);
+saveBooks();
 
-    document
-        .getElementById("bookTitle")
-        .value = "";
+document.getElementById("bookTitle")
+.value="";
 
-    await openBook(book.id);
+openBook(book.id);
+
 };
 
 
-async function openBook(id){
+window.deleteBook = function(id){
 
-    currentBookId = id;
+if(!confirm("Delete this book?"))
+return;
 
-    const book =
-        await getBook(id);
+books =
+books.filter(book=>book.id!==id);
 
-    if(!book)
-        return;
+saveBooks();
 
-    document
-        .getElementById("bookTitleDisplay")
-        .textContent =
-        book.title;
+renderBooks();
 
-    document
-        .getElementById("bookInfo")
-        .textContent =
-        `${book.chapters.length} chapter(s)`;
-
-    renderChapters(book);
-
-    showSection("bookSection");
-}
-
-
-async function deleteBook(id){
-
-    if(!confirm(
-        "Delete this book?"
-    ))
-        return;
-
-
-    const book =
-        await getBook(id);
-
-    if(!book)
-        return;
-
-
-    /*
-     * Delete all pages belonging
-     * to all chapters.
-     */
-
-    for(
-        const chapter of book.chapters
-    ){
-
-        const pages =
-            await dbGetPages(
-                chapter.id
-            );
-
-        for(
-            const page of pages
-        ){
-
-            await dbDelete(
-                PAGE_STORE,
-                page.id
-            );
-        }
-    }
-
-
-    await dbDelete(
-        BOOK_STORE,
-        id
-    );
-
-
-    await loadBooks();
-
-    renderBooks();
-
-    showSection("booksSection");
-}
+};
 
 
 /* =====================================================
-   CHAPTERS
+OPEN BOOK
 ===================================================== */
 
-function renderChapters(book){
+window.openBook = function(id){
 
-    const container =
-        document.getElementById(
-            "chaptersContainer"
-        );
+currentBookId=id;
 
-    container.innerHTML = "";
+const book =
+books.find(b=>b.id===id);
 
+if(!book)return;
 
-    if(book.chapters.length === 0){
+document.getElementById(
+"bookTitleDisplay"
+).textContent=book.title;
 
-        container.innerHTML = `
-            <div class="card">
-                <h3>No chapters yet</h3>
-                <p>Add a chapter with pages.</p>
-            </div>
-        `;
+renderChapters();
 
-        return;
-    }
+showSection("bookSection");
 
-
-    book.chapters.forEach(
-        chapter => {
-
-            const card =
-                document.createElement("div");
-
-            card.className =
-                "chapter-card";
-
-            card.innerHTML = `
-
-                <h3>
-                    ${escapeHTML(chapter.title)}
-                </h3>
-
-                <p>
-                    ${chapter.pageCount}
-                    page(s)
-                </p>
-
-                <p>
-                    Status:
-                    ${
-                        chapter.completed
-                        ? "Completed"
-                        : "In progress"
-                    }
-                </p>
-
-                <button class="primary">
-                    Open
-                </button>
-
-                <button class="danger">
-                    Delete
-                </button>
-            `;
-
-
-            card.querySelector(
-                ".primary"
-            ).onclick =
-            () => openChapter(chapter.id);
-
-
-            card.querySelector(
-                ".danger"
-            ).onclick =
-            () => deleteChapter(chapter.id);
-
-
-            container.appendChild(card);
-        }
-    );
-}
-
-
-async function openChapter(id){
-
-    currentChapterId = id;
-
-    const chapter =
-        await getChapter();
-
-    if(!chapter)
-        return;
-
-    document
-        .getElementById(
-            "chapterTitleDisplay"
-        )
-        .textContent =
-        chapter.title;
-
-    document
-        .getElementById(
-            "chapterInfo"
-        )
-        .textContent =
-        `${chapter.pageCount} page(s)`;
-
-
-    await renderChapterPages();
-
-    showSection("chapterSection");
-}
-
-
-async function renderChapterPages(){
-
-    const container =
-        document.getElementById(
-            "chapterPages"
-        );
-
-    container.innerHTML = "";
-
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
-
-
-    for(
-        const page of pages
-    ){
-
-        const card =
-            document.createElement("div");
-
-        card.className =
-            "chapter-card";
-
-        const img =
-            document.createElement("img");
-
-        img.src =
-            page.image;
-
-        img.style.width =
-            "100%";
-
-        img.style.maxHeight =
-            "280px";
-
-        img.style.objectFit =
-            "contain";
-
-
-        card.innerHTML = `
-            <h3>
-                Page ${page.pageNumber}
-            </h3>
-        `;
-
-        card.appendChild(img);
-
-
-        card.innerHTML += `
-
-            <p>
-                ${
-                    page.result
-                    ? `Score: ${page.result.score}%`
-                    : "Not read yet"
-                }
-            </p>
-        `;
-
-
-        container.appendChild(card);
-    }
-}
-
-
-async function deleteChapter(id){
-
-    if(!confirm(
-        "Delete this chapter?"
-    ))
-        return;
-
-
-    const pages =
-        await dbGetPages(id);
-
-
-    for(
-        const page of pages
-    ){
-
-        await dbDelete(
-            PAGE_STORE,
-            page.id
-        );
-    }
-
-
-    const book =
-        await getBook(currentBookId);
-
-
-    book.chapters =
-        book.chapters.filter(
-            c => c.id !== id
-        );
-
-
-    await saveBook(book);
-
-    await openBook(currentBookId);
-}
+};
 
 
 /* =====================================================
-   FILE DISPLAY
+CHAPTERS
 ===================================================== */
 
-document
-.getElementById("pageFiles")
-.addEventListener(
-    "change",
-    function(){
+function renderChapters(){
 
-        const files =
-            Array.from(
-                this.files
-            );
+const book =
+books.find(b=>b.id===currentBookId);
 
-        const box =
-            document.getElementById(
-                "selectedFiles"
-            );
+const container =
+document.getElementById("chaptersContainer");
+
+container.innerHTML="";
+
+if(book.chapters.length===0){
+
+container.innerHTML=`
+<p class="small">
+No chapters yet.
+</p>
+`;
+
+return;
+
+}
+
+book.chapters.forEach(chapter=>{
+
+const firstPage =
+chapter.pages[0];
+
+const div =
+document.createElement("div");
+
+div.className="chapterCard";
+
+div.innerHTML=`
+
+${
+firstPage
+?
+`<img src="${firstPage.image}">`
+:
+`<div style="height:180px;background:#eee"></div>`
+}
+
+<div class="body">
+
+<h3>
+${escapeHTML(chapter.title)}
+</h3>
+
+<p class="small">
+${chapter.pages.length} page(s)
+</p>
+
+<button class="yellow"
+onclick="openChapter('${currentBookId}','${chapter.id}')">
+Open Chapter
+</button>
+
+<button class="danger"
+onclick="deleteChapter('${chapter.id}')">
+Delete
+</button>
+
+</div>
+`;
+
+container.appendChild(div);
+
+});
+
+}
 
 
-        if(!files.length){
+window.deleteChapter = function(id){
 
-            box.textContent =
-                "No files selected.";
+if(!confirm("Delete this chapter?"))
+return;
 
-            return;
-        }
+const book =
+books.find(b=>b.id===currentBookId);
+
+book.chapters =
+book.chapters.filter(c=>c.id!==id);
+
+saveBooks();
+
+renderChapters();
+
+};
 
 
-        box.innerHTML =
-            files.map(
-                file =>
-                `<div>
-                    ${escapeHTML(file.name)}
-                </div>`
-            ).join("");
-    }
+/* =====================================================
+FILE DISPLAY
+===================================================== */
+
+document.getElementById(
+"chapterFiles"
+).addEventListener("change",function(){
+
+const files =
+Array.from(this.files);
+
+const box =
+document.getElementById("selectedFiles");
+
+box.innerHTML="";
+
+files.forEach((file,index)=>{
+
+box.innerHTML += `
+
+<div class="fileInfo">
+
+<strong>
+${index+1}. ${escapeHTML(file.name)}
+</strong>
+
+<br>
+
+<span class="small">
+${formatBytes(file.size)}
+</span>
+
+</div>
+
+`;
+
+});
+
+});
+
+
+/* =====================================================
+PROCESS CHAPTER FILES
+===================================================== */
+
+window.processChapterFiles =
+async function(){
+
+const title =
+document.getElementById("chapterTitle")
+.value.trim();
+
+const files =
+Array.from(
+document.getElementById("chapterFiles").files
 );
 
+if(!title){
 
-/* =====================================================
-   CREATE CHAPTER
-===================================================== */
+alert("Enter a chapter name.");
 
-window.createChapter =
-async function(){
+return;
 
-    const title =
-        document
-        .getElementById(
-            "chapterTitle"
-        )
-        .value
-        .trim();
+}
 
+if(files.length===0){
 
-    const files =
-        Array.from(
-            document
-            .getElementById(
-                "pageFiles"
-            )
-            .files
-        );
+alert("Select PDF or image files.");
 
+return;
 
-    if(!title){
+}
 
-        alert(
-            "Enter a chapter title."
-        );
+const button =
+document.getElementById("extractButton");
 
-        return;
-    }
+button.disabled=true;
 
+const status =
+document.getElementById("ocrStatus");
 
-    if(!files.length){
+const preview =
+document.getElementById("ocrPreview");
 
-        alert(
-            "Select at least one file."
-        );
+preview.innerHTML="";
 
-        return;
-    }
+const pages=[];
 
+let pageNumber=1;
 
-    const button =
-        document.getElementById(
-            "processButton"
-        );
 
+/*
+Process every selected file.
+*/
 
-    const status =
-        document.getElementById(
-            "processingStatus"
-        );
+for(let fileIndex=0;
+    fileIndex<files.length;
+    fileIndex++){
 
+const file=files[fileIndex];
 
-    button.disabled = true;
+status.innerHTML=`
 
-    status.classList.remove(
-        "hidden"
-    );
+<div class="status">
 
+Processing file
+${fileIndex+1}/${files.length}
 
-    try{
+<br>
 
-        const chapterId =
-            uid();
+<strong>
+${escapeHTML(file.name)}
+</strong>
 
+</div>
 
-        const chapter = {
+`;
 
-            id:chapterId,
 
-            title,
+/* =================================================
+PDF
+================================================= */
 
-            pageCount:0,
+if(
+file.type==="application/pdf" ||
+file.name.toLowerCase().endsWith(".pdf")
+){
 
-            currentPosition:0,
+try{
 
-            completed:false,
+const pdf =
+await pdfjsLib.getDocument({
+data:await file.arrayBuffer()
+}).promise;
 
-            activeTranscript:"",
 
-            lastReadAt:null,
+for(
+let pdfPageNumber=1;
+pdfPageNumber<=pdf.numPages;
+pdfPageNumber++
+){
 
-            lastScore:0
-        };
+status.innerHTML=`
 
+<div class="status">
 
-        const pages = [];
+Reading PDF:
+${escapeHTML(file.name)}
 
+<br>
 
-        let pageNumber = 1;
+Page ${pdfPageNumber}
+of ${pdf.numPages}
 
+</div>
 
-        for(
-            const file of files
-        ){
+`;
 
-            status.textContent =
-                `Processing ${file.name}...`;
 
+const pdfPage =
+await pdf.getPage(pdfPageNumber);
 
-            if(
-                file.type ===
-                "application/pdf" ||
-                file.name
-                    .toLowerCase()
-                    .endsWith(".pdf")
-            ){
 
-                const pdfPages =
-                    await processPDF(
-                        file,
-                        chapterId,
-                        pageNumber
-                    );
+/*
+First try extracting actual PDF text.
+*/
 
+let extractedText="";
 
-                for(
-                    const page
-                    of pdfPages
-                ){
+try{
 
-                    pages.push(page);
+const textContent =
+await pdfPage.getTextContent();
 
-                    pageNumber++;
-                }
+extractedText =
+textContent.items
+.map(item=>item.str)
+.join(" ")
+.trim();
 
-            }else{
+}catch(error){
 
-                const page =
-                    await processImage(
-                        file,
-                        chapterId,
-                        pageNumber
-                    );
+console.log(
+"PDF text extraction failed",
+error
+);
 
+}
 
-                pages.push(page);
 
-                pageNumber++;
-            }
-        }
+/*
+Render page to canvas.
+We need the image even when
+the PDF already has text.
+*/
 
+const viewport =
+pdfPage.getViewport({
+scale:1.5
+});
 
-        chapter.pageCount =
-            pages.length;
+const canvas =
+document.createElement("canvas");
 
+canvas.width =
+Math.ceil(viewport.width);
 
-        /*
-         * Save the book first.
-         */
+canvas.height =
+Math.ceil(viewport.height);
 
-        const book =
-            await getBook(
-                currentBookId
-            );
+const context =
+canvas.getContext("2d");
 
+await pdfPage.render({
+canvasContext:context,
+viewport:viewport
+}).promise;
 
-        book.chapters.push(
-            chapter
-        );
+const image =
+canvas.toDataURL("image/jpeg",.82);
 
 
-        await saveBook(book);
+/*
+If PDF has no selectable text,
+use OCR.
+*/
 
+if(!extractedText){
 
-        /*
-         * Save page images and OCR
-         * text in IndexedDB.
-         */
+status.innerHTML=`
 
-        for(
-            const page of pages
-        ){
+<div class="status">
 
-            status.textContent =
-                `Saving page ${page.pageNumber} of ${pages.length}...`;
+PDF page ${pdfPageNumber}
+has no selectable text.
 
-            await dbPut(
-                PAGE_STORE,
-                page
-            );
-        }
+Running OCR...
 
+</div>
 
-        await loadBooks();
+`;
 
+try{
 
-        status.textContent =
-            `Chapter created successfully: ${pages.length} page(s).`;
+const ocr =
+await Tesseract.recognize(
+image,
+"eng",
+{
+logger:info=>{
 
+if(info.status){
 
-        button.disabled = false;
+const percent =
+info.progress
+?
+Math.round(
+info.progress*100
+)
+:
+"";
 
+status.innerHTML=`
 
-        setTimeout(
-            () =>
-            openChapter(chapterId),
-            700
-        );
+<div class="status">
 
+OCR:
+Page ${pdfPageNumber}/${pdf.numPages}
 
-    }catch(error){
+<br>
 
-        console.error(error);
+${info.status}
 
-        status.textContent =
-            "Error processing files: " +
-            error.message;
+${percent
+?
+" "+percent+"%"
+:
+""}
 
-        button.disabled = false;
-    }
+</div>
+
+`;
+
+}
+
+}
+}
+);
+
+extractedText =
+cleanOCR(
+ocr.data.text
+);
+
+}catch(error){
+
+console.error(
+"PDF OCR failed",
+error
+);
+
+extractedText="";
+
+}
+
+}
+
+
+/*
+Save page.
+*/
+
+pages.push({
+
+pageNumber:pageNumber++,
+
+image:image,
+
+text:cleanOCR(extractedText),
+
+source:file.name,
+
+sourceType:"pdf",
+
+pdfPage:pdfPageNumber,
+
+transcript:"",
+
+result:null
+
+});
+
+showOCRPreview(
+pages[pages.length-1]
+);
+
+}
+
+}catch(error){
+
+console.error(error);
+
+alert(
+"Could not process PDF: "+
+file.name
+);
+
+}
+
+}
+
+
+/* =================================================
+IMAGE
+================================================= */
+
+else if(file.type.startsWith("image/")){
+
+try{
+
+const image =
+await fileToDataURL(file);
+
+status.innerHTML=`
+
+<div class="status">
+
+Running OCR on image
+${fileIndex+1}/${files.length}
+
+</div>
+
+`;
+
+const ocr =
+await Tesseract.recognize(
+image,
+"eng",
+{
+logger:info=>{
+
+if(info.status){
+
+const percent =
+info.progress
+?
+Math.round(info.progress*100)
+:
+"";
+
+status.innerHTML=`
+
+<div class="status">
+
+OCR:
+
+${info.status}
+
+${percent
+?
+" "+percent+"%"
+:
+""}
+
+</div>
+
+`;
+
+}
+
+}
+}
+);
+
+const extractedText =
+cleanOCR(
+ocr.data.text
+);
+
+pages.push({
+
+pageNumber:pageNumber++,
+
+image:image,
+
+text:extractedText,
+
+source:file.name,
+
+sourceType:"image",
+
+transcript:"",
+
+result:null
+
+});
+
+showOCRPreview(
+pages[pages.length-1]
+);
+
+}catch(error){
+
+console.error(error);
+
+alert(
+"Could not process image: "+
+file.name
+);
+
+}
+
+}
+
+else{
+
+alert(
+"Unsupported file: "+file.name
+);
+
+}
+
+}
+
+
+/* =================================================
+SAVE CHAPTER
+================================================= */
+
+if(pages.length===0){
+
+status.innerHTML=`
+<div class="status">
+No pages were successfully processed.
+</div>
+`;
+
+button.disabled=false;
+
+return;
+
+}
+
+const book =
+books.find(
+b=>b.id===currentBookId
+);
+
+const chapter={
+
+id:Date.now().toString(),
+
+title:title,
+
+pages:pages,
+
+currentPosition:0,
+
+completed:false,
+
+lastScore:null
+
+};
+
+book.chapters.push(chapter);
+
+saveBooks();
+
+status.innerHTML=`
+
+<div class="status">
+
+✓ Chapter created successfully.
+
+<br>
+
+${pages.length} page(s) processed.
+
+</div>
+
+`;
+
+button.disabled=false;
+
+setTimeout(()=>{
+
+document.getElementById(
+"chapterTitle"
+).value="";
+
+document.getElementById(
+"chapterFiles"
+).value="";
+
+openChapter(
+currentBookId,
+chapter.id
+);
+
+},700);
+
 };
 
 
 /* =====================================================
-   IMAGE OCR
+OCR PREVIEW
 ===================================================== */
 
-async function processImage(
-    file,
-    chapterId,
-    pageNumber
-){
+function showOCRPreview(page){
 
-    const image =
-        await fileToDataURL(file);
+const preview =
+document.getElementById("ocrPreview");
 
+preview.innerHTML += `
 
-    const status =
-        document.getElementById(
-            "processingStatus"
-        );
+<div class="card">
 
+<h3>
+Page ${page.pageNumber}
+</h3>
 
-    status.textContent =
-        `OCR reading page ${pageNumber}...`;
+<img src="${page.image}"
+style="
+width:160px;
+height:190px;
+object-fit:contain;
+border-radius:8px;
+background:#eee;
+">
 
+<p class="small">
 
-    const result =
-        await Tesseract.recognize(
-            image,
-            "eng",
-            {
-                logger:data => {
+<strong>
+Extracted text:
+</strong>
 
-                    if(
-                        data.status
-                    ){
+<br>
 
-                        const percent =
-                            data.progress
-                            ? Math.round(
-                                data.progress *
-                                100
-                              )
-                            : "";
+${
+escapeHTML(
+page.text.substring(0,600)
+)
+}
 
-                        status.textContent =
-                            `Page ${pageNumber}: ${data.status} ${percent}%`;
-                    }
-                }
-            }
-        );
+${page.text.length>600?"...":""}
 
+</p>
 
-    return {
+</div>
 
-        id:uid(),
+`;
 
-        chapterId,
-
-        pageNumber,
-
-        image,
-
-        text:
-            result.data.text || "",
-
-        transcript:"",
-
-        result:null,
-
-        source:file.name,
-
-        sourceType:"image"
-    };
 }
 
 
 /* =====================================================
-   PDF PROCESSING
+OPEN CHAPTER
 ===================================================== */
 
-async function processPDF(
-    file,
-    chapterId,
-    startingPage
-){
+window.openChapter =
+function(bookId,chapterId){
 
-    const buffer =
-        await file.arrayBuffer();
+currentBookId=bookId;
 
+currentChapterId=chapterId;
 
-    const pdf =
-        await pdfjsLib.getDocument({
-            data:buffer
-        }).promise;
+const book =
+books.find(
+b=>b.id===bookId
+);
 
+const chapter =
+book?.chapters.find(
+c=>c.id===chapterId
+);
 
-    const pages = [];
+if(!chapter)return;
 
+document.getElementById(
+"chapterTitleDisplay"
+).textContent=
+chapter.title;
 
-    for(
-        let i=1;
-        i<=pdf.numPages;
-        i++
-    ){
+document.getElementById(
+"chapterDetails"
+).textContent=
+`${chapter.pages.length} pages`;
 
-        const status =
-            document.getElementById(
-                "processingStatus"
-            );
+renderChapterPages(chapter);
 
+showSection("chapterSection");
 
-        status.textContent =
-            `Rendering PDF page ${i} of ${pdf.numPages}...`;
-
-
-        const pdfPage =
-            await pdf.getPage(i);
-
-
-        const viewport =
-            pdfPage.getViewport({
-                scale:1.5
-            });
-
-
-        const canvas =
-            document.createElement(
-                "canvas"
-            );
-
-
-        canvas.width =
-            viewport.width;
-
-        canvas.height =
-            viewport.height;
-
-
-        const context =
-            canvas.getContext(
-                "2d"
-            );
-
-
-        await pdfPage.render({
-
-            canvasContext:context,
-
-            viewport
-
-        }).promise;
-
-
-        const image =
-            canvas.toDataURL(
-                "image/jpeg",
-                .85
-            );
-
-
-        let text = "";
-
-
-        try{
-
-            const textContent =
-                await pdfPage.getTextContent();
-
-
-            text =
-                textContent.items
-                    .map(
-                        item => item.str
-                    )
-                    .join(" ")
-                    .trim();
-
-        }catch(error){
-
-            console.warn(
-                error
-            );
-        }
-
-
-        /*
-         * Scanned PDF:
-         * OCR the page if selectable
-         * text is missing.
-         */
-
-        if(
-            text.length < 20
-        ){
-
-            status.textContent =
-                `OCR scanning PDF page ${i} of ${pdf.numPages}...`;
-
-
-            const ocr =
-                await Tesseract.recognize(
-                    image,
-                    "eng"
-                );
-
-
-            text =
-                ocr.data.text || "";
-        }
-
-
-        pages.push({
-
-            id:uid(),
-
-            chapterId,
-
-            pageNumber:
-                startingPage +
-                i -
-                1,
-
-            image,
-
-            text,
-
-            transcript:"",
-
-            result:null,
-
-            source:file.name,
-
-            sourceType:"pdf",
-
-            pdfPage:i
-        });
-    }
-
-
-    return pages;
-}
-
-
-/* =====================================================
-   START READING
-===================================================== */
-
-window.startReading =
-async function(){
-
-    const chapter =
-        await getChapter();
-
-    if(!chapter)
-        return;
-
-
-    if(!setupRecognition())
-        return;
-
-
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
-
-
-    /*
-     * Find first unfinished page.
-     */
-
-    let index =
-        chapter.currentPosition || 0;
-
-
-    for(
-        let i=0;
-        i<pages.length;
-        i++
-    ){
-
-        if(
-            !pages[i].result
-        ){
-
-            index = i;
-
-            break;
-        }
-    }
-
-
-    if(
-        index >= pages.length
-    ){
-
-        showReport();
-
-        return;
-    }
-
-
-    currentPageIndex =
-        index;
-
-
-    const page =
-        pages[index];
-
-
-    currentPageTranscript =
-        page.transcript ||
-        chapter.activeTranscript ||
-        "";
-
-
-    readingActive = true;
-
-    manualPauseState = false;
-
-    longPauseState = false;
-
-    chapterFinished = false;
-
-
-    await updateReader();
-
-
-    showSection(
-        "readerSection"
-    );
-
-
-    if(
-        currentPageTranscript
-    ){
-
-        showLongPauseButton(
-            false
-        );
-
-
-        setStatus(
-            "paused",
-            "Saved reading found. Tap Continue Reading to resume."
-        );
-
-
-        /*
-         * Existing saved progress requires
-         * the child to tap once.
-         */
-
-        showContinueButton();
-
-
-        speak(
-            "Your reading progress is saved. Tap Continue Reading to resume."
-        );
-
-    }else{
-
-        startListening();
-    }
 };
 
 
-/* =====================================================
-   SPEECH RECOGNITION SETUP
-===================================================== */
+function renderChapterPages(chapter){
 
-function setupRecognition(){
+const container =
+document.getElementById("chapterPages");
 
-    const SpeechRecognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
+container.innerHTML="";
 
+chapter.pages.forEach(page=>{
 
-    if(!SpeechRecognition){
+let status="Not read";
 
-        alert(
-            "Speech recognition is not supported. Please use Chrome or Edge."
-        );
+if(page.result){
 
-        return false;
-    }
+status =
+`${page.result.score}% accuracy`;
 
+}
 
-    recognition =
-        new SpeechRecognition();
+const div =
+document.createElement("div");
 
+div.className="pageCard";
 
-    recognition.lang =
-        "en-US";
+div.innerHTML=`
 
+<img src="${page.image}">
 
-    recognition.continuous =
-        true;
+<div class="body">
 
+<strong>
+Page ${page.pageNumber}
+</strong>
 
-    recognition.interimResults =
-        true;
+<p class="small">
+${status}
+</p>
 
+</div>
 
-    recognition.maxAlternatives =
-        1;
+`;
 
+container.appendChild(div);
 
-    recognition.onstart =
-    () => {
+});
 
-        recognitionRunning =
-            true;
-
-
-        if(
-            !longPauseState
-        ){
-
-            setStatus(
-                "listening",
-                "🎤 Listening... Keep reading."
-            );
-        }
-    };
-
-
-    recognition.onend =
-    () => {
-
-        recognitionRunning =
-            false;
-
-
-        /*
-         * Browser may automatically end
-         * recognition after a while.
-         *
-         * During a normal short pause,
-         * automatically restart.
-         */
-
-        if(
-            readingActive &&
-            !manualPauseState &&
-            !longPauseState &&
-            !chapterFinished
-        ){
-
-            restartRecognition();
-        }
-    };
-
-
-    recognition.onerror =
-    event => {
-
-        recognitionRunning =
-            false;
-
-
-        console.warn(
-            "Recognition error:",
-            event.error
-        );
-
-
-        if(
-            event.error === "no-speech" ||
-            event.error === "network" ||
-            event.error === "audio-capture"
-        ){
-
-            if(
-                readingActive &&
-                !manualPauseState &&
-                !longPauseState
-            ){
-
-                restartRecognition();
-            }
-
-            return;
-        }
-    };
-
-
-    recognition.onresult =
-        handleSpeech;
-
-
-    return true;
 }
 
 
 /* =====================================================
-   START LISTENING
+START CHAPTER
 ===================================================== */
 
-function startListening(){
-
-    readingActive = true;
-
-    manualPauseState = false;
-
-    longPauseState = false;
-
-    hideContinueButton();
-
-    lastSpeechTime =
-        Date.now();
-
-
-    resetSilenceTimer();
-
-
-    try{
-
-        if(
-            !recognitionRunning
-        ){
-
-            recognition.start();
-        }
-
-    }catch(error){
-
-        restartRecognition();
-    }
-}
-
-
-/* =====================================================
-   CONTINUE READING
-===================================================== */
-
-window.continueReading =
+window.startChapter =
 function(){
 
-    readingActive = true;
+const chapter =
+getCurrentChapter();
 
-    manualPauseState = false;
-
-    longPauseState = false;
-
-
-    hideContinueButton();
+if(!chapter)return;
 
 
-    lastSpeechTime =
-        Date.now();
+/*
+Find first unfinished page.
+*/
 
+let resume=0;
 
-    saveProgress();
+for(let i=0;
+    i<chapter.pages.length;
+    i++){
 
+if(!chapter.pages[i].result){
 
-    startListening();
+resume=i;
 
+break;
 
-    speak(
-        "Please continue reading."
-    );
+}
+
+}
+
+currentPageIndex=resume;
+
+loadReaderPage();
+
+showSection("readerSection");
+
 };
 
 
 /* =====================================================
-   SPEECH HANDLING
+LOAD READER PAGE
 ===================================================== */
 
-function handleSpeech(event){
+function loadReaderPage(){
 
-    if(
-        Date.now() <
-        ignoreSpeechUntil
-    )
-        return;
+const chapter =
+getCurrentChapter();
 
+if(!chapter)return;
 
-    let finalText = "";
+const page =
+chapter.pages[currentPageIndex];
 
-    let interimText = "";
+if(!page){
 
+finishChapter();
 
-    for(
-        let i=event.resultIndex;
-        i<event.results.length;
-        i++
-    ){
+return;
 
-        const result =
-            event.results[i];
+}
 
+document.getElementById(
+"readerChapterTitle"
+).textContent=
+chapter.title;
 
-        const text =
-            result[0].transcript;
+document.getElementById(
+"readerPageTitle"
+).textContent=
+`Page ${page.pageNumber} of ${chapter.pages.length}`;
 
+document.getElementById(
+"readerImage"
+).src=
+page.image;
 
-        if(
-            result.isFinal
-        ){
+document.getElementById(
+"referenceText"
+).textContent=
+page.text || "No text detected.";
 
-            finalText +=
-                " " + text;
+document.getElementById(
+"liveTranscript"
+).textContent=
+page.transcript ||
+"Nothing recorded yet.";
 
-        }else{
+document.getElementById(
+"pageResult"
+).innerHTML="";
 
-            interimText +=
-                " " + text;
-        }
-    }
+resetRecordingUI();
 
+updateChapterProgress();
 
-    if(
-        interimText
-    ){
-
-        document
-        .getElementById(
-            "interim"
-        )
-        .textContent =
-            "Hearing: " +
-            interimText.trim();
-    }
-
-
-    if(
-        finalText.trim()
-    ){
-
-        currentPageTranscript =
-            (
-                currentPageTranscript +
-                " " +
-                finalText
-            )
-            .replace(/\s+/g," ")
-            .trim();
-
-
-        childSpoke();
-
-
-        saveProgress();
-
-
-        updateTranscript();
-
-
-        checkPageProgress();
-    }
 }
 
 
 /* =====================================================
-   CHILD SPOKE
+PROGRESS
 ===================================================== */
 
-function childSpoke(){
+function updateChapterProgress(){
 
-    lastSpeechTime =
-        Date.now();
+const chapter =
+getCurrentChapter();
 
+if(!chapter)return;
 
-    /*
-     * This cancels the long pause countdown.
-     */
+const completed =
+chapter.pages.filter(
+p=>p.result
+).length;
 
-    longPauseState =
-        false;
+const percent =
+chapter.pages.length
+?
+Math.round(
+completed /
+chapter.pages.length *
+100
+)
+:
+0;
 
+document.getElementById(
+"progressText"
+).textContent=
+percent+"%";
 
-    clearTimeout(
-        longPauseTimer
-    );
+document.getElementById(
+"progressBar"
+).style.width=
+percent+"%";
 
-
-    hideContinueButton();
-
-
-    setStatus(
-        "listening",
-        "🎤 Listening... Keep reading."
-    );
-
-
-    resetSilenceTimer();
 }
 
 
 /* =====================================================
-   SILENCE SYSTEM
+SPEECH RECOGNITION
 ===================================================== */
 
-function resetSilenceTimer(){
+function createRecognition(){
 
-    clearTimeout(
-        silenceTimer
-    );
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
 
+if(!SpeechRecognition){
 
-    silenceTimer =
-        setTimeout(
-            firstReminder,
-            5000
-        );
+alert(
+"Speech recognition is not supported here. Please use Chrome or Edge."
+);
+
+return null;
+
 }
 
+const r =
+new SpeechRecognition();
 
-function firstReminder(){
+r.lang="en-US";
 
-    if(
-        !readingActive ||
-        longPauseState
-    )
-        return;
+r.continuous=true;
 
-
-    const silence =
-        Date.now() -
-        lastSpeechTime;
+r.interimResults=true;
 
 
-    if(
-        silence <
-        5000
-    ){
+r.onstart=function(){
 
-        resetSilenceTimer();
+isRecording=true;
 
-        return;
-    }
+document.getElementById(
+"readingStatus"
+).className=
+"status listening";
 
+document.getElementById(
+"readingStatus"
+).textContent=
+"🎤 AI is listening...";
 
-    setStatus(
-        "paused",
-        "Please continue reading."
-    );
+document.getElementById(
+"startButton"
+).disabled=true;
 
+document.getElementById(
+"stopButton"
+).disabled=false;
 
-    speak(
-        "Please continue reading."
-    );
-
-
-    /*
-     * Continue giving reminders.
-     */
-
-    reminderTimer =
-        setTimeout(
-            repeatReminder,
-            15000
-        );
+};
 
 
-    /*
-     * Start the ten-minute timer.
-     */
+r.onresult=function(event){
 
-    scheduleLongPause();
+let interim="";
+
+for(
+let i=event.resultIndex;
+i<event.results.length;
+i++
+){
+
+const text =
+event.results[i][0].transcript;
+
+if(
+event.results[i].isFinal
+){
+
+finalTranscript +=
+" "+text;
+
+}else{
+
+interim += text;
+
 }
 
-
-function repeatReminder(){
-
-    if(
-        !readingActive ||
-        longPauseState
-    )
-        return;
-
-
-    const silence =
-        Date.now() -
-        lastSpeechTime;
-
-
-    if(
-        silence >=
-        10 * 60 * 1000
-    ){
-
-        enterLongPause();
-
-        return;
-    }
-
-
-    speak(
-        "Please continue reading."
-    );
-
-
-    reminderTimer =
-        setTimeout(
-            repeatReminder,
-            15000
-        );
 }
 
+const display =
+(
+finalTranscript+
+" "+
+interim
+).trim();
 
-function scheduleLongPause(){
-
-    clearTimeout(
-        longPauseTimer
-    );
-
-
-    const remaining =
-        10 * 60 * 1000 -
-        (
-            Date.now() -
-            lastSpeechTime
-        );
+document.getElementById(
+"liveTranscript"
+).textContent=
+display ||
+"Listening...";
 
 
-    if(
-        remaining <= 0
-    ){
+/*
+Track where the student is
+while reading.
+*/
 
-        enterLongPause();
+updateReadingPosition(display);
 
-        return;
-    }
-
-
-    longPauseTimer =
-        setTimeout(
-            () => {
-
-                const silence =
-                    Date.now() -
-                    lastSpeechTime;
+};
 
 
-                if(
-                    silence >=
-                    10 * 60 * 1000
-                ){
+r.onerror=function(event){
 
-                    enterLongPause();
+console.log(
+"Speech error:",
+event.error
+);
 
-                }else{
+isRecording=false;
 
-                    scheduleLongPause();
-                }
+if(
+event.error==="not-allowed"
+){
 
-            },
-            Math.max(
-                1000,
-                remaining
-            )
-        );
+alert(
+"Please allow microphone access."
+);
+
+}
+
+resetRecordingUI();
+
+};
+
+
+r.onend=function(){
+
+isRecording=false;
+
+if(shouldCompareAfterStop){
+
+shouldCompareAfterStop=false;
+
+setTimeout(
+compareCurrentPage,
+300
+);
+
+}else{
+
+resetRecordingUI();
+
+}
+
+};
+
+return r;
+
 }
 
 
 /* =====================================================
-   LONG PAUSE
+START RECORDING
 ===================================================== */
 
-function enterLongPause(){
-
-    if(
-        !readingActive
-    )
-        return;
-
-
-    longPauseState =
-        true;
-
-
-    clearTimeout(
-        silenceTimer
-    );
-
-    clearTimeout(
-        reminderTimer
-    );
-
-    clearTimeout(
-        longPauseTimer
-    );
-
-
-    /*
-     * SAVE BEFORE STOPPING.
-     */
-
-    saveProgress();
-
-
-    /*
-     * Stop microphone.
-     */
-
-    try{
-
-        if(
-            recognitionRunning
-        ){
-
-            recognition.stop();
-        }
-
-    }catch(error){}
-
-
-    setStatus(
-        "long-pause",
-        "Long pause detected. Tap Continue Reading when you return."
-    );
-
-
-    showContinueButton();
-
-
-    speak(
-        "You have been away for a while. Tap Continue Reading when you are ready."
-    );
-}
-
-
-/* =====================================================
-   MANUAL PAUSE
-===================================================== */
-
-window.manualPause =
+window.startRecording =
 function(){
 
-    manualPauseState =
-        true;
+if(isRecording)return;
 
+finalTranscript="";
 
-    readingActive =
-        false;
+const chapter =
+getCurrentChapter();
 
+const page =
+chapter.pages[currentPageIndex];
 
-    clearTimers();
+page.transcript="";
 
+page.result=null;
 
-    saveProgress();
+document.getElementById(
+"pageResult"
+).innerHTML="";
 
+document.getElementById(
+"liveTranscript"
+).textContent=
+"Listening...";
 
-    try{
+recognition =
+createRecognition();
 
-        if(
-            recognitionRunning
-        ){
+if(!recognition)return;
 
-            recognition.stop();
-        }
+shouldCompareAfterStop=false;
 
-    }catch(error){}
+try{
 
+recognition.start();
 
-    showContinueButton();
+}catch(error){
 
+console.log(error);
 
-    setStatus(
-        "paused",
-        "Reading paused. Tap Continue Reading when ready."
-    );
+}
+
 };
 
 
 /* =====================================================
-   RESTART SPEECH RECOGNITION
+STOP RECORDING
 ===================================================== */
 
-function restartRecognition(){
+window.stopRecording =
+function(){
 
-    if(
-        recognitionRestarting
-    )
-        return;
+if(!recognition){
 
+compareCurrentPage();
 
-    if(
-        !readingActive ||
-        manualPauseState ||
-        longPauseState ||
-        chapterFinished
-    )
-        return;
+return;
 
-
-    recognitionRestarting =
-        true;
-
-
-    setTimeout(
-        () => {
-
-            recognitionRestarting =
-                false;
-
-
-            if(
-                !readingActive ||
-                manualPauseState ||
-                longPauseState ||
-                chapterFinished
-            )
-                return;
-
-
-            try{
-
-                recognition.start();
-
-            }catch(error){
-
-                setTimeout(
-                    restartRecognition,
-                    2000
-                );
-            }
-
-        },
-        600
-    );
 }
 
+shouldCompareAfterStop=true;
 
-/* =====================================================
-   PAGE PROGRESS
-===================================================== */
+document.getElementById(
+"readingStatus"
+).className="status";
 
-async function checkPageProgress(){
+document.getElementById(
+"readingStatus"
+).textContent=
+"Checking reading...";
 
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
+document.getElementById(
+"stopButton"
+).disabled=true;
 
+try{
 
-    const page =
-        pages[currentPageIndex];
+recognition.stop();
 
+}catch(error){
 
-    if(!page)
-        return;
+compareCurrentPage();
 
-
-    const reference =
-        tokenize(
-            page.text
-        );
-
-
-    const spoken =
-        tokenize(
-            currentPageTranscript
-        );
-
-
-    if(!reference.length)
-        return;
-
-
-    const progress =
-        estimateProgress(
-            reference,
-            spoken
-        );
-
-
-    const percent =
-        Math.round(
-            progress * 100
-        );
-
-
-    document
-        .getElementById(
-            "wordPercent"
-        )
-        .textContent =
-        percent + "%";
-
-
-    document
-        .getElementById(
-            "wordProgress"
-        )
-        .style.width =
-        percent + "%";
-
-
-    if(
-        progress >= .88
-    ){
-
-        clearTimeout(
-            pageCompletionTimer
-        );
-
-
-        pageCompletionTimer =
-            setTimeout(
-                async () => {
-
-                    const freshPages =
-                        await dbGetPages(
-                            currentChapterId
-                        );
-
-
-                    const freshPage =
-                        freshPages[
-                            currentPageIndex
-                        ];
-
-
-                    const freshReference =
-                        tokenize(
-                            freshPage.text
-                        );
-
-
-                    const freshSpoken =
-                        tokenize(
-                            currentPageTranscript
-                        );
-
-
-                    if(
-                        estimateProgress(
-                            freshReference,
-                            freshSpoken
-                        ) >= .88
-                    ){
-
-                        completePage();
-                    }
-
-                },
-                1800
-            );
-    }
 }
 
-
-/* =====================================================
-   PROGRESS ESTIMATION
-===================================================== */
-
-function estimateProgress(
-    reference,
-    spoken
-){
-
-    if(!reference.length)
-        return 0;
-
-
-    let position = 0;
-
-    let matched = 0;
-
-
-    for(
-        const spokenWord
-        of spoken
-    ){
-
-        if(
-            position >=
-            reference.length
-        )
-            break;
-
-
-        for(
-            let i=position;
-            i<
-            Math.min(
-                position + 5,
-                reference.length
-            );
-            i++
-        ){
-
-            if(
-                similarity(
-                    spokenWord,
-                    reference[i]
-                ) >= .70
-            ){
-
-                matched++;
-
-                position =
-                    i + 1;
-
-                break;
-            }
-        }
-    }
-
-
-    return Math.min(
-        1,
-        matched /
-        reference.length
-    );
-}
-
-
-/* =====================================================
-   COMPLETE PAGE
-===================================================== */
-
-async function completePage(){
-
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
-
-
-    const page =
-        pages[currentPageIndex];
-
-
-    if(
-        !page ||
-        page.result
-    )
-        return;
-
-
-    const result =
-        compare(
-            page.text,
-            currentPageTranscript
-        );
-
-
-    page.transcript =
-        currentPageTranscript;
-
-
-    page.result =
-        result;
-
-
-    await dbPut(
-        PAGE_STORE,
-        page
-    );
-
-
-    const book =
-        await getBook(
-            currentBookId
-        );
-
-
-    const chapter =
-        book.chapters.find(
-            c =>
-            c.id ===
-            currentChapterId
-        );
-
-
-    chapter.currentPosition =
-        currentPageIndex + 1;
-
-
-    chapter.activeTranscript =
-        "";
-
-
-    chapter.lastScore =
-        result.score;
-
-
-    await saveBook(book);
-
-
-    setStatus(
-        "listening",
-        `Page ${currentPageIndex+1} completed — ${result.score}%`
-    );
-
-
-    setTimeout(
-        nextPage,
-        1800
-    );
-}
-
-
-/* =====================================================
-   NEXT PAGE
-===================================================== */
-
-async function nextPage(){
-
-    const chapter =
-        await getChapter();
-
-
-    currentPageIndex++;
-
-
-    currentPageTranscript =
-        "";
-
-
-    if(
-        currentPageIndex >=
-        chapter.pageCount
-    ){
-
-        finishChapter();
-
-        return;
-    }
-
-
-    await updateReader();
-
-
-    lastSpeechTime =
-        Date.now();
-
-
-    resetSilenceTimer();
-}
-
-
-/* =====================================================
-   SAVE PROGRESS
-===================================================== */
-
-async function saveProgress(){
-
-    const book =
-        await getBook(
-            currentBookId
-        );
-
-
-    if(!book)
-        return;
-
-
-    const chapter =
-        book.chapters.find(
-            c =>
-            c.id ===
-            currentChapterId
-        );
-
-
-    if(!chapter)
-        return;
-
-
-    chapter.currentPosition =
-        currentPageIndex;
-
-
-    chapter.activeTranscript =
-        currentPageTranscript;
-
-
-    chapter.lastReadAt =
-        new Date().toISOString();
-
-
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
-
-
-    const page =
-        pages[currentPageIndex];
-
-
-    if(page){
-
-        page.transcript =
-            currentPageTranscript;
-
-
-        await dbPut(
-            PAGE_STORE,
-            page
-        );
-    }
-
-
-    await saveBook(book);
-}
-
-
-/* =====================================================
-   READER UI
-===================================================== */
-
-async function updateReader(){
-
-    const chapter =
-        await getChapter();
-
-
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
-
-
-    const page =
-        pages[currentPageIndex];
-
-
-    if(!page)
-        return;
-
-
-    document
-        .getElementById(
-            "readerChapterTitle"
-        )
-        .textContent =
-        chapter.title;
-
-
-    document
-        .getElementById(
-            "readerPageNumber"
-        )
-        .textContent =
-        `Page ${currentPageIndex+1} of ${pages.length}`;
-
-
-    document
-        .getElementById(
-            "readerImage"
-        )
-        .src =
-        page.image;
-
-
-    updateTranscript();
-
-
-    const progress =
-        currentPageIndex /
-        pages.length;
-
-
-    document
-        .getElementById(
-            "chapterProgress"
-        )
-        .style.width =
-        Math.round(
-            progress * 100
-        ) + "%";
-
-
-    document
-        .getElementById(
-            "wordPercent"
-        )
-        .textContent =
-        "0%";
-
-
-    document
-        .getElementById(
-            "wordProgress"
-        )
-        .style.width =
-        "0%";
-}
-
-
-function updateTranscript(){
-
-    document
-        .getElementById(
-            "transcript"
-        )
-        .textContent =
-        currentPageTranscript ||
-        "Nothing spoken yet.";
-}
-
-
-function setStatus(
-    type,
-    text
-){
-
-    const element =
-        document.getElementById(
-            "readerStatus"
-        );
-
-
-    element.className =
-        "status " + type;
-
-
-    element.textContent =
-        text;
-}
-
-
-function showContinueButton(){
-
-    document
-        .getElementById(
-            "longPauseCard"
-        )
-        .classList.remove(
-            "hidden"
-        );
-}
-
-
-function hideContinueButton(){
-
-    document
-        .getElementById(
-            "longPauseCard"
-        )
-        .classList.add(
-            "hidden"
-        );
-}
-
-
-/* =====================================================
-   FINISH
-===================================================== */
-
-async function finishChapter(){
-
-    chapterFinished =
-        true;
-
-    readingActive =
-        false;
-
-
-    clearTimers();
-
-
-    try{
-
-        if(
-            recognitionRunning
-        ){
-
-            recognition.stop();
-        }
-
-    }catch(error){}
-
-
-    const book =
-        await getBook(
-            currentBookId
-        );
-
-
-    const chapter =
-        book.chapters.find(
-            c =>
-            c.id ===
-            currentChapterId
-        );
-
-
-    chapter.completed =
-        true;
-
-
-    chapter.currentPosition =
-        chapter.pageCount;
-
-
-    chapter.activeTranscript =
-        "";
-
-
-    await saveBook(book);
-
-
-    await showReport();
-}
-
-
-/* =====================================================
-   END READING
-===================================================== */
-
-window.endReading =
-async function(){
-
-    if(
-        !confirm(
-            "End this reading session? Progress will be saved."
-        )
-    )
-        return;
-
-
-    await saveProgress();
-
-
-    readingActive =
-        false;
-
-
-    manualPauseState =
-        true;
-
-
-    clearTimers();
-
-
-    try{
-
-        if(
-            recognitionRunning
-        ){
-
-            recognition.stop();
-        }
-
-    }catch(error){}
-
-
-    await openChapter(
-        currentChapterId
-    );
 };
 
 
 /* =====================================================
-   REPORT
+RESET RECORDING
 ===================================================== */
 
-async function showReport(){
+function resetRecordingUI(){
 
-    const chapter =
-        await getChapter();
+document.getElementById(
+"startButton"
+).disabled=false;
 
+document.getElementById(
+"stopButton"
+).disabled=true;
 
-    const pages =
-        await dbGetPages(
-            currentChapterId
-        );
+document.getElementById(
+"readingStatus"
+).className="status";
 
+document.getElementById(
+"readingStatus"
+).textContent=
+"Ready";
 
-    let total = 0;
-    let count = 0;
-
-    let correct = 0;
-    let missing = 0;
-    let changed = 0;
-    let extra = 0;
-
-
-    pages.forEach(
-        page => {
-
-            if(
-                page.result
-            ){
-
-                total +=
-                    page.result.score;
-
-                count++;
-
-
-                correct +=
-                    page.result.correct.length;
-
-
-                missing +=
-                    page.result.missing.length;
-
-
-                changed +=
-                    page.result.changed.length;
-
-
-                extra +=
-                    page.result.extra.length;
-            }
-        }
-    );
-
-
-    const average =
-        count
-        ? Math.round(
-            total / count
-          )
-        : 0;
-
-
-    document
-        .getElementById(
-            "reportTitle"
-        )
-        .textContent =
-        chapter.title;
-
-
-    document
-        .getElementById(
-            "overallScore"
-        )
-        .textContent =
-        average + "%";
-
-
-    document
-        .getElementById(
-            "reportStats"
-        )
-        .innerHTML = `
-
-            <div class="report-stat">
-                <strong>Pages Read</strong>
-                <br>
-                ${count}/${pages.length}
-            </div>
-
-            <div class="report-stat">
-                <strong>Correct Words</strong>
-                <br>
-                ${correct}
-            </div>
-
-            <div class="report-stat">
-                <strong>Missing Words</strong>
-                <br>
-                ${missing}
-            </div>
-
-            <div class="report-stat">
-                <strong>Changed Words</strong>
-                <br>
-                ${changed}
-            </div>
-
-            <div class="report-stat">
-                <strong>Extra Words</strong>
-                <br>
-                ${extra}
-            </div>
-        `;
-
-
-    const results =
-        document.getElementById(
-            "pageResults"
-        );
-
-
-    results.innerHTML = "";
-
-
-    pages.forEach(
-        (page,index) => {
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-
-            div.className =
-                "card";
-
-
-            if(
-                !page.result
-            ){
-
-                div.innerHTML = `
-                    <h3>
-                        Page ${index+1}
-                    </h3>
-                    <p>Not completed.</p>
-                `;
-
-            }else{
-
-                div.innerHTML = `
-
-                    <h3>
-                        Page ${index+1}
-                    </h3>
-
-                    <div class="score"
-                         style="font-size:32px">
-                        ${page.result.score}%
-                    </div>
-
-                    <p>
-                        Correct:
-                        ${page.result.correct.length}
-                    </p>
-
-                    <p>
-                        Missing:
-                        ${page.result.missing.length}
-                    </p>
-
-                    <p>
-                        Changed:
-                        ${page.result.changed.length}
-                    </p>
-
-                    <p>
-                        Extra:
-                        ${page.result.extra.length}
-                    </p>
-
-                    <h4>
-                        Missing Words
-                    </h4>
-
-                    <p>
-                        ${
-                            page.result.missing
-                            .map(
-                                w =>
-                                escapeHTML(w)
-                            )
-                            .join(", ")
-                            ||
-                            "None"
-                        }
-                    </p>
-
-                    <h4>
-                        Changed Words
-                    </h4>
-
-                    <p>
-                        ${
-                            page.result.changed
-                            .map(
-                                w =>
-                                escapeHTML(
-                                    w.expected
-                                ) +
-                                " → " +
-                                escapeHTML(
-                                    w.spoken
-                                )
-                            )
-                            .join(", ")
-                            ||
-                            "None"
-                        }
-                    </p>
-                `;
-            }
-
-
-            results.appendChild(div);
-        }
-    );
-
-
-    showSection(
-        "reportSection"
-    );
 }
 
 
 /* =====================================================
-   COMPARISON
+READING POSITION
 ===================================================== */
 
-function compare(
-    referenceText,
-    spokenText
+function updateReadingPosition(spoken){
+
+if(!spoken)return;
+
+const chapter =
+getCurrentChapter();
+
+const spokenWords =
+tokenize(spoken);
+
+if(spokenWords.length<5)
+return;
+
+
+/*
+Look at the current page and
+the next few pages.
+
+This helps detect when the
+student has moved forward.
+*/
+
+let bestPage =
+currentPageIndex;
+
+let bestScore=0;
+
+for(
+let i=currentPageIndex;
+i<Math.min(
+chapter.pages.length,
+currentPageIndex+4
+);
+i++
 ){
 
-    const reference =
-        tokenize(
-            referenceText
-        );
+const reference =
+tokenize(
+chapter.pages[i].text
+);
 
+if(reference.length===0)
+continue;
 
-    const spoken =
-        tokenize(
-            spokenText
-        );
+const score =
+findSequenceMatch(
+reference,
+spokenWords
+);
 
+if(score>bestScore){
 
-    const alignment =
-        align(
-            reference,
-            spoken
-        );
+bestScore=score;
 
+bestPage=i;
 
-    const correct = [];
-    const missing = [];
-    const changed = [];
-    const extra = [];
+}
 
-
-    alignment.forEach(
-        item => {
-
-            if(
-                item.type ===
-                "correct"
-            )
-                correct.push(
-                    item.reference
-                );
-
-
-            if(
-                item.type ===
-                "missing"
-            )
-                missing.push(
-                    item.reference
-                );
-
-
-            if(
-                item.type ===
-                "changed"
-            )
-                changed.push({
-                    expected:
-                        item.reference,
-
-                    spoken:
-                        item.spoken
-                });
-
-
-            if(
-                item.type ===
-                "extra"
-            )
-                extra.push(
-                    item.spoken
-                );
-        }
-    );
-
-
-    let score =
-        reference.length
-        ? 100 -
-          (
-              (
-                  missing.length +
-                  changed.length * .7
-              )
-              /
-              reference.length
-          )
-          * 100
-        : 0;
-
-
-    score =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                Math.round(score)
-            )
-        );
-
-
-    return {
-
-        score,
-
-        correct,
-
-        missing,
-
-        changed,
-
-        extra,
-
-        referenceWords:
-            reference,
-
-        spokenWords:
-            spoken,
-
-        completed:true,
-
-        timestamp:
-            new Date().toISOString()
-    };
 }
 
 
-/* =====================================================
-   ALIGNMENT
-===================================================== */
+/*
+Only move forward when
+confidence is reasonably high.
+*/
 
-function align(
-    reference,
-    spoken
+if(
+bestPage>currentPageIndex &&
+bestScore>=0.35
 ){
 
-    const n =
-        reference.length;
+currentPageIndex=bestPage;
 
-    const m =
-        spoken.length;
+const page =
+chapter.pages[currentPageIndex];
 
+document.getElementById(
+"readerPageTitle"
+).textContent=
+`Page ${page.pageNumber} of ${chapter.pages.length}`;
 
-    const dp =
-        Array.from(
-            {length:n+1},
-            () =>
-            Array(m+1).fill(0)
-        );
+document.getElementById(
+"readerImage"
+).src=
+page.image;
 
+document.getElementById(
+"referenceText"
+).textContent=
+page.text;
 
-    for(
-        let i=0;
-        i<=n;
-        i++
-    )
-        dp[i][0] = i;
+updateChapterProgress();
 
+}
 
-    for(
-        let j=0;
-        j<=m;
-        j++
-    )
-        dp[0][j] = j;
+}
 
 
-    for(
-        let i=1;
-        i<=n;
-        i++
-    ){
+/*
+Find approximate sequence overlap.
+*/
 
-        for(
-            let j=1;
-            j<=m;
-            j++
-        ){
+function findSequenceMatch(
+reference,
+spoken
+){
 
-            const sim =
-                similarity(
-                    reference[i-1],
-                    spoken[j-1]
-                );
+if(
+!reference.length ||
+!spoken.length
+)return 0;
+
+let best=0;
 
 
-            const substitution =
-                sim >= .70
-                ? 0
-                : 1;
+/*
+Use the last part of speech because
+it represents the most recently read
+words.
+*/
 
+const recent =
+spoken.slice(
+Math.max(0,spoken.length-60)
+);
 
-            dp[i][j] =
-                Math.min(
+for(
+let i=0;
+i<reference.length;
+i++
+){
 
-                    dp[i-1][j] + 1,
+let matches=0;
 
-                    dp[i][j-1] + 1,
+for(
+let j=0;
+j<recent.length;
+j++
+){
 
-                    dp[i-1][j-1] +
-                    substitution
-                );
-        }
-    }
+if(
+reference[i+j] &&
+reference[i+j]===recent[j]
+){
 
+matches++;
 
-    const result = [];
+}else{
 
+if(j>10)break;
 
-    let i=n;
-    let j=m;
+}
 
+}
 
-    while(
-        i>0 ||
-        j>0
-    ){
+const score =
+matches /
+Math.min(
+recent.length,
+40
+);
 
-        if(
-            i>0 &&
-            j>0
-        ){
+if(score>best)
+best=score;
 
-            const sim =
-                similarity(
-                    reference[i-1],
-                    spoken[j-1]
-                );
+}
 
+return best;
 
-            const cost =
-                sim >= .70
-                ? 0
-                : 1;
-
-
-            if(
-                dp[i][j] ===
-                dp[i-1][j-1] +
-                cost
-            ){
-
-                result.unshift({
-
-                    type:
-                        sim >= .70
-                        ? "correct"
-                        : "changed",
-
-                    reference:
-                        reference[i-1],
-
-                    spoken:
-                        spoken[j-1]
-                });
-
-
-                i--;
-                j--;
-
-                continue;
-            }
-        }
-
-
-        if(
-            i>0 &&
-            dp[i][j] ===
-            dp[i-1][j] + 1
-        ){
-
-            result.unshift({
-
-                type:"missing",
-
-                reference:
-                    reference[i-1]
-            });
-
-
-            i--;
-
-            continue;
-        }
-
-
-        if(
-            j>0
-        ){
-
-            result.unshift({
-
-                type:"extra",
-
-                spoken:
-                    spoken[j-1]
-            });
-
-
-            j--;
-
-            continue;
-        }
-    }
-
-
-    return result;
 }
 
 
 /* =====================================================
-   TEXT HELPERS
+COMPARE PAGE
 ===================================================== */
+
+function compareCurrentPage(){
+
+const chapter =
+getCurrentChapter();
+
+const page =
+chapter.pages[currentPageIndex];
+
+if(!page)return;
+
+const spoken =
+finalTranscript.trim();
+
+page.transcript=spoken;
+
+if(!spoken){
+
+document.getElementById(
+"pageResult"
+).innerHTML=`
+
+<div class="resultBox">
+
+<h3>
+No reading detected
+</h3>
+
+<p>
+The AI did not receive enough speech
+to evaluate this page.
+</p>
+
+<button class="yellow"
+onclick="startRecording()">
+Try Again
+</button>
+
+</div>
+
+`;
+
+resetRecordingUI();
+
+return;
+
+}
+
+const reference =
+tokenize(page.text);
+
+const spokenWords =
+tokenize(spoken);
+
+const operations =
+alignWords(
+reference,
+spokenWords
+);
+
+const result =
+calculateResult(
+operations,
+reference,
+spokenWords
+);
+
+page.result=result;
+
+saveBooks();
+
+showPageResult(
+page,
+result,
+operations
+);
+
+resetRecordingUI();
+
+}
+
+
+/* =====================================================
+CALCULATE RESULT
+===================================================== */
+
+function calculateResult(
+operations,
+reference,
+spoken
+){
+
+let correct=0;
+let missing=0;
+let changed=0;
+let extra=0;
+
+operations.forEach(op=>{
+
+if(op.type==="correct")
+correct++;
+
+if(op.type==="missing")
+missing++;
+
+if(op.type==="changed")
+changed++;
+
+if(op.type==="extra")
+extra++;
+
+});
+
+let score=0;
+
+if(reference.length){
+
+score=Math.round(
+correct /
+reference.length *
+100
+);
+
+}
+
+score=Math.max(
+0,
+Math.min(100,score)
+);
+
+return{
+
+score:score,
+
+correct:correct,
+
+missing:missing,
+
+changed:changed,
+
+extra:extra,
+
+referenceWords:
+reference.length,
+
+spokenWords:
+spoken.length,
+
+completed:true,
+
+timestamp:
+new Date().toISOString()
+
+};
+
+}
+
+
+/* =====================================================
+WORD ALIGNMENT
+===================================================== */
+
+function normalizeText(text){
+
+return text
+.toLowerCase()
+.replace(/[^\p{L}\p{N}'-]+/gu," ")
+.replace(/\s+/g," ")
+.trim();
+
+}
+
 
 function tokenize(text){
 
-    return text
-        .toLowerCase()
-        .replace(
-            /[^\p{L}\p{N}'-]+/gu,
-            " "
-        )
-        .split(/\s+/)
-        .filter(Boolean);
+const normalized =
+normalizeText(text);
+
+if(!normalized)
+return [];
+
+return normalized.split(" ");
+
 }
 
 
-function similarity(a,b){
+function wordSimilarity(a,b){
 
-    if(
-        a === b
-    )
-        return 1;
+if(a===b)
+return 1;
 
+const distance =
+levenshtein(a,b);
 
-    const distance =
-        levenshtein(
-            a,
-            b
-        );
+return 1 -
+distance /
+Math.max(
+a.length,
+b.length
+);
 
-
-    return 1 -
-        distance /
-        Math.max(
-            a.length,
-            b.length,
-            1
-        );
 }
 
 
 function levenshtein(a,b){
 
-    const matrix =
-        Array.from(
-            {length:a.length+1},
-            () =>
-            Array(
-                b.length+1
-            ).fill(0)
-        );
-
-
-    for(
-        let i=0;
-        i<=a.length;
-        i++
-    )
-        matrix[i][0] = i;
-
-
-    for(
-        let j=0;
-        j<=b.length;
-        j++
-    )
-        matrix[0][j] = j;
-
-
-    for(
-        let i=1;
-        i<=a.length;
-        i++
-    ){
-
-        for(
-            let j=1;
-            j<=b.length;
-            j++
-        ){
-
-            matrix[i][j] =
-                Math.min(
-
-                    matrix[i-1][j] + 1,
-
-                    matrix[i][j-1] + 1,
-
-                    matrix[i-1][j-1] +
-                    (
-                        a[i-1] ===
-                        b[j-1]
-                        ? 0
-                        : 1
-                    )
-                );
-        }
-    }
-
-
-    return matrix[
-        a.length
-    ][
-        b.length
-    ];
-}
-
-
-/* =====================================================
-   SPEECH OUTPUT
-===================================================== */
-
-function speak(text){
-
-    if(
-        !("speechSynthesis" in window)
-    )
-        return;
-
-
-    ignoreSpeechUntil =
-        Date.now() + 8000;
-
-
-    speechSynthesis.cancel();
-
-
-    const utterance =
-        new SpeechSynthesisUtterance(
-            text
-        );
-
-
-    utterance.rate =
-        .9;
-
-
-    utterance.pitch =
-        1;
-
-
-    speechSynthesis.speak(
-        utterance
-    );
-}
-
-
-/* =====================================================
-   TIMERS
-===================================================== */
-
-function clearTimers(){
-
-    clearTimeout(
-        silenceTimer
-    );
-
-    clearTimeout(
-        reminderTimer
-    );
-
-    clearTimeout(
-        longPauseTimer
-    );
-
-    clearTimeout(
-        pageCompletionTimer
-    );
-
-
-    silenceTimer = null;
-    reminderTimer = null;
-    longPauseTimer = null;
-    pageCompletionTimer = null;
-}
-
-
-/* =====================================================
-   VISIBILITY
-===================================================== */
-
-document.addEventListener(
-    "visibilitychange",
-    () => {
-
-        if(
-            document.hidden &&
-            readingActive
-        ){
-
-            saveProgress();
-
-            return;
-        }
-
-
-        if(
-            !document.hidden &&
-            readingActive &&
-            !manualPauseState &&
-            !longPauseState &&
-            !chapterFinished
-        ){
-
-            if(
-                !recognitionRunning
-            ){
-
-                restartRecognition();
-            }
-        }
-    }
+const matrix =
+Array.from(
+{length:a.length+1},
+()=>Array(b.length+1).fill(0)
 );
 
+for(
+let i=0;
+i<=a.length;
+i++
+)
+matrix[i][0]=i;
 
-/* =====================================================
-   BEFORE CLOSE
-===================================================== */
+for(
+let j=0;
+j<=b.length;
+j++
+)
+matrix[0][j]=j;
 
-window.addEventListener(
-    "beforeunload",
-    () => {
+for(
+let i=1;
+i<=a.length;
+i++
+){
 
-        if(
-            readingActive
-        ){
+for(
+let j=1;
+j<=b.length;
+j++
+){
 
-            saveProgress();
-        }
-    }
+const cost =
+a[i-1]===b[j-1]
+?0
+:1;
+
+matrix[i][j]=Math.min(
+
+matrix[i-1][j]+1,
+
+matrix[i][j-1]+1,
+
+matrix[i-1][j-1]+cost
+
 );
 
+}
+
+}
+
+return matrix[a.length][b.length];
+
+}
+
 
 /* =====================================================
-   FILE READER
+ALIGNMENT
 ===================================================== */
+
+function alignWords(reference,spoken){
+
+const n=reference.length;
+const m=spoken.length;
+
+const dp =
+Array.from(
+{length:n+1},
+()=>Array(m+1).fill(0)
+);
+
+for(let i=0;i<=n;i++)
+dp[i][0]=i;
+
+for(let j=0;j<=m;j++)
+dp[0][j]=j;
+
+for(let i=1;i<=n;i++){
+
+for(let j=1;j<=m;j++){
+
+const similarity =
+wordSimilarity(
+reference[i-1],
+spoken[j-1]
+);
+
+const substitution =
+similarity>=.70
+?0
+:1;
+
+dp[i][j]=Math.min(
+
+dp[i-1][j]+1,
+
+dp[i][j-1]+1,
+
+dp[i-1][j-1]+substitution
+
+);
+
+}
+
+}
+
+const operations=[];
+
+let i=n;
+let j=m;
+
+while(i>0 || j>0){
+
+if(i>0 && j>0){
+
+const similarity =
+wordSimilarity(
+reference[i-1],
+spoken[j-1]
+);
+
+if(
+similarity>=.70 &&
+dp[i][j]===dp[i-1][j-1]
+){
+
+if(
+reference[i-1]===
+spoken[j-1]
+){
+
+operations.unshift({
+
+type:"correct",
+
+reference:
+reference[i-1],
+
+spoken:
+spoken[j-1]
+
+});
+
+}else{
+
+operations.unshift({
+
+type:"changed",
+
+reference:
+reference[i-1],
+
+spoken:
+spoken[j-1]
+
+});
+
+}
+
+i--;
+j--;
+
+continue;
+
+}
+
+}
+
+if(
+i>0 &&
+dp[i][j]===
+dp[i-1][j]+1
+){
+
+operations.unshift({
+
+type:"missing",
+
+reference:
+reference[i-1],
+
+spoken:""
+
+});
+
+i--;
+
+continue;
+
+}
+
+if(
+j>0 &&
+dp[i][j]===
+dp[i][j-1]+1
+){
+
+operations.unshift({
+
+type:"extra",
+
+reference:"",
+
+spoken:
+spoken[j-1]
+
+});
+
+j--;
+
+continue;
+
+}
+
+if(i>0 && j>0){
+
+operations.unshift({
+
+type:"changed",
+
+reference:
+reference[i-1],
+
+spoken:
+spoken[j-1]
+
+});
+
+i--;
+j--;
+
+}else if(i>0){
+
+operations.unshift({
+
+type:"missing",
+
+reference:
+reference[i-1],
+
+spoken:""
+
+});
+
+i--;
+
+}else{
+
+operations.unshift({
+
+type:"extra",
+
+reference:"",
+
+spoken:
+spoken[j-1]
+
+});
+
+j--;
+
+}
+
+}
+
+return operations;
+
+}
+
+
+/* =====================================================
+PAGE RESULT
+===================================================== */
+
+function showPageResult(
+page,
+result,
+operations
+){
+
+let scoreClass="good";
+
+if(result.score<80)
+scoreClass="warning";
+
+if(result.score<60)
+scoreClass="bad";
+
+let wordsHTML="";
+
+operations.forEach(op=>{
+
+if(op.type==="correct"){
+
+wordsHTML+=`
+
+<span class="word correct">
+${escapeHTML(op.reference)}
+</span>
+
+`;
+
+}
+
+if(op.type==="missing"){
+
+wordsHTML+=`
+
+<span class="word missing">
+${escapeHTML(op.reference)}
+</span>
+
+`;
+
+}
+
+if(op.type==="changed"){
+
+wordsHTML+=`
+
+<span class="word changed">
+
+${escapeHTML(op.spoken)}
+
+<small>
+(${escapeHTML(op.reference)})
+</small>
+
+</span>
+
+`;
+
+}
+
+if(op.type==="extra"){
+
+wordsHTML+=`
+
+<span class="word extra">
++${escapeHTML(op.spoken)}
+</span>
+
+`;
+
+}
+
+});
+
+
+const chapter =
+getCurrentChapter();
+
+const isLast =
+currentPageIndex===
+chapter.pages.length-1;
+
+document.getElementById(
+"pageResult"
+).innerHTML=`
+
+<div class="resultBox">
+
+<h2>
+Page ${page.pageNumber} Result
+</h2>
+
+<div class="score ${scoreClass}">
+${result.score}%
+</div>
+
+<p>
+Reading accuracy
+</p>
+
+<div class="statGrid">
+
+<div class="stat">
+<strong>
+${result.correct}
+</strong>
+Correct
+</div>
+
+<div class="stat">
+<strong>
+${result.missing}
+</strong>
+Missing
+</div>
+
+<div class="stat">
+<strong>
+${result.changed}
+</strong>
+Changed
+</div>
+
+<div class="stat">
+<strong>
+${result.extra}
+</strong>
+Extra
+</div>
+
+</div>
+
+<h3>
+Word Comparison
+</h3>
+
+<div class="wordResults">
+${wordsHTML}
+</div>
+
+<br>
+
+${
+isLast
+?
+`
+<button class="yellow"
+onclick="finishChapter()">
+Finish Chapter
+</button>
+`
+:
+`
+<button class="yellow"
+onclick="nextPage()">
+Continue to Page ${page.pageNumber+1} →
+</button>
+`
+}
+
+</div>
+
+`;
+
+}
+
+
+/* =====================================================
+NEXT PAGE
+===================================================== */
+
+window.nextPage =
+function(){
+
+const chapter =
+getCurrentChapter();
+
+if(
+currentPageIndex >=
+chapter.pages.length-1
+){
+
+finishChapter();
+
+return;
+
+}
+
+currentPageIndex++;
+
+chapter.currentPosition=
+currentPageIndex;
+
+saveBooks();
+
+loadReaderPage();
+
+};
+
+
+/* =====================================================
+FINISH CHAPTER
+===================================================== */
+
+window.finishChapter =
+function(){
+
+const chapter =
+getCurrentChapter();
+
+const results =
+chapter.pages.filter(
+p=>p.result
+).map(
+p=>p.result
+);
+
+let correct=0;
+let missing=0;
+let changed=0;
+let extra=0;
+let referenceWords=0;
+
+results.forEach(result=>{
+
+correct+=result.correct;
+
+missing+=result.missing;
+
+changed+=result.changed;
+
+extra+=result.extra;
+
+referenceWords+=
+result.referenceWords;
+
+});
+
+const score =
+referenceWords
+?
+Math.round(
+correct /
+referenceWords *
+100
+)
+:
+0;
+
+chapter.completed =
+results.length===
+chapter.pages.length;
+
+chapter.lastScore=
+score;
+
+saveBooks();
+
+document.getElementById(
+"reportChapterName"
+).textContent=
+chapter.title;
+
+document.getElementById(
+"overallScore"
+).textContent=
+score+"%";
+
+document.getElementById(
+"reportPages"
+).textContent=
+results.length+
+"/"+
+chapter.pages.length;
+
+document.getElementById(
+"reportCorrect"
+).textContent=
+correct;
+
+document.getElementById(
+"reportMissing"
+).textContent=
+missing;
+
+document.getElementById(
+"reportChanged"
+).textContent=
+changed;
+
+document.getElementById(
+"reportExtra"
+).textContent=
+extra;
+
+renderReport(chapter);
+
+showSection("reportSection");
+
+};
+
+
+/* =====================================================
+REPORT
+===================================================== */
+
+function renderReport(chapter){
+
+const container =
+document.getElementById(
+"reportPagesList"
+);
+
+container.innerHTML="";
+
+chapter.pages.forEach(page=>{
+
+if(!page.result)
+return;
+
+const div =
+document.createElement("div");
+
+div.className="stat";
+
+div.style.marginBottom="10px";
+
+div.innerHTML=`
+
+<strong>
+Page ${page.pageNumber}:
+${page.result.score}%
+</strong>
+
+<br>
+
+Correct:
+${page.result.correct}
+
+&nbsp; · &nbsp;
+
+Missing:
+${page.result.missing}
+
+&nbsp; · &nbsp;
+
+Changed:
+${page.result.changed}
+
+&nbsp; · &nbsp;
+
+Extra:
+${page.result.extra}
+
+`;
+
+container.appendChild(div);
+
+});
+
+}
+
+
+/* =====================================================
+HELPERS
+===================================================== */
+
+function getCurrentChapter(){
+
+const book =
+books.find(
+b=>b.id===currentBookId
+);
+
+return book?.chapters.find(
+c=>c.id===currentChapterId
+);
+
+}
+
 
 function fileToDataURL(file){
 
-    return new Promise(
-        (resolve,reject) => {
+return new Promise(
+(resolve,reject)=>{
 
-            const reader =
-                new FileReader();
+const reader =
+new FileReader();
 
+reader.onload=
+()=>resolve(reader.result);
 
-            reader.onload =
-                () =>
-                resolve(
-                    reader.result
-                );
+reader.onerror=
+reject;
 
+reader.readAsDataURL(file);
 
-            reader.onerror =
-                reject;
+}
+);
 
-
-            reader.readAsDataURL(
-                file
-            );
-        }
-    );
 }
 
 
-/* =====================================================
-   ID
-===================================================== */
+function cleanOCR(text){
 
-function uid(){
+return text
+.replace(/\r/g," ")
+.replace(/\n+/g," ")
+.replace(/\s+/g," ")
+.trim();
 
-    return (
-        Date.now().toString(36) +
-        Math.random()
-        .toString(36)
-        .substring(2,9)
-    );
 }
 
-
-/* =====================================================
-   ESCAPE HTML
-===================================================== */
 
 function escapeHTML(value){
 
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+return String(value || "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
 }
+
+
+function formatBytes(bytes){
+
+if(bytes===0)
+return "0 Bytes";
+
+const sizes=[
+"Bytes",
+"KB",
+"MB",
+"GB"
+];
+
+const i =
+Math.floor(
+Math.log(bytes) /
+Math.log(1024)
+);
+
+return (
+bytes /
+Math.pow(1024,i)
+).toFixed(1)
++" "+
+sizes[i];
+
+}
+
+
+/* =====================================================
+INITIALIZE
+===================================================== */
+
+renderBooks();
 
 </script>
 

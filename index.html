@@ -345,126 +345,126 @@ button:disabled{
     margin:6px 0;
     border-radius:10px;
     font-size:18px;
-    line-height:1.5
+    line-height:1.5;
 }
 
 .seg.done{
     color:#12652d;
     background:#eaf8ee;
-    cursor:pointer
+    cursor:pointer;
 }
 
 .seg.cur{
     background:#fff3a6;
     font-weight:bold;
-    border:2px solid #f3d000
+    border:2px solid #f3d000;
 }
 
 .seg.next{
     background:#f5f5f2;
-    cursor:pointer
+    cursor:pointer;
 }
 
 .seg.lock{
     color:#999;
-    background:#f5f5f2
+    background:#f5f5f2;
 }
 
 #welcomeBack.hidden{
-    display:none!important
+    display:none!important;
 }
 
 #readerSection h3,
 #readerSection .bookPage .small,
 #readerSection .card>p{
-    display:none
+    display:none;
 }
 
 #readerSection .card{
     box-shadow:none;
     background:transparent;
     padding:8px 0;
-    margin-bottom:8px
+    margin-bottom:8px;
 }
 
 #readerSection .readerGrid{
     grid-template-columns:1fr 1.3fr;
-    align-items:start
+    align-items:start;
 }
 
 #readerSection .bookPage{
     background:white;
     border-radius:16px;
-    padding:10px
+    padding:10px;
 }
 
 #readerSection .bookPage img{
     width:100%;
-    border-radius:10px
+    border-radius:10px;
 }
 
 #readerSection #readerChapterTitle{
     font-size:16px;
     color:#666;
     font-weight:normal;
-    margin:6px 0
+    margin:6px 0;
 }
 
 #readerSection #readingStatus{
     font-size:18px;
-    padding:8px 0
+    padding:8px 0;
 }
 
 #readerSection #startButton{
     font-size:24px;
     padding:18px 34px;
-    border-radius:40px
+    border-radius:40px;
 }
 
 #readerSection #stopButton{
     background:#eee;
     color:#080808;
-    border-radius:40px
+    border-radius:40px;
 }
 
 #readerSection #backButton{
-    border-radius:40px
+    border-radius:40px;
 }
 
 #readerSection #continueHereButton{
     font-size:20px;
     padding:14px 28px;
-    border-radius:40px
+    border-radius:40px;
 }
 
 #readerSection #referenceText{
     background:white;
     border-radius:16px;
-    padding:12px
+    padding:12px;
 }
 
 #readerSection .seg{
     font-size:24px;
-    line-height:1.6
+    line-height:1.6;
 }
 
 #readerSection .seg.lock{
-    opacity:.35
+    opacity:.35;
 }
 
 #readerSection .progressOuter{
-    height:8px
+    height:8px;
 }
 
 @media(max-width:750px){
 
     #readerSection .readerGrid{
-        grid-template-columns:1fr
+        grid-template-columns:1fr;
     }
 
     #readerSection .bookPage img{
         max-height:220px;
-        object-fit:contain
+        object-fit:contain;
     }
 
 }
@@ -477,13 +477,23 @@ button:disabled{
 
 <header>
 
-    <div class="logo">AI Reading Supervision</div>
+<div class="logo">
+AI Reading Supervision
+</div>
 
-    <div class="brand">Appearich</div>
+<div class="brand">
+Appearich
+</div>
 
 </header>
 
+
 <div class="container">
+
+
+<!-- =====================================================
+HOME
+===================================================== -->
 
 <section id="homeSection">
 
@@ -498,24 +508,34 @@ supervision.
 </p>
 
 <button class="yellow"
-        onclick="showSection('createBookSection')">
+onclick="showSection('createBookSection')">
+
 Create Book
+
 </button>
 
 </div>
+
 
 <div class="card">
 
 <h2>Your Books</h2>
 
-<div id="booksContainer" class="grid"></div>
+<div id="booksContainer"
+class="grid">
+</div>
 
 </div>
 
 </section>
 
 
-<section id="createBookSection" class="hidden">
+<!-- =====================================================
+CREATE BOOK
+===================================================== -->
+
+<section id="createBookSection"
+class="hidden">
 
 <div class="card">
 
@@ -524,17 +544,21 @@ Create Book
 <label>Book name</label>
 
 <input id="bookTitle"
-       type="text"
-       placeholder="Example: English Standard Five">
+type="text"
+placeholder="Example: English Standard Five">
 
 <button class="yellow"
-        onclick="createBook()">
+onclick="createBook()">
+
 Create Book
+
 </button>
 
 <button class="secondary"
-        onclick="showSection('homeSection')">
+onclick="showSection('homeSection')">
+
 Cancel
+
 </button>
 
 </div>
@@ -542,36 +566,53 @@ Cancel
 </section>
 
 
-<section id="bookSection" class="hidden">
+<!-- =====================================================
+BOOK
+===================================================== -->
+
+<section id="bookSection"
+class="hidden">
 
 <div class="card">
 
 <button class="secondary"
-        onclick="showSection('homeSection')">
+onclick="showSection('homeSection')">
+
 ← Books
+
 </button>
 
 <h2 id="bookTitleDisplay"></h2>
 
 <button class="yellow"
-        onclick="showSection('createChapterSection')">
+onclick="showSection('createChapterSection')">
+
 + Add Chapter
+
 </button>
 
 </div>
+
 
 <div class="card">
 
 <h2>Chapters</h2>
 
-<div id="chaptersContainer" class="grid"></div>
+<div id="chaptersContainer"
+class="grid">
+</div>
 
 </div>
 
 </section>
 
 
-<section id="createChapterSection" class="hidden">
+<!-- =====================================================
+CREATE CHAPTER
+===================================================== -->
+
+<section id="createChapterSection"
+class="hidden">
 
 <div class="card">
 
@@ -580,15 +621,17 @@ Cancel
 <label>Chapter name</label>
 
 <input id="chapterTitle"
-       type="text"
-       placeholder="Example: Chapter 1 - The New School">
+type="text"
+placeholder="Example: Chapter 1 - The New School">
+
 
 <label>Upload chapter pages</label>
 
 <input id="chapterFiles"
-       type="file"
-       multiple
-       accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
+type="file"
+multiple
+accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
+
 
 <div class="fileInfo">
 
@@ -610,35 +653,49 @@ A PDF can contain many pages.
 
 </div>
 
+
 <div id="selectedFiles"></div>
 
 <div id="ocrStatus"></div>
 
 <button class="yellow"
-        id="extractButton"
-        onclick="processChapterFiles()">
+id="extractButton"
+onclick="processChapterFiles()">
+
 Extract Chapter
+
 </button>
 
+
 <button class="secondary"
-        onclick="openBook(currentBookId)">
+onclick="openBook(currentBookId)">
+
 Cancel
+
 </button>
 
 </div>
+
 
 <div id="ocrPreview"></div>
 
 </section>
 
 
-<section id="chapterSection" class="hidden">
+<!-- =====================================================
+CHAPTER
+===================================================== -->
+
+<section id="chapterSection"
+class="hidden">
 
 <div class="card">
 
 <button class="secondary"
-        onclick="openBook(currentBookId)">
+onclick="openBook(currentBookId)">
+
 ← Book
+
 </button>
 
 <h2 id="chapterTitleDisplay"></h2>
@@ -646,18 +703,21 @@ Cancel
 <p id="chapterDetails"></p>
 
 <button class="yellow"
-        onclick="startChapter()">
+onclick="startChapter()">
+
 Start / Continue Reading
+
 </button>
 
 </div>
+
 
 <div class="card">
 
 <h3>Chapter Pages</h3>
 
 <div id="chapterPages"
-     class="pageList">
+class="pageList">
 </div>
 
 </div>
@@ -665,38 +725,52 @@ Start / Continue Reading
 </section>
 
 
-<section id="readerSection" class="hidden">
+<!-- =====================================================
+READER
+===================================================== -->
+
+<section id="readerSection"
+class="hidden">
 
 <div class="card">
 
 <button class="secondary"
-        onclick="openChapter(currentBookId,currentChapterId)">
+onclick="openChapter(currentBookId,currentChapterId)">
+
 ← Exit
+
 </button>
 
 <h2 id="readerChapterTitle"></h2>
 
+
 <div id="readingStatus"
-     class="status">
+class="status">
+
 Ready
+
 </div>
+
 
 <p>
 Chapter progress:
 <strong id="progressText">0%</strong>
 </p>
 
+
 <div class="progressOuter">
 
 <div id="progressBar"
-     class="progressInner">
+class="progressInner">
 </div>
 
 </div>
 
 </div>
+
 
 <div class="readerGrid">
+
 
 <div class="bookPage">
 
@@ -707,76 +781,103 @@ Page 1
 <img id="readerImage">
 
 <p class="small">
+
 Read from the physical textbook.
 The phone acts as the AI supervisor.
+
 </p>
 
 </div>
 
+
 <div>
+
 
 <div class="card">
 
 <h3>Reading Supervision</h3>
 
+
 <button id="startButton"
-        class="yellow"
-        onclick="startRecording()">
+class="yellow"
+onclick="startRecording()">
+
 🎤 Start Reading
+
 </button>
+
 
 <button id="stopButton"
-        class="danger"
-        onclick="stopRecording()"
-        disabled>
+class="danger"
+onclick="stopRecording()"
+disabled>
+
 ⏸ Pause
+
 </button>
+
 
 <button id="backButton"
-        class="secondary"
-        onclick="goBack()">
+class="secondary"
+onclick="goBack()">
+
 ← Back
+
 </button>
 
+
 <button id="continueHereButton"
-        class="yellow hidden"
-        onclick="continueHere()">
+class="yellow hidden"
+onclick="continueHere()">
+
 Continue from here
+
 </button>
 
 </div>
+
 
 <div class="card">
 
 <h3>Read this</h3>
 
 <div id="referenceText"
-     class="reference">
+class="reference">
 </div>
 
 </div>
 
-<div class="card">
+
+<div class="card hidden">
 
 <h3>What AI Heard</h3>
 
 <div id="liveTranscript"
-     class="transcript">
+class="transcript">
+
 Nothing recorded yet.
-</div>
 
 </div>
 
 </div>
 
+
 </div>
+
+</div>
+
 
 <div id="pageResult"></div>
 
 </section>
 
 
-<section id="reportSection" class="hidden">
+<!-- =====================================================
+REPORT
+===================================================== -->
+
+<section id="reportSection"
+class="hidden">
 
 <div class="card center">
 
@@ -785,8 +886,10 @@ Nothing recorded yet.
 <h2 id="reportChapterName"></h2>
 
 <div id="overallScore"
-     class="score">
+class="score">
+
 0%
+
 </div>
 
 <p>
@@ -795,40 +898,73 @@ Overall reading accuracy
 
 </div>
 
+
 <div class="card">
 
 <h2>Chapter Report</h2>
 
 <div class="statGrid">
 
+
 <div class="stat">
-<strong id="reportPages">0</strong>
+
+<strong id="reportPages">
+0
+</strong>
+
 Pages
+
 </div>
 
+
 <div class="stat">
-<strong id="reportCorrect">0</strong>
+
+<strong id="reportCorrect">
+0
+</strong>
+
 Correct
+
 </div>
 
+
 <div class="stat">
-<strong id="reportMissing">0</strong>
+
+<strong id="reportMissing">
+0
+</strong>
+
 Missing
+
 </div>
 
+
 <div class="stat">
-<strong id="reportChanged">0</strong>
+
+<strong id="reportChanged">
+0
+</strong>
+
 Changed
+
 </div>
+
 
 <div class="stat">
-<strong id="reportExtra">0</strong>
+
+<strong id="reportExtra">
+0
+</strong>
+
 Extra
+
 </div>
+
 
 </div>
 
 </div>
+
 
 <div class="card">
 
@@ -838,16 +974,22 @@ Extra
 
 </div>
 
+
 <div class="card center">
 
 <button class="yellow"
-        onclick="openChapter(currentBookId,currentChapterId)">
+onclick="openChapter(currentBookId,currentChapterId)">
+
 Back to Chapter
+
 </button>
 
+
 <button class="secondary"
-        onclick="openBook(currentBookId)">
+onclick="openBook(currentBookId)">
+
 Back to Book
+
 </button>
 
 </div>
@@ -857,9 +999,23 @@ Back to Book
 </div>
 
 
+<!-- =====================================================
+WELCOME BACK
+===================================================== -->
+
 <div id="welcomeBack"
-     class="hidden"
-     style="position:fixed;inset:0;background:rgba(8,8,8,.88);z-index:99;display:flex;align-items:center;justify-content:center;text-align:center;color:white;padding:30px">
+class="hidden"
+style="
+position:fixed;
+inset:0;
+background:rgba(8,8,8,.88);
+z-index:99;
+display:flex;
+align-items:center;
+justify-content:center;
+text-align:center;
+color:white;
+padding:30px">
 
 <div>
 
@@ -872,9 +1028,11 @@ Tap Continue to keep reading.
 </p>
 
 <button class="yellow"
-        style="font-size:22px;padding:16px 40px"
-        onclick="welcomeContinue()">
+style="font-size:22px;padding:16px 40px"
+onclick="welcomeContinue()">
+
 Continue
+
 </button>
 
 </div>
@@ -882,7 +1040,12 @@ Continue
 </div>
 
 
+<!-- =====================================================
+MAIN SCRIPT
+===================================================== -->
+
 <script type="module">
+
 
 /* =====================================================
 PDF.JS
@@ -904,14 +1067,24 @@ JSON.parse(
 localStorage.getItem("appearich_reading_books") || "[]"
 );
 
-let currentBookId = null;
-let currentChapterId = null;
-let currentPageIndex = 0;
+let currentBookId=null;
+let currentChapterId=null;
+let currentPageIndex=0;
 
-let recognition = null;
-let isRecording = false;
-let finalTranscript = "";
-let shouldCompareAfterStop = false;
+let sessionActive=false;
+
+let bufWords=[];
+let interimWords=[];
+
+let restartTimer=null;
+let idleTimer=null;
+
+let F=[];
+
+let prog=null;
+
+const LONG_BREAK_MS =
+10*60*1000;
 
 
 /* =====================================================
@@ -929,6 +1102,8 @@ JSON.stringify(books)
 
 }catch(e){
 
+console.error(e);
+
 alert(
 "Storage is full. Please delete an old book or chapter."
 );
@@ -942,13 +1117,21 @@ alert(
 SECTION NAVIGATION
 ===================================================== */
 
-window.showSection = function(id){
+window.showSection=function(id){
 
 document.querySelectorAll("section")
-.forEach(s=>s.classList.add("hidden"));
+.forEach(section=>{
+section.classList.add("hidden");
+});
 
-document.getElementById(id)
-.classList.remove("hidden");
+const section =
+document.getElementById(id);
+
+if(section){
+
+section.classList.remove("hidden");
+
+}
 
 };
 
@@ -964,17 +1147,21 @@ document.getElementById("booksContainer");
 
 container.innerHTML="";
 
+
 if(books.length===0){
 
 container.innerHTML=`
+
 <p class="small">
 No books created yet.
 </p>
+
 `;
 
 return;
 
 }
+
 
 books.forEach(book=>{
 
@@ -982,10 +1169,10 @@ let cover="";
 
 for(const chapter of book.chapters){
 
-if(chapter.pages.length){
+if(chapter.pages &&
+chapter.pages.length){
 
-cover =
-chapter.pages[0].image;
+cover=chapter.pages[0].image;
 
 break;
 
@@ -993,10 +1180,12 @@ break;
 
 }
 
+
 const div =
 document.createElement("div");
 
 div.className="bookCard";
+
 
 div.innerHTML=`
 
@@ -1018,18 +1207,26 @@ ${escapeHTML(book.title)}
 ${book.chapters.length} chapter(s)
 </p>
 
+
 <button class="yellow"
 onclick="openBook('${book.id}')">
+
 Open
+
 </button>
+
 
 <button class="danger"
 onclick="deleteBook('${book.id}')">
+
 Delete
+
 </button>
 
 </div>
+
 `;
+
 
 container.appendChild(div);
 
@@ -1038,46 +1235,59 @@ container.appendChild(div);
 }
 
 
-window.createBook = function(){
+window.createBook=function(){
+
+const input =
+document.getElementById("bookTitle");
 
 const title =
-document.getElementById("bookTitle")
-.value.trim();
+input.value.trim();
+
 
 if(!title){
 
 alert("Enter a book title.");
+
 return;
 
 }
 
+
 const book={
 
 id:Date.now().toString(),
+
 title:title,
+
 chapters:[]
 
 };
+
 
 books.push(book);
 
 saveBooks();
 
-document.getElementById("bookTitle")
-.value="";
+
+input.value="";
+
 
 openBook(book.id);
 
 };
 
 
-window.deleteBook = function(id){
+window.deleteBook=function(id){
 
 if(!confirm("Delete this book?"))
 return;
 
+
 books =
-books.filter(book=>book.id!==id);
+books.filter(
+book=>book.id!==id
+);
+
 
 saveBooks();
 
@@ -1090,18 +1300,28 @@ renderBooks();
 OPEN BOOK
 ===================================================== */
 
-window.openBook = function(id){
+window.openBook=function(id){
+
+stopSession();
+
 
 currentBookId=id;
 
-const book =
-books.find(b=>b.id===id);
 
-if(!book)return;
+const book =
+books.find(
+b=>b.id===id
+);
+
+
+if(!book)
+return;
+
 
 document.getElementById(
 "bookTitleDisplay"
 ).textContent=book.title;
+
 
 renderChapters();
 
@@ -1117,34 +1337,48 @@ CHAPTERS
 function renderChapters(){
 
 const book =
-books.find(b=>b.id===currentBookId);
+books.find(
+b=>b.id===currentBookId
+);
+
+
+if(!book)
+return;
+
 
 const container =
 document.getElementById("chaptersContainer");
 
 container.innerHTML="";
 
+
 if(book.chapters.length===0){
 
 container.innerHTML=`
+
 <p class="small">
 No chapters yet.
 </p>
+
 `;
 
 return;
 
 }
 
+
 book.chapters.forEach(chapter=>{
 
 const firstPage =
+chapter.pages &&
 chapter.pages[0];
+
 
 const div =
 document.createElement("div");
 
 div.className="chapterCard";
+
 
 div.innerHTML=`
 
@@ -1156,28 +1390,40 @@ firstPage
 `<div style="height:180px;background:#eee"></div>`
 }
 
+
 <div class="body">
 
 <h3>
 ${escapeHTML(chapter.title)}
 </h3>
 
+
 <p class="small">
+
 ${chapter.pages.length} page(s)
+
 </p>
+
 
 <button class="yellow"
 onclick="openChapter('${currentBookId}','${chapter.id}')">
+
 Open Chapter
+
 </button>
+
 
 <button class="danger"
 onclick="deleteChapter('${chapter.id}')">
+
 Delete
+
 </button>
 
 </div>
+
 `;
+
 
 container.appendChild(div);
 
@@ -1186,16 +1432,27 @@ container.appendChild(div);
 }
 
 
-window.deleteChapter = function(id){
+window.deleteChapter=function(id){
 
 if(!confirm("Delete this chapter?"))
 return;
 
+
 const book =
-books.find(b=>b.id===currentBookId);
+books.find(
+b=>b.id===currentBookId
+);
+
+
+if(!book)
+return;
+
 
 book.chapters =
-book.chapters.filter(c=>c.id!==id);
+book.chapters.filter(
+c=>c.id!==id
+);
+
 
 saveBooks();
 
@@ -1210,7 +1467,9 @@ FILE DISPLAY
 
 document.getElementById(
 "chapterFiles"
-).addEventListener("change",function(){
+).addEventListener(
+"change",
+function(){
 
 const files =
 Array.from(this.files);
@@ -1220,9 +1479,10 @@ document.getElementById("selectedFiles");
 
 box.innerHTML="";
 
+
 files.forEach((file,index)=>{
 
-box.innerHTML += `
+box.innerHTML+=`
 
 <div class="fileInfo">
 
@@ -1246,257 +1506,145 @@ ${formatBytes(file.size)}
 
 
 /* =====================================================
-TEXT EXTRACTION
+TEXT HELPERS
 ===================================================== */
 
-/*
-The page image remains the actual page.
+function normalizeExtractedLine(text){
 
-The extracted text is only the hidden/reference text
-used by the reading supervisor.
-
-The extraction now follows the visual reading order
-of the page instead of simply joining every PDF text
-item together.
-
-It attempts to ignore:
-
-- page numbers
-- headers
-- footers
-- figure labels
-- image captions
-- table labels
-- source labels
-- isolated short labels
-- obvious non-reading page furniture
-*/
-
-
-function cleanReadingCharacters(text){
-
-if(!text)
-return "";
-
-return String(text)
-
-.replace(/\r/g," ")
-
-.replace(/[ \t]+/g," ")
-
-.replace(
-/[ \t]*([,.;:!?%])/g,
-"$1"
-)
-
-.replace(
-/([(\[{])[ \t]+/g,
-"$1"
-)
-
-.replace(
-/[ \t]+([)\]}])/g,
-"$1"
-)
-
-.trim();
-
-}
-
-
-/* =====================================================
-JOIN TEXT FRAGMENTS
-===================================================== */
-
-function joinTextFragments(fragments){
-
-let result="";
-
-for(const fragment of fragments){
-
-let text =
-String(fragment || "")
+return String(text||"")
 .replace(/\s+/g," ")
 .trim();
 
-if(!text)
+}
+
+
+function joinTextParts(parts){
+
+let out="";
+
+
+for(const raw of parts){
+
+const t =
+normalizeExtractedLine(raw);
+
+
+if(!t)
 continue;
 
-if(!result){
 
-result=text;
+if(!out){
+
+out=t;
+
 continue;
 
 }
 
-const first =
-text.charAt(0);
 
-const last =
-result.charAt(
-result.length-1
-);
+const first=t[0];
+const last=out[out.length-1];
 
-
-/*
-No space before punctuation.
-*/
 
 if(
 /^[,.;:!?%…)\]}]/.test(first)
 ){
 
-result += text;
-
-continue;
+out+=t;
 
 }
 
-
-/*
-Closing quotation marks should stay
-attached to the previous word.
-*/
-
-if(
-first==="”" ||
-first==="’"
+else if(
+(first==="\""||
+first==="”"||
+first==="’")
+&&
+/[A-Za-z0-9]/.test(last)
 ){
 
-result += text;
-
-continue;
+out+=t;
 
 }
 
-
-/*
-Opening brackets attach to the following word.
-*/
-
-if(
+else if(
 /^[([{]/.test(first)
 ){
 
-result += " "+text;
-
-continue;
+out+=t;
 
 }
 
-
-/*
-If previous character is an opening bracket,
-do not create a space.
-*/
-
-if(
-last==="(" ||
-last==="[" ||
-last==="{"
+else if(
+/[-–—]$/.test(last)
 ){
 
-result += text;
+out+=t;
 
-continue;
+}
+
+else{
+
+out+=" "+t;
+
+}
 
 }
 
 
-/*
-Hyphen/dash continuation.
-*/
+return out
 
-if(
-last==="-" ||
-last==="–" ||
-last==="—"
-){
+.replace(
+/\s+([,.;:!?%…)\]}])/g,
+"$1"
+)
 
-result += text;
+.replace(
+/([([{])\s+/g,
+"$1"
+)
 
-continue;
-
-}
-
-
-/*
-Normal word separation.
-*/
-
-result += " "+text;
-
-}
-
-return cleanReadingCharacters(result);
+.replace(/\s+/g," ")
+.trim();
 
 }
 
 
 /* =====================================================
-OBVIOUS NON-READING LINE
+FURNITURE DETECTION
 ===================================================== */
 
-function isNonReadingLine(text){
+function isFurnitureLine(text){
 
 const t =
-String(text||"")
-.trim();
+normalizeExtractedLine(text);
 
 
 if(!t)
 return true;
 
 
-/*
-Page numbers.
-*/
-
-if(
-/^(page\s*)?\d{1,4}$/i.test(t)
-)
-
+if(/^\d{1,4}$/.test(t))
 return true;
 
 
-/*
-Figure/image/table labels.
-*/
-
 if(
-/^(fig(ure)?|photo|image|illustration|diagram|table|chart|graph|source)\b/i
+/^(page|p\.?)\s*\d+$/i
 .test(t)
 )
-
 return true;
 
 
-/*
-Common textbook source/copyright lines.
-*/
-
 if(
-/^(source|copyright|www\.|https?:\/\/|isbn)\b/i
+/^(fig\.?|figure|photo|image|illustration|diagram|table|source)\b/i
 .test(t)
 )
-
 return true;
 
 
-/*
-Very short labels that are unlikely to be
-normal reading content.
-*/
-
-const words =
-tokenize(t);
-
-
 if(
-words.length<=2 &&
-!/[.!?]/.test(t)
+/^(isbn|www\.|https?:\/\/)/i
+.test(t)
 )
-
 return true;
 
 
@@ -1506,19 +1654,169 @@ return false;
 
 
 /* =====================================================
-PDF LINE EXTRACTION
+COLUMN DETECTION
 ===================================================== */
 
-async function extractStructuredPDFText(pdfPage){
+function clusterColumns(lines,pageWidth){
 
-try{
+if(lines.length<6){
 
-const content =
-await pdfPage.getTextContent({
-normalizeWhitespace:false,
-disableCombineTextItems:false
+return [
+lines.slice()
+.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+)
+];
+
+}
+
+
+const sorted =
+lines.slice()
+.sort(
+(a,b)=>a.x-b.x
+);
+
+
+const xs =
+sorted.map(l=>l.x);
+
+
+const gaps=[];
+
+
+for(
+let i=1;
+i<xs.length;
+i++
+){
+
+gaps.push({
+
+gap:xs[i]-xs[i-1],
+
+index:i
+
 });
 
+}
+
+
+gaps.sort(
+(a,b)=>b.gap-a.gap
+);
+
+
+const split =
+gaps.find(
+g=>g.gap>pageWidth*.18
+);
+
+
+if(!split){
+
+return [
+lines.slice()
+.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+)
+];
+
+}
+
+
+const left =
+sorted.slice(
+0,
+split.index
+);
+
+
+const right =
+sorted.slice(
+split.index
+);
+
+
+if(
+left.length<3 ||
+right.length<3
+){
+
+return [
+lines.slice()
+.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+)
+];
+
+}
+
+
+left.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+);
+
+
+right.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+);
+
+
+return [left,right];
+
+}
+
+
+/* =====================================================
+FINAL TEXT CLEANING
+===================================================== */
+
+function cleanFinalReference(text){
+
+return String(text||"")
+
+.replace(/\r/g,"")
+
+.split(/\n+/)
+
+.map(normalizeExtractedLine)
+
+.filter(Boolean)
+
+.filter(
+line=>!isFurnitureLine(line)
+)
+
+.join("\n")
+
+.replace(
+/[ \t]+([,.;:!?])/g,
+"$1"
+)
+
+.trim();
+
+}
+
+
+/* =====================================================
+PDF TEXT EXTRACTION
+===================================================== */
+
+async function extractPDFText(pdfPage){
+
+try{
 
 const viewport =
 pdfPage.getViewport({
@@ -1526,70 +1824,46 @@ scale:1
 });
 
 
-const pageWidth =
-viewport.width;
-
-const pageHeight =
-viewport.height;
+const textContent =
+await pdfPage.getTextContent({
+normalizeWhitespace:false,
+disableCombineTextItems:false
+});
 
 
 const raw=[];
 
 
-for(const item of content.items || []){
+for(
+const item of textContent.items||[]
+){
 
 if(
 !item ||
 typeof item.str!=="string" ||
 !item.str.trim()
 )
-
 continue;
 
 
-const transform =
+const tx =
 pdfjsLib.Util.transform(
 viewport.transform,
 item.transform
 );
 
 
-const x =
-transform[4];
-
-const y =
-transform[5];
+const x=tx[4];
+const y=tx[5];
 
 
-/*
-Approximate text height.
-*/
-
-const height =
+const h =
 Math.max(
 1,
-Math.sqrt(
-transform[2]*transform[2]+
-transform[3]*transform[3]
+Math.hypot(
+tx[2],
+tx[3]
 )
-);
-
-
-/*
-PDF canvas y is measured from the top after
-viewport transformation.
-
-Use it as the baseline and derive top.
-*/
-
-const top =
-y-height;
-
-
-const width =
-Math.max(
-1,
-item.width || 1
 );
 
 
@@ -1599,15 +1873,15 @@ text:item.str,
 
 x:x,
 
-y:y,
-
-top:top,
+top:y-h,
 
 bottom:y,
 
-width:width,
+height:h,
 
-height:height
+width:Math.abs(
+item.width||0
+)
 
 });
 
@@ -1618,48 +1892,7 @@ if(!raw.length)
 return "";
 
 
-/* =================================================
-REMOVE OBVIOUS TOP/BOTTOM PAGE FURNITURE
-================================================= */
-
-const bodyTop =
-pageHeight*.035;
-
-const bodyBottom =
-pageHeight*.965;
-
-
-const body =
-raw.filter(item=>{
-
-if(
-item.top<bodyTop ||
-item.bottom>bodyBottom
-){
-
-/*
-Keep it temporarily if it looks like a
-real long paragraph line.
-*/
-
-if(
-item.text.trim().split(/\s+/).length<7
-)
-
-return false;
-
-}
-
-return true;
-
-});
-
-
-/* =================================================
-GROUP WORDS INTO VISUAL LINES
-================================================= */
-
-body.sort(
+raw.sort(
 (a,b)=>
 a.top-b.top ||
 a.x-b.x
@@ -1669,67 +1902,83 @@ a.x-b.x
 const lines=[];
 
 
-for(const item of body){
+for(const item of raw){
 
-let best=null;
+const last =
+lines[lines.length-1];
 
-
-/*
-Text on the same visual line normally has
-very similar vertical positions.
-*/
-
-for(const line of lines){
 
 const tolerance =
 Math.max(
-4,
+3,
 Math.min(
-item.height,
-line.height
-)*.65
+12,
+item.height*.55
+)
 );
 
 
 if(
+last &&
 Math.abs(
-item.top-line.top
+item.top-last.top
 )<=tolerance
 ){
 
-best=line;
-break;
+last.items.push(item);
 
-}
+last.x =
+Math.min(
+last.x,
+item.x
+);
 
-}
+last.right =
+Math.max(
+last.right,
+item.x+item.width
+);
 
+last.top =
+Math.min(
+last.top,
+item.top
+);
 
-if(!best){
+last.bottom =
+Math.max(
+last.bottom,
+item.bottom
+);
 
-best={
+last.height =
+Math.max(
+last.height,
+item.height
+);
+
+}else{
+
+lines.push({
+
+items:[item],
+
+x:item.x,
+
+right:item.x+item.width,
 
 top:item.top,
 
-height:item.height,
+bottom:item.bottom,
 
-items:[]
+height:item.height
 
-};
-
-lines.push(best);
+});
 
 }
 
-
-best.items.push(item);
-
 }
 
-
-/* =================================================
-SORT ITEMS INSIDE EACH LINE
-===================================================== */
 
 lines.forEach(line=>{
 
@@ -1738,670 +1987,107 @@ line.items.sort(
 );
 
 line.text =
-joinTextFragments(
+joinTextParts(
 line.items.map(
-x=>x.text
+i=>i.text
 )
 );
-
-line.x =
-Math.min(
-...line.items.map(
-x=>x.x
-)
-);
-
-line.right =
-Math.max(
-...line.items.map(
-x=>x.x+x.width
-)
-);
-
-line.width =
-line.right-line.x;
 
 });
 
 
-/*
-Remove empty and obvious furniture.
-*/
-
-let useful =
-lines.filter(
-line=>
-line.text &&
-!isNonReadingLine(line.text)
-);
-
-
-if(!useful.length)
-return "";
-
-
-/* =================================================
-COLUMN DETECTION
-===================================================== */
-
-/*
-A textbook may have two or more columns.
-
-Global top-to-bottom sorting can incorrectly read:
-
-left line 1
-right line 1
-left line 2
-right line 2
-
-Instead, detect strong horizontal gaps and read
-the left column from top to bottom before the
-right column.
-*/
-
-function detectColumns(input){
-
-if(input.length<6)
-return [input];
-
-
-/*
-Get starting x positions.
-*/
-
-const starts =
-input
-.map(x=>x.x)
-.sort((a,b)=>a-b);
-
-
-const candidates=[];
-
-for(
-let i=1;
-i<starts.length;
-i++
-){
-
-const gap =
-starts[i]-starts[i-1];
-
-if(
-gap>pageWidth*.16
-){
-
-candidates.push({
-index:i,
-gap:gap
-});
-
-}
-
-}
-
-
-if(!candidates.length)
-return [input];
-
-
-/*
-Use the strongest gap.
-*/
-
-candidates.sort(
-(a,b)=>b.gap-a.gap
-);
-
-
-const candidate =
-candidates[0];
-
-
-const splitX =
-(
-starts[candidate.index-1]+
-starts[candidate.index]
-)/2;
-
-
-const left =
-input.filter(
-x=>x.x<splitX
-);
-
-const right =
-input.filter(
-x=>x.x>=splitX
-);
-
-
-/*
-Do not call small indentations columns.
-*/
-
-if(
-left.length<3 ||
-right.length<3
-)
-
-return [input];
-
-
-/*
-Check that the two groups occupy meaningful
-parts of the page.
-*/
-
-const leftRange =
-Math.max(...left.map(x=>x.x))-
-Math.min(...left.map(x=>x.x));
-
-const rightRange =
-Math.max(...right.map(x=>x.x))-
-Math.min(...right.map(x=>x.x));
-
-
-if(
-leftRange<pageWidth*.05 &&
-rightRange<pageWidth*.05 &&
-candidate.gap<pageWidth*.20
-){
-
-return [input];
-
-}
-
-
-return [left,right];
-
-}
+const pageWidth =
+viewport.width;
 
 
 const columns =
-detectColumns(useful);
+clusterColumns(
+lines.filter(
+l=>l.text
+),
+pageWidth
+);
 
-
-/* =================================================
-BUILD READING FLOW
-===================================================== */
 
 const ordered=[];
 
 
 columns.forEach(column=>{
 
-column.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-);
+column.forEach(line=>{
+
+if(
+line.text &&
+!isFurnitureLine(line.text)
+){
+
+ordered.push(line);
+
+}
+
+});
+
+});
 
 
-/*
-Group lines into paragraph blocks.
-
-A larger vertical gap normally means a
-new paragraph.
-*/
-
-let paragraph=[];
+let output="";
 let previous=null;
 
 
-function flush(){
+for(const line of ordered){
 
-if(!paragraph.length)
-return;
+if(!output){
 
+output=line.text;
 
-const text =
-joinTextFragments(
-paragraph.map(
-x=>x.text
-)
-);
-
-
-if(text){
-
-/*
-Ignore very short isolated labels.
-*/
-
-if(
-tokenize(text).length>=3 ||
-/[.!?]/.test(text)
-){
-
-ordered.push(text);
-
-}
-
-}
-
-
-paragraph=[];
-
-}
-
-
-for(const line of column){
-
-if(!previous){
-
-paragraph.push(line);
 previous=line;
+
 continue;
 
 }
 
 
 const gap =
-line.top-
-previous.bottom;
+line.top-previous.bottom;
 
 
-/*
-Large vertical gap = new paragraph.
-*/
-
-const threshold =
+if(
+gap>
 Math.max(
-previous.height*1.8,
-10
-);
+14,
+previous.height*1.8
+)
+){
 
+output+=
+"\n\n"+
+line.text;
 
-if(gap>threshold){
+}else{
 
-flush();
+output+=" "+
+line.text;
 
 }
 
-
-paragraph.push(line);
 
 previous=line;
 
 }
 
 
-flush();
-
-});
-
-
-/*
-If column detection produced strange results,
-fallback to normal page order.
-*/
-
-if(
-ordered.length<1
-){
-
-useful.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-);
-
-return useful
-.map(x=>x.text)
-.filter(Boolean)
-.join(" ")
-.trim();
-
-}
-
-
-return cleanReadingCharacters(
-ordered.join("\n\n")
-);
-
-}
-
-
-/* =====================================================
-LEGACY PDF EXTRACTION FALLBACK
-===================================================== */
-
-async function extractPDFText(pdfPage){
-
-try{
-
-const structured =
-await extractStructuredPDFText(
-pdfPage
-);
-
-if(structured)
-return structured;
+return cleanFinalReference(output);
 
 }catch(error){
 
-console.log(
-"Structured PDF extraction failed:",
-error
-);
-
-}
-
-
-try{
-
-const textContent =
-await pdfPage.getTextContent();
-
-const items =
-textContent.items || [];
-
-const fallback =
-items
-.map(
-item=>
-typeof item.str==="string"
-?
-item.str
-:
-""
-)
-.filter(Boolean)
-.join(" ");
-
-
-return cleanReadingCharacters(
-fallback
-);
-
-}catch(error){
-
-console.log(
-"PDF fallback extraction failed:",
+console.error(
+"PDF text extraction failed:",
 error
 );
 
 return "";
 
 }
-
-}
-
-
-/* =====================================================
-OCR LAYOUT EXTRACTION
-===================================================== */
-
-function extractOCRLayout(data){
-
-if(!data)
-return "";
-
-
-/*
-Tesseract provides line bounding boxes.
-
-Using lines instead of data.text allows us
-to preserve the page's visual reading order.
-*/
-
-let lines =
-Array.isArray(data.lines)
-?
-data.lines
-.map(line=>({
-
-text:
-String(line.text||"").trim(),
-
-x:
-Number(line.bbox?.x0||0),
-
-y:
-Number(line.bbox?.y0||0),
-
-x1:
-Number(line.bbox?.x1||0),
-
-y1:
-Number(line.bbox?.y1||0)
-
-}))
-.filter(x=>x.text)
-:
-[];
-
-
-/*
-Fallback to OCR words if line information
-is unavailable.
-*/
-
-if(!lines.length && Array.isArray(data.words)){
-
-lines =
-data.words
-.map(word=>({
-
-text:
-String(word.text||"").trim(),
-
-x:
-Number(word.bbox?.x0||0),
-
-y:
-Number(word.bbox?.y0||0),
-
-x1:
-Number(word.bbox?.x1||0),
-
-y1:
-Number(word.bbox?.y1||0)
-
-}))
-.filter(x=>x.text);
-
-}
-
-
-/*
-Sort vertically first.
-*/
-
-lines.sort(
-(a,b)=>
-a.y-b.y ||
-a.x-b.x
-);
-
-
-/*
-Merge lines that Tesseract accidentally
-split at nearly the same height.
-*/
-
-const merged=[];
-
-for(const line of lines){
-
-let target=null;
-
-for(const existing of merged){
-
-const height =
-Math.max(
-2,
-existing.y1-existing.y
-);
-
-const currentHeight =
-Math.max(
-2,
-line.y1-line.y
-);
-
-const tolerance =
-Math.max(
-5,
-Math.min(
-height,
-currentHeight
-)*.7
-);
-
-if(
-Math.abs(
-line.y-existing.y
-)<=tolerance
-){
-
-target=existing;
-break;
-
-}
-
-}
-
-
-if(!target){
-
-merged.push({
-
-text:line.text,
-
-x:line.x,
-
-y:line.y,
-
-x1:line.x1,
-
-y1:line.y1
-
-});
-
-}else{
-
-target.text =
-joinTextFragments([
-target.text,
-line.text
-]);
-
-target.x =
-Math.min(
-target.x,
-line.x
-);
-
-target.x1 =
-Math.max(
-target.x1,
-line.x1
-);
-
-target.y1 =
-Math.max(
-target.y1,
-line.y1
-);
-
-}
-
-}
-
-
-/*
-Remove obvious non-reading lines.
-*/
-
-let useful =
-merged.filter(
-line=>
-!isNonReadingLine(
-line.text
-)
-);
-
-
-/*
-Attempt basic column ordering.
-*/
-
-if(useful.length>=6){
-
-const starts =
-useful
-.map(x=>x.x)
-.sort((a,b)=>a-b);
-
-
-let strongestGap=0;
-let splitIndex=-1;
-
-
-for(
-let i=1;
-i<starts.length;
-i++
-){
-
-const gap =
-starts[i]-starts[i-1];
-
-if(gap>strongestGap){
-
-strongestGap=gap;
-splitIndex=i;
-
-}
-
-}
-
-
-if(
-splitIndex>2 &&
-starts.length-splitIndex>2 &&
-strongestGap>120
-){
-
-const splitX =
-(
-starts[splitIndex-1]+
-starts[splitIndex]
-)/2;
-
-
-const left =
-useful
-.filter(x=>x.x<splitX)
-.sort((a,b)=>a.y-b.y);
-
-const right =
-useful
-.filter(x=>x.x>=splitX)
-.sort((a,b)=>a.y-b.y);
-
-
-if(
-left.length>=3 &&
-right.length>=3
-){
-
-useful =
-left.concat(right);
-
-}
-
-}
-
-}
-
-
-return useful
-.map(x=>x.text)
-.filter(Boolean)
-.join("\n\n")
-.trim();
 
 }
 
@@ -2410,15 +2096,11 @@ return useful
 OCR
 ===================================================== */
 
-async function runOCR(
-image,
-status,
-prefix=""
-){
+async function runOCR(image,status,prefix=""){
 
 try{
 
-const ocr =
+const result =
 await Tesseract.recognize(
 image,
 "eng",
@@ -2426,30 +2108,41 @@ image,
 
 logger:info=>{
 
-if(!info || !info.status)
+if(!info)
 return;
+
+
+if(
+info.status
+){
 
 const percent =
 info.progress
 ?
-Math.round(info.progress*100)
+Math.round(
+info.progress*100
+)
 :
 "";
+
 
 status.innerHTML=`
 
 <div class="status">
 
 ${escapeHTML(prefix)}
+
 <br>
 
 ${escapeHTML(info.status)}
 
-${percent
+${
+percent
 ?
 " "+percent+"%"
 :
-""}
+""
+}
 
 </div>
 
@@ -2458,38 +2151,144 @@ ${percent
 }
 
 }
+
+}
 );
 
 
-/*
-Use the page layout rather than the raw
-OCR string.
-*/
+const lines =
+(result.data.lines||[])
+.map(line=>{
 
-const structured =
-extractOCRLayout(
-ocr.data
+const b =
+line.bbox||{};
+
+
+return {
+
+text:
+normalizeExtractedLine(
+line.text||""
+),
+
+x:b.x0||0,
+
+top:b.y0||0,
+
+bottom:b.y1||0,
+
+height:
+Math.max(
+1,
+(b.y1||0)-
+(b.y0||0)
+),
+
+right:b.x1||0
+
+};
+
+})
+.filter(
+l=>l.text
 );
 
 
-if(structured)
-return cleanReadingCharacters(
-structured
+if(!lines.length){
+
+return cleanFinalReference(
+result.data.text||""
+);
+
+}
+
+
+const pageWidth =
+Math.max(
+...lines.map(l=>l.right),
+1
 );
 
 
-/*
-Final fallback.
-*/
-
-return cleanReadingCharacters(
-ocr.data.text || ""
+const columns =
+clusterColumns(
+lines,
+pageWidth
 );
+
+
+const ordered=[];
+
+
+columns.forEach(column=>{
+
+column.forEach(line=>{
+
+if(
+!isFurnitureLine(line.text)
+){
+
+ordered.push(line);
+
+}
+
+});
+
+});
+
+
+let output="";
+let previous=null;
+
+
+for(const line of ordered){
+
+if(!output){
+
+output=line.text;
+
+previous=line;
+
+continue;
+
+}
+
+
+const gap =
+line.top-previous.bottom;
+
+
+if(
+gap>
+Math.max(
+14,
+previous.height*1.8
+)
+){
+
+output+=
+"\n\n"+
+line.text;
+
+}else{
+
+output+=" "+
+line.text;
+
+}
+
+
+previous=line;
+
+}
+
+
+return cleanFinalReference(output);
 
 }catch(error){
 
 console.error(
-"OCR failed",
+"OCR failed:",
 error
 );
 
@@ -2508,49 +2307,64 @@ window.processChapterFiles =
 async function(){
 
 const title =
-document.getElementById("chapterTitle")
-.value.trim();
+document.getElementById(
+"chapterTitle"
+).value.trim();
+
 
 const files =
 Array.from(
-document.getElementById("chapterFiles").files
+document.getElementById(
+"chapterFiles"
+).files
 );
+
 
 if(!title){
 
 alert("Enter a chapter name.");
+
 return;
 
 }
 
-if(files.length===0){
+
+if(!files.length){
 
 alert("Select PDF or image files.");
+
 return;
 
 }
 
+
 const button =
-document.getElementById("extractButton");
+document.getElementById(
+"extractButton"
+);
+
+
+const status =
+document.getElementById(
+"ocrStatus"
+);
+
+
+const preview =
+document.getElementById(
+"ocrPreview"
+);
+
 
 button.disabled=true;
 
-const status =
-document.getElementById("ocrStatus");
-
-const preview =
-document.getElementById("ocrPreview");
-
 preview.innerHTML="";
+
 
 const pages=[];
 
 let pageNumber=1;
 
-
-/* =================================================
-PROCESS EVERY FILE
-================================================= */
 
 for(
 let fileIndex=0;
@@ -2558,7 +2372,9 @@ fileIndex<files.length;
 fileIndex++
 ){
 
-const file=files[fileIndex];
+const file =
+files[fileIndex];
+
 
 status.innerHTML=`
 
@@ -2580,7 +2396,7 @@ ${escapeHTML(file.name)}
 
 /* =================================================
 PDF
-================================================= */
+===================================================== */
 
 if(
 file.type==="application/pdf" ||
@@ -2620,48 +2436,53 @@ of ${pdf.numPages}
 
 
 const pdfPage =
-await pdf.getPage(pdfPageNumber);
+await pdf.getPage(
+pdfPageNumber
+);
 
-
-/*
-Extract only the reading text from the
-actual PDF layout.
-*/
 
 let extractedText =
-await extractPDFText(pdfPage);
+await extractPDFText(
+pdfPage
+);
 
 
-/*
-Render the original page for display.
-
-This image remains the page the child
-is reading from.
-*/
+/* Render visual page */
 
 const viewport =
 pdfPage.getViewport({
 scale:1.5
 });
 
+
 const canvas =
 document.createElement("canvas");
 
+
 canvas.width =
-Math.ceil(viewport.width);
+Math.ceil(
+viewport.width
+);
+
 
 canvas.height =
-Math.ceil(viewport.height);
+Math.ceil(
+viewport.height
+);
+
 
 const context =
 canvas.getContext("2d");
 
+
 await pdfPage.render({
 
 canvasContext:context,
+
 viewport:viewport
 
 }).promise;
+
 
 const image =
 canvas.toDataURL(
@@ -2670,13 +2491,7 @@ canvas.toDataURL(
 );
 
 
-/*
-If there is no usable native text,
-OCR the page.
-
-The OCR result is converted into
-reading-order text.
-*/
+/* OCR scanned PDF */
 
 if(
 tokenize(extractedText).length<3
@@ -2691,11 +2506,12 @@ contains little or no selectable text.
 
 <br>
 
-Extracting reading text with OCR...
+Extracting words with OCR...
 
 </div>
 
 `;
+
 
 extractedText =
 await runOCR(
@@ -2707,21 +2523,13 @@ status,
 }
 
 
-/*
-Store:
-
-image = existing page
-
-text = hidden reading reference
-*/
-
 pages.push({
 
 pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanReadingCharacters(
+text:cleanFinalReference(
 extractedText
 ),
 
@@ -2748,6 +2556,7 @@ pages[pages.length-1]
 
 console.error(error);
 
+
 alert(
 "Could not process PDF: "+
 file.name
@@ -2760,20 +2569,23 @@ file.name
 
 /* =================================================
 IMAGE
-================================================= */
+===================================================== */
 
-else if(file.type.startsWith("image/")){
+else if(
+file.type.startsWith("image/")
+){
 
 try{
 
 const image =
 await fileToDataURL(file);
 
+
 status.innerHTML=`
 
 <div class="status">
 
-Extracting reading text from image
+Extracting words from image
 ${fileIndex+1}/${files.length}
 
 </div>
@@ -2785,7 +2597,7 @@ const extractedText =
 await runOCR(
 image,
 status,
-"Extracting reading text"
+"Extracting words"
 );
 
 
@@ -2795,7 +2607,7 @@ pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanReadingCharacters(
+text:cleanFinalReference(
 extractedText
 ),
 
@@ -2818,6 +2630,7 @@ pages[pages.length-1]
 
 console.error(error);
 
+
 alert(
 "Could not process image: "+
 file.name
@@ -2825,12 +2638,11 @@ file.name
 
 }
 
-}
-
-else{
+}else{
 
 alert(
-"Unsupported file: "+file.name
+"Unsupported file: "+
+file.name
 );
 
 }
@@ -2838,11 +2650,14 @@ alert(
 }
 
 
-/* =================================================
-SAVE CHAPTER
-================================================= */
+/* Remove repeated header/footer lines */
 
-if(pages.length===0){
+removeRepeatedFurniture(
+pages
+);
+
+
+if(!pages.length){
 
 status.innerHTML=`
 
@@ -2861,18 +2676,32 @@ return;
 }
 
 
-status.innerHTML=
-'<div class="status">Optimising pages...</div>';
-
-
-if(!(await prepareStorage(pages))){
+/* Prepare storage */
 
 status.innerHTML=`
 
 <div class="status">
 
-Not enough storage
-(${MAX_STORAGE_MB} MB limit).
+Optimising pages...
+
+</div>
+
+`;
+
+
+const prepared =
+await prepareStorage(
+pages
+);
+
+
+if(!prepared){
+
+status.innerHTML=`
+
+<div class="status">
+
+Not enough storage.
 
 Delete an old book or upload fewer pages.
 
@@ -2891,6 +2720,19 @@ const book =
 books.find(
 b=>b.id===currentBookId
 );
+
+
+if(!book){
+
+button.disabled=false;
+
+alert(
+"Book could not be found."
+);
+
+return;
+
+}
 
 
 const chapter={
@@ -2939,18 +2781,129 @@ document.getElementById(
 "chapterTitle"
 ).value="";
 
+
 document.getElementById(
 "chapterFiles"
 ).value="";
+
 
 openChapter(
 currentBookId,
 chapter.id
 );
 
-},700);
+},500);
 
 };
+
+
+/* =====================================================
+REPEATED HEADER / FOOTER
+===================================================== */
+
+function removeRepeatedFurniture(pages){
+
+const occurrences=new Map();
+
+
+pages.forEach(page=>{
+
+const lines =
+(page.text||"")
+.split(/\n+/);
+
+
+lines.forEach(line=>{
+
+const t =
+normalizeExtractedLine(
+line
+).toLowerCase();
+
+
+if(
+!t ||
+tokenize(t).length>12
+)
+return;
+
+
+if(
+isFurnitureLine(t)
+)
+return;
+
+
+if(!occurrences.has(t)){
+
+occurrences.set(t,[]);
+
+}
+
+
+occurrences.get(t).push(
+page.pageNumber
+);
+
+});
+
+});
+
+
+const repeated =
+new Set();
+
+
+occurrences.forEach(
+(pageNumbers,text)=>{
+
+if(
+pageNumbers.length>=2
+){
+
+repeated.add(text);
+
+}
+
+});
+
+
+pages.forEach(page=>{
+
+const lines =
+(page.text||"")
+.split(/\n+/);
+
+
+page.text =
+lines
+
+.map(
+normalizeExtractedLine
+)
+
+.filter(Boolean)
+
+.filter(
+line=>{
+
+const lower =
+line.toLowerCase();
+
+
+return !isFurnitureLine(line) &&
+!repeated.has(lower);
+
+}
+)
+
+.join("\n")
+
+.trim();
+
+});
+
+}
 
 
 /* =====================================================
@@ -2960,15 +2913,19 @@ OCR PREVIEW
 function showOCRPreview(page){
 
 const preview =
-document.getElementById("ocrPreview");
+document.getElementById(
+"ocrPreview"
+);
 
-preview.innerHTML += `
+
+preview.innerHTML+=`
 
 <div class="card">
 
 <h3>
 Page ${page.pageNumber}
 </h3>
+
 
 <img src="${page.image}"
 style="
@@ -2979,6 +2936,7 @@ border-radius:8px;
 background:#eee;
 ">
 
+
 <p class="small">
 
 <strong>
@@ -2987,13 +2945,17 @@ Extracted reading text:
 
 <br>
 
-${
-escapeHTML(
+${escapeHTML(
 page.text.substring(0,600)
-)
-}
+)}
 
-${page.text.length>600?"...":""}
+${
+page.text.length>600
+?
+"..."
+:
+""
+}
 
 </p>
 
@@ -3011,50 +2973,75 @@ OPEN CHAPTER
 window.openChapter =
 function(bookId,chapterId){
 
+stopSession();
+
+
 currentBookId=bookId;
 
 currentChapterId=chapterId;
+
 
 const book =
 books.find(
 b=>b.id===bookId
 );
 
+
 const chapter =
 book?.chapters.find(
 c=>c.id===chapterId
 );
 
-if(!chapter)return;
+
+if(!chapter)
+return;
+
 
 document.getElementById(
 "chapterTitleDisplay"
 ).textContent=
 chapter.title;
 
+
 document.getElementById(
 "chapterDetails"
 ).textContent=
 `${chapter.pages.length} pages`;
 
-renderChapterPages(chapter);
 
-showSection("chapterSection");
+renderChapterPages(
+chapter
+);
+
+
+showSection(
+"chapterSection"
+);
 
 };
 
+
+/* =====================================================
+RENDER CHAPTER PAGES
+===================================================== */
 
 function renderChapterPages(chapter){
 
 window.__pp={};
 
+
 chapter.pages.forEach(
-p=>
-window.__pp[p.pageNumber]=p
+page=>{
+window.__pp[page.pageNumber]=page;
+}
 );
 
+
 const container =
-document.getElementById("chapterPages");
+document.getElementById(
+"chapterPages"
+);
+
 
 container.innerHTML="";
 
@@ -3062,6 +3049,7 @@ container.innerHTML="";
 chapter.pages.forEach(page=>{
 
 let status="Not read";
+
 
 if(page.result){
 
@@ -3074,6 +3062,7 @@ status =
 const div =
 document.createElement("div");
 
+
 div.className="pageCard";
 
 
@@ -3081,21 +3070,17 @@ div.innerHTML=`
 
 <img src="${page.image}">
 
+
 <div class="body">
 
 <strong>
 Page ${page.pageNumber}
 </strong>
 
+
 <p class="small">
 
-${
-page.result&&page.result.auto
-?
-"Pictures only"
-:
-status
-}
+${status}
 
 </p>
 
@@ -3108,7 +3093,10 @@ Reading text
 
 
 <textarea
-style="width:100%;height:110px"
+style="
+width:100%;
+height:110px
+"
 oninput="editRef(${page.pageNumber},this.value)"
 >${escapeHTML(page.text)}</textarea>
 
@@ -3116,7 +3104,7 @@ oninput="editRef(${page.pageNumber},this.value)"
 <div class="small"
 id="segCount${page.pageNumber}">
 
-${(page.segments||[]).length}
+${buildSegments(page.text).length}
 reading sentence(s)
 
 </div>
@@ -3136,190 +3124,73 @@ container.appendChild(div);
 
 
 /* =====================================================
-CONFIG
+EDIT REFERENCE
 ===================================================== */
-
-const MAX_STORAGE_MB = 4.5;
-
-const LONG_BREAK_MS =
-10*60*1000;
-
-const IMG_MAX_SIDE = 1400;
-
-const IMG_QUALITY = .6;
-
-
-/* =====================================================
-CLEAN EXTRACTED TEXT
-===================================================== */
-
-function cleanOCR(text){
-
-if(!text)
-return "";
-
-return cleanReadingCharacters(
-String(text)
-
-.replace(/\r/g," ")
-
-.replace(
-/[ \t]+/g,
-" "
-)
-
-.replace(
-/\n{3,}/g,
-"\n\n"
-)
-
-.trim()
-);
-
-}
-
-
-/* =====================================================
-CLEAN READING TEXT -> SEGMENTS
-===================================================== */
-
-function buildSegments(text){
-
-const raw =
-(text||"")
-.match(
-/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g
-) || [];
-
-const out=[];
-
-
-raw.forEach(s=>{
-
-s=s.trim();
-
-
-if(!/[a-z]/i.test(s))
-return;
-
-
-if(
-/^(fig(ure)?|table|photo|source|image|illustration|diagram|page)\b/i
-.test(s)
-)
-return;
-
-
-const n =
-tokenize(s).length;
-
-
-if(
-n<2 &&
-!/[!?.]$/.test(s)
-)
-return;
-
-
-if(n>30){
-
-let cur="";
-
-s.split(
-/(?<=[,;:])\s+/
-)
-.forEach(part=>{
-
-cur +=
-(cur?" ":"")+
-part;
-
-if(
-tokenize(cur).length>=8
-){
-
-out.push(cur);
-
-cur="";
-
-}
-
-});
-
-
-if(cur){
-
-if(
-out.length &&
-tokenize(cur).length<4
-)
-
-out[out.length-1]+=
-" "+cur;
-
-else
-
-out.push(cur);
-
-}
-
-}else{
-
-out.push(s);
-
-}
-
-});
-
-
-return out;
-
-}
-
 
 window.editRef =
-function(n,val){
+function(pageNumber,value){
 
-const p =
+const page =
 window.__pp &&
-window.__pp[n];
+window.__pp[pageNumber];
 
-if(!p)
+
+if(!page)
 return;
 
-p.text =
-val.trim();
 
-p.segments =
-buildSegments(p.text);
+page.text =
+value.trim();
+
+
+page.segments =
+buildSegments(
+page.text
+);
+
 
 saveBooks();
 
 
-const c =
+const count =
 document.getElementById(
-"segCount"+n
+"segCount"+pageNumber
 );
 
-if(c)
 
-c.textContent =
-p.segments.length+
+if(count){
+
+count.textContent =
+page.segments.length+
 " reading sentence(s)";
+
+}
 
 };
 
 
 /* =====================================================
-STORAGE
+CONFIG
+===================================================== */
+
+const MAX_STORAGE_MB=4.5;
+
+const IMG_MAX_SIDE=1400;
+
+const IMG_QUALITY=.6;
+
+
+/* =====================================================
+STORAGE IMAGE
 ===================================================== */
 
 function shrinkImage(src){
 
-return new Promise(res=>{
+return new Promise(resolve=>{
 
 const img =
 new Image();
+
 
 img.onload=()=>{
 
@@ -3333,30 +3204,36 @@ img.height
 )
 );
 
-const c =
+
+const canvas =
 document.createElement("canvas");
 
-c.width =
+
+canvas.width =
 Math.round(
 img.width*k
 );
 
-c.height =
+
+canvas.height =
 Math.round(
 img.height*k
 );
 
-c.getContext("2d")
+
+canvas
+.getContext("2d")
 .drawImage(
 img,
 0,
 0,
-c.width,
-c.height
+canvas.width,
+canvas.height
 );
 
-res(
-c.toDataURL(
+
+resolve(
+canvas.toDataURL(
 "image/jpeg",
 IMG_QUALITY
 )
@@ -3364,7 +3241,11 @@ IMG_QUALITY
 
 };
 
-img.onerror=()=>res(src);
+
+img.onerror=()=>{
+resolve(src);
+};
+
 
 img.src=src;
 
@@ -3377,15 +3258,19 @@ function hashStr(s){
 
 let h=5381;
 
+
 for(
 let i=0;
 i<s.length;
 i++
-)
+){
 
-h=
+h =
 ((h<<5)+h+s.charCodeAt(i))
 |0;
+
+}
+
 
 return h+":"+s.length;
 
@@ -3397,40 +3282,56 @@ async function prepareStorage(pages){
 const seen =
 new Set();
 
+
 const keep=[];
 
 
-for(const p of pages){
+for(const page of pages){
 
-p.image =
-await shrinkImage(p.image);
+page.image =
+await shrinkImage(
+page.image
+);
 
-const h =
-hashStr(p.image);
 
-if(seen.has(h))
+const hash =
+hashStr(
+page.image
+);
+
+
+if(
+seen.has(hash)
+)
 continue;
 
-seen.add(h);
 
-p.segments =
-buildSegments(p.text);
+seen.add(hash);
 
-p.transcript="";
 
-keep.push(p);
+page.segments =
+buildSegments(
+page.text
+);
+
+
+page.transcript="";
+
+
+keep.push(page);
 
 }
 
 
 pages.length=0;
 
+
 keep.forEach(
-(p,i)=>{
+(page,index)=>{
 
-p.pageNumber=i+1;
+page.pageNumber=index+1;
 
-pages.push(p);
+pages.push(page);
 
 });
 
@@ -3440,35 +3341,124 @@ JSON.stringify(books).length+
 JSON.stringify(pages).length;
 
 
-return used <=
-MAX_STORAGE_MB*1024*1024;
+return (
+used<=
+MAX_STORAGE_MB*1024*1024
+);
+
+}
+
+
+/* =====================================================
+BUILD SEGMENTS
+===================================================== */
+
+function buildSegments(text){
+
+const raw =
+String(text||"")
+.match(
+/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g
+) || [];
+
+
+const output=[];
+
+
+raw.forEach(segment=>{
+
+segment =
+segment.trim();
+
+
+if(
+!/[a-z]/i.test(segment)
+)
+return;
+
+
+if(
+/^(fig(ure)?|table|photo|source|image|illustration|diagram|page)\b/i
+.test(segment)
+)
+return;
+
+
+const count =
+tokenize(segment).length;
+
+
+if(
+count<2 &&
+!/[!?.]$/.test(segment)
+)
+return;
+
+
+if(count>30){
+
+let current="";
+
+
+segment
+.split(
+/(?<=[,;:])\s+/
+)
+.forEach(part=>{
+
+current +=
+(current?" ":"")+
+part;
+
+
+if(
+tokenize(current).length>=8
+){
+
+output.push(current);
+
+current="";
+
+}
+
+});
+
+
+if(current){
+
+if(
+output.length &&
+tokenize(current).length<4
+){
+
+output[
+output.length-1
+]+=" "+current;
+
+}else{
+
+output.push(current);
+
+}
+
+}
+
+}else{
+
+output.push(segment);
+
+}
+
+});
+
+
+return output;
 
 }
 
 
 /* =====================================================
 READING SESSION
-===================================================== */
-
-let F=[],
-prog=null,
-sessionActive=false;
-
-let bufWords=[],
-interimWords=[],
-ptr=0;
-
-let restartTimer=null,
-idleTimer=null;
-
-const PKEY =
-()=>
-"appearich_progress_"+
-currentChapterId;
-
-
-/* =====================================================
-BUILD FLAT READING FLOW
 ===================================================== */
 
 function buildFlat(chapter){
@@ -3479,72 +3469,102 @@ F=[];
 chapter.pages.forEach(
 (pg,pi)=>{
 
-if(!pg.segments)
+if(!pg.segments){
 
 pg.segments =
 buildSegments(
 pg.text||""
 );
 
+}
+
 
 if(
 !pg.segments.length &&
 !pg.result
-)
+){
 
 pg.result={
 
 score:100,
+
 correct:0,
+
 missing:0,
+
 changed:0,
+
 extra:0,
+
 referenceWords:0,
+
 auto:true,
+
 completed:true
 
 };
 
+}
+
 
 pg.segments.forEach(
-(t,si)=>
+(t,si)=>{
 
 F.push({
 
 p:pi,
+
 s:si,
+
 text:t,
+
 ref:tokenize(t)
-
-})
-
-);
 
 });
 
+});
 
-const valid =
-F.filter(
-x=>x.ref.length
-);
-
-F=valid;
+});
 
 }
 
 
-const firstIdxOfPage =
-pi=>
-F.findIndex(
+/* =====================================================
+PAGE INDEX HELPER
+===================================================== */
+
+function firstIdxOfPage(pi){
+
+return F.findIndex(
 x=>x.p===pi
 );
 
+}
+
+
+/* =====================================================
+BUFFER
+===================================================== */
 
 function resetBuffer(){
 
 bufWords=[];
+
 interimWords=[];
+
 ptr=0;
+
+}
+
+
+/* =====================================================
+PROGRESS
+===================================================== */
+
+function PKEY(){
+
+return "appearich_progress_"+
+currentChapterId;
 
 }
 
@@ -3565,8 +3585,12 @@ JSON.stringify(prog)
 
 function touch(){
 
-prog.lastActive =
+if(prog){
+
+prog.lastActive=
 Date.now();
+
+}
 
 }
 
@@ -3578,20 +3602,23 @@ START CHAPTER
 window.startChapter =
 function(){
 
-const ch =
+const chapter =
 getCurrentChapter();
 
-if(!ch)
+
+if(!chapter)
 return;
 
 
-buildFlat(ch);
+buildFlat(
+chapter
+);
 
 
 if(!F.length){
 
 alert(
-"No reading text found in this chapter. Open the chapter and check the reading text of each page."
+"No reading text found in this chapter. Open the chapter and check the reading text."
 );
 
 return;
@@ -3603,7 +3630,9 @@ try{
 
 prog =
 JSON.parse(
-localStorage.getItem(PKEY())
+localStorage.getItem(
+PKEY()
+)
 );
 
 }catch(e){
@@ -3616,19 +3645,26 @@ prog=null;
 if(
 !prog ||
 typeof prog.cursor!=="number"
-)
+){
 
 prog={
+
 cursor:0,
+
 reached:0,
+
 seg:[],
+
 lastActive:0
+
 };
+
+}
 
 
 prog.reached =
 Math.min(
-prog.reached,
+prog.reached||0,
 F.length
 );
 
@@ -3646,9 +3682,13 @@ prog.reached
 
 resetBuffer();
 
+
 loadReaderPage();
 
-showSection("readerSection");
+
+showSection(
+"readerSection"
+);
 
 
 if(
@@ -3656,9 +3696,11 @@ prog.reached>0 &&
 Date.now()-
 (prog.lastActive||0)
 >=LONG_BREAK_MS
-)
+){
 
 showWelcome();
+
+}
 
 };
 
@@ -3669,54 +3711,49 @@ LOAD READER PAGE
 
 function loadReaderPage(){
 
-const ch =
+const chapter =
 getCurrentChapter();
 
-const it =
+
+const item =
 F[prog.cursor];
 
-if(!ch||!it)
+
+if(!chapter||!item)
 return;
 
 
-const pg =
-ch.pages[it.p];
+const page =
+chapter.pages[item.p];
 
 
 document.getElementById(
 "readerChapterTitle"
-).textContent =
-ch.title;
+).textContent=
+chapter.title;
 
 
 document.getElementById(
 "readerPageTitle"
-).textContent =
-`Page ${pg.pageNumber} of ${ch.pages.length}`;
+).textContent=
+`Page ${page.pageNumber} of ${chapter.pages.length}`;
 
-
-/*
-IMPORTANT:
-
-This is always the original existing
-page image.
-
-It is NOT replaced by extracted text.
-*/
 
 document.getElementById(
 "readerImage"
-).src =
-pg.image;
+).src=
+page.image;
 
 
-renderSegments(it.p);
+renderSegments(
+item.p
+);
 
 
 document.getElementById(
 "backButton"
-).disabled =
-F[0].p===it.p;
+).disabled=
+F[0].p===item.p;
 
 
 document.getElementById(
@@ -3734,13 +3771,14 @@ document.getElementById(
 
 resetRecordingUI();
 
+
 updateChapterProgress();
 
 }
 
 
 /* =====================================================
-SEGMENTS
+RENDER SEGMENTS
 ===================================================== */
 
 function renderSegments(pi){
@@ -3750,133 +3788,175 @@ document.getElementById(
 "referenceText"
 );
 
+
 box.innerHTML="";
 
 
-F.forEach((x,i)=>{
+F.forEach(
+(item,index)=>{
 
-if(x.p!==pi)
+if(item.p!==pi)
 return;
 
 
-const st =
-i===prog.cursor
+const state =
+index===prog.cursor
 ?
 "cur"
 :
-i<prog.reached
+index<prog.reached
 ?
 "done"
 :
-i===prog.reached
+index===prog.reached
 ?
 "next"
 :
 "lock";
 
 
-const d =
+const div =
 document.createElement("div");
 
 
-d.className =
-"seg "+st;
+div.className=
+"seg "+state;
 
 
-d.textContent =
+div.textContent=
+
 (
-st==="cur"
+state==="cur"
 ?
 "→ "
 :
-st==="done"
+state==="done"
 ?
 "✓ "
 :
-st==="lock"
+state==="lock"
 ?
 "🔒 "
 :
 "• "
 )+
-x.text;
+item.text;
 
 
-if(i<=prog.reached)
+if(index<=prog.reached){
 
-d.onclick =
-()=>
-jumpTo(i);
+div.onclick=()=>{
+
+jumpTo(index);
+
+};
+
+}
 
 
-box.appendChild(d);
+box.appendChild(div);
 
 
-if(st==="cur")
+if(state==="cur"){
 
 setTimeout(
-()=>
-d.scrollIntoView({
+()=>{
+
+div.scrollIntoView({
 block:"nearest"
-}),
+});
+
+},
 0
 );
+
+}
 
 });
 
 }
 
 
-function jumpTo(i){
+/* =====================================================
+JUMP TO
+===================================================== */
 
-if(i>prog.reached)
+function jumpTo(index){
+
+if(!prog)
 return;
 
-prog.cursor=i;
+
+if(index>prog.reached)
+return;
+
+
+prog.cursor=index;
+
 
 resetBuffer();
 
-loadReaderPage();
 
 saveProgress();
+
+
+loadReaderPage();
 
 }
 
 
-window.goBack =
-function(){
+/* =====================================================
+BACK
+===================================================== */
 
-let current =
+window.goBack=function(){
+
+if(!F.length)
+return;
+
+
+const current =
 F[prog.cursor];
+
 
 if(!current)
 return;
 
-let pi =
+
+let pageIndex =
 current.p-1;
 
 
 while(
-pi>=0 &&
-firstIdxOfPage(pi)<0
-)
+pageIndex>=0 &&
+firstIdxOfPage(pageIndex)<0
+){
 
-pi--;
+pageIndex--;
+
+}
 
 
-if(pi<0)
+if(pageIndex<0)
 return;
 
 
 jumpTo(
-firstIdxOfPage(pi)
+firstIdxOfPage(pageIndex)
 );
 
 };
 
 
-window.continueHere =
-function(){
+/* =====================================================
+CONTINUE HERE
+===================================================== */
+
+window.continueHere=function(){
+
+if(!F.length)
+return;
+
 
 jumpTo(
 Math.min(
@@ -3898,7 +3978,9 @@ const percent =
 F.length
 ?
 Math.round(
-prog.reached/F.length*100
+prog.reached/
+F.length*
+100
 )
 :
 0;
@@ -3906,13 +3988,13 @@ prog.reached/F.length*100
 
 document.getElementById(
 "progressText"
-).textContent =
+).textContent=
 percent+"%";
 
 
 document.getElementById(
 "progressBar"
-).style.width =
+).style.width=
 percent+"%";
 
 }
@@ -3924,12 +4006,12 @@ MICROPHONE
 
 function startListening(){
 
-if(
-!(
+const SpeechRecognition =
 window.SpeechRecognition||
-window.webkitSpeechRecognition
-)
-){
+window.webkitSpeechRecognition;
+
+
+if(!SpeechRecognition){
 
 alert(
 "Speech recognition is not supported here. Please use Chrome or Edge."
@@ -3948,14 +4030,20 @@ resetBuffer();
 
 launch();
 
-clearInterval(idleTimer);
+
+clearInterval(
+idleTimer
+);
 
 
-idleTimer =
+idleTimer=
 setInterval(
 ()=>{
+
 saveProgress();
+
 checkIdle();
+
 },
 15000
 );
@@ -3967,7 +4055,7 @@ return true;
 
 
 /* =====================================================
-SPEECH TO TEXT
+LAUNCH SPEECH RECOGNITION
 ===================================================== */
 
 function launch(){
@@ -3976,97 +4064,75 @@ if(!sessionActive)
 return;
 
 
-const SR =
+const SpeechRecognition =
 window.SpeechRecognition||
 window.webkitSpeechRecognition;
 
 
-const r =
-new SR();
+if(!SpeechRecognition)
+return;
 
 
-r.lang="en-US";
-
-r.continuous=true;
-
-r.interimResults=true;
+const recognition =
+new SpeechRecognition();
 
 
-/*
-This is the important flow:
+recognition.lang="en-US";
 
-VOICE
-  ↓
-SpeechRecognition
-  ↓
-TEXT
-  ↓
-compare with book reference
-*/
+recognition.continuous=true;
 
-r.onstart =
-()=>{
+recognition.interimResults=true;
+
+
+recognition.onstart=()=>{
 
 resetRecordingUI();
-
-document.getElementById(
-"liveTranscript"
-).textContent =
-"Listening...";
 
 };
 
 
-r.onresult =
-ev=>{
+recognition.onresult=(event)=>{
 
 interimWords=[];
 
 
-/*
-Collect both final and interim speech.
-*/
-
-let finalDisplay=[];
-
-let interimDisplay=[];
+let currentSpeech=[];
 
 
 for(
-let i=ev.resultIndex;
-i<ev.results.length;
+let i=event.resultIndex;
+i<event.results.length;
 i++
 ){
 
-const spokenText =
-ev.results[i][0]
-.transcript
-.trim();
+const transcript =
+event.results[i][0]
+.transcript;
 
 
-const t =
+currentSpeech.push(
+transcript
+);
+
+
+const words =
 tokenize(
-spokenText
+transcript
 );
 
 
 if(
-ev.results[i]
-.isFinal
+event.results[i].isFinal
 ){
 
-bufWords.push(...t);
-
-finalDisplay.push(
-spokenText
+bufWords.push(
+...words
 );
 
 }else{
 
-interimWords.push(...t);
-
-interimDisplay.push(
-spokenText
+interimWords.push(
+...words
 );
 
 }
@@ -4074,63 +4140,52 @@ spokenText
 }
 
 
-/*
-Show exactly what the browser's speech
-recognition engine is converting the
-child's voice into.
-
-This is the text that gets compared
-with the extracted book reference.
-*/
-
-const displayText =
-[
-finalDisplay.join(" "),
-interimDisplay.join(" ")
-]
-.filter(Boolean)
+const allHeard =
+bufWords
+.concat(interimWords)
 .join(" ");
 
 
-if(displayText){
-
+const live =
 document.getElementById(
 "liveTranscript"
-).textContent =
-displayText;
+);
+
+
+if(live){
+
+live.textContent =
+allHeard ||
+"Listening...";
 
 }
 
 
 if(
-bufWords.length+
-interimWords.length
-)
+allHeard.length
+){
 
 touch();
 
+}
 
-/*
-Now compare speech text with the
-reference text.
-*/
 
 advance();
 
 };
 
 
-r.onerror =
-e=>{
+recognition.onerror=(event)=>{
 
-console.log(
+console.error(
 "Speech recognition error:",
-e.error
+event.error
 );
 
+
 if(
-e.error==="not-allowed"||
-e.error==="service-not-allowed"
+event.error==="not-allowed"||
+event.error==="service-not-allowed"
 ){
 
 alert(
@@ -4139,53 +4194,83 @@ alert(
 
 stopSession();
 
+return;
+
+}
+
+
+if(
+event.error==="no-speech"
+){
+
+return;
+
 }
 
 };
 
 
-r.onend =
-()=>{
+recognition.onend=()=>{
 
-interimWords=[];
+if(!sessionActive)
+return;
 
-
-if(sessionActive){
 
 clearTimeout(
 restartTimer
 );
 
+
 restartTimer =
 setTimeout(
-launch,
-300
-);
+()=>{
+
+if(sessionActive){
+
+launch();
 
 }
+
+},
+300
+);
 
 };
 
 
-window._rec=r;
+window._rec =
+recognition;
 
 
 try{
 
-r.start();
+recognition.start();
 
-}catch(e){}
+}catch(error){
+
+console.log(
+"Recognition start:",
+error
+);
 
 }
 
+}
+
+
+/* =====================================================
+STOP SESSION
+===================================================== */
 
 function stopSession(){
 
 sessionActive=false;
 
+
 clearTimeout(
 restartTimer
 );
+
 
 clearInterval(
 idleTimer
@@ -4194,8 +4279,11 @@ idleTimer
 
 try{
 
-window._rec &&
+if(window._rec){
+
 window._rec.abort();
+
+}
 
 }catch(e){}
 
@@ -4203,9 +4291,11 @@ window._rec.abort();
 window._rec=null;
 
 
-if(prog)
+if(prog){
 
 saveProgress();
+
+}
 
 
 resetRecordingUI();
@@ -4213,48 +4303,80 @@ resetRecordingUI();
 }
 
 
-window.startRecording =
-function(){
+/* =====================================================
+START RECORDING BUTTON
+===================================================== */
 
-if(
-!sessionActive &&
-F.length
-){
+window.startRecording=function(){
+
+if(!F.length){
+
+alert(
+"Start a chapter first."
+);
+
+return;
+
+}
+
+
+if(!sessionActive){
 
 startListening();
-
-resetRecordingUI();
 
 }
 
 };
 
 
-window.stopRecording =
-stopSession;
+/* =====================================================
+STOP RECORDING BUTTON
+===================================================== */
 
+window.stopRecording=function(){
+
+stopSession();
+
+};
+
+
+/* =====================================================
+RECORDING UI
+===================================================== */
 
 function resetRecordingUI(){
 
-const s =
+const status =
 document.getElementById(
 "readingStatus"
 );
 
 
+const start =
 document.getElementById(
 "startButton"
-).disabled =
+);
+
+
+const stop =
+document.getElementById(
+"stopButton"
+);
+
+
+if(!status||!start||!stop)
+return;
+
+
+start.disabled=
 sessionActive;
 
 
-document.getElementById(
-"stopButton"
-).disabled =
+stop.disabled=
 !sessionActive;
 
 
-s.className =
+status.className =
 sessionActive
 ?
 "status listening"
@@ -4262,7 +4384,7 @@ sessionActive
 "status";
 
 
-s.textContent =
+status.textContent =
 sessionActive
 ?
 "🎤 Listening... just read"
@@ -4273,7 +4395,7 @@ sessionActive
 
 
 /* =====================================================
-LONG INTERRUPTION
+LONG PAUSE
 ===================================================== */
 
 function checkIdle(){
@@ -4284,9 +4406,11 @@ prog &&
 Date.now()-
 prog.lastActive
 >=LONG_BREAK_MS
-)
+){
 
 showWelcome();
+
+}
 
 }
 
@@ -4294,6 +4418,7 @@ showWelcome();
 function showWelcome(){
 
 stopSession();
+
 
 document.getElementById(
 "welcomeBack"
@@ -4304,8 +4429,7 @@ document.getElementById(
 }
 
 
-window.welcomeContinue =
-function(){
+window.welcomeContinue=function(){
 
 document.getElementById(
 "welcomeBack"
@@ -4313,20 +4437,25 @@ document.getElementById(
 "hidden"
 );
 
-startListening();
 
-resetRecordingUI();
+startListening();
 
 };
 
+
+/* =====================================================
+VISIBILITY
+===================================================== */
 
 document.addEventListener(
 "visibilitychange",
 ()=>{
 
-if(!document.hidden)
+if(!document.hidden){
 
 checkIdle();
+
+}
 
 });
 
@@ -4335,18 +4464,27 @@ window.addEventListener(
 "beforeunload",
 ()=>{
 
-if(prog)
+if(prog){
 
 saveProgress();
+
+}
 
 });
 
 
 /* =====================================================
-FOLLOW CHILD READING
+FOLLOW READING
 ===================================================== */
 
+let ptr=0;
+
+
 function advance(){
+
+if(!prog||!F.length)
+return;
+
 
 let moved=false;
 
@@ -4357,18 +4495,13 @@ guard<6;
 guard++
 ){
 
-const it =
+const item =
 F[prog.cursor];
 
-if(!it)
+
+if(!item)
 break;
 
-
-/*
-The text currently spoken by the child.
-
-Final speech + current interim speech.
-*/
 
 const words =
 bufWords
@@ -4377,51 +4510,55 @@ bufWords
 
 
 if(
-words.length <
-Math.ceil(it.ref.length*.5)
+words.length<
+Math.ceil(
+item.ref.length*.5
 )
+){
 
 break;
 
+}
 
-/*
-COMPARE:
 
-Reference words from the book
-against words produced by speech
-recognition.
-*/
-
-const ops =
-alignWords(
-it.ref,
+const sample =
 words.slice(
 0,
-it.ref.length*2+6
-)
+item.ref.length*2+6
 );
 
 
-let last=-1,
-r=0;
+const operations =
+alignWords(
+item.ref,
+sample
+);
 
 
-ops.forEach(
-(o,k)=>{
+let last=-1;
 
-if(o.type!=="extra"){
+let refCount=0;
+
+
+operations.forEach(
+(op,index)=>{
+
+if(op.type!=="extra"){
 
 if(
 (
-o.type==="correct"||
-o.type==="changed"
+op.type==="correct"||
+op.type==="changed"
 )&&
-r>=it.ref.length-2
-)
+refCount>=item.ref.length-2
+){
 
-last=k;
+last=index;
 
-r++;
+}
+
+
+refCount++;
 
 }
 
@@ -4433,7 +4570,7 @@ break;
 
 
 const used =
-ops.slice(
+operations.slice(
 0,
 last+1
 );
@@ -4441,78 +4578,91 @@ last+1
 
 const matched =
 used.filter(
-o=>
-o.type==="correct"||
-o.type==="changed"
+op=>
+op.type==="correct"||
+op.type==="changed"
 ).length;
 
 
 if(
-matched <
-it.ref.length*.5
-)
+matched<
+item.ref.length*.5
+){
 
 break;
+
+}
 
 
 const refUsed =
 used.filter(
-o=>o.type!=="extra"
+op=>op.type!=="extra"
 ).length;
 
 
-const c =
+const correct =
 used.filter(
-o=>o.type==="correct"
+op=>op.type==="correct"
 ).length;
 
 
-const ch =
+const changed =
 used.filter(
-o=>o.type==="changed"
+op=>op.type==="changed"
 ).length;
 
 
-const e =
+const extra =
 used.filter(
-o=>o.type==="extra"
+op=>op.type==="extra"
 ).length;
 
 
-const m =
+const missing =
 used.filter(
-o=>o.type==="missing"
+op=>op.type==="missing"
 ).length+
 (
-it.ref.length-refUsed
+item.ref.length-refUsed
 );
 
 
 const consumed =
 used.filter(
-o=>o.spoken
+op=>op.spoken
 ).length;
 
 
-const fresh =
-prog.cursor===prog.reached;
+const isNew =
+prog.cursor===
+prog.reached;
 
 
-if(fresh){
+if(isNew){
 
 prog.seg[
 prog.cursor
 ]=[
-c,m,ch,e,
-it.ref.length
+
+correct,
+
+missing,
+
+changed,
+
+extra,
+
+item.ref.length
+
 ];
+
 
 prog.reached++;
 
 }
 
 
-ptr += consumed;
+ptr+=consumed;
 
 
 if(
@@ -4530,8 +4680,8 @@ ptr=0;
 }
 
 
-const prevPage =
-it.p;
+const previousPage =
+item.p;
 
 
 prog.cursor++;
@@ -4539,24 +4689,18 @@ prog.cursor++;
 moved=true;
 
 
-/*
-The current reference segment has been
-read. If there is another segment on the
-same page, continue there.
-
-If there is another page, load the existing
-next page automatically.
-*/
-
 if(
 prog.cursor>=F.length
 ){
 
-if(fresh)
+if(isNew){
 
 finalizePage(
-prevPage
+previousPage
 );
+
+}
+
 
 touch();
 
@@ -4572,13 +4716,15 @@ return;
 
 
 if(
-fresh &&
-F[prog.cursor].p!==prevPage
-)
+isNew &&
+F[prog.cursor].p!==previousPage
+){
 
 finalizePage(
-prevPage
+previousPage
 );
+
+}
 
 }
 
@@ -4602,67 +4748,87 @@ FINALIZE PAGE
 
 function finalizePage(pi){
 
-const ch =
+const chapter =
 getCurrentChapter();
 
-const pg =
-ch.pages[pi];
+
+if(!chapter)
+return;
 
 
-let c=0,
-m=0,
-x=0,
-e=0,
-n=0;
+const page =
+chapter.pages[pi];
+
+
+if(!page)
+return;
+
+
+let correct=0;
+
+let missing=0;
+
+let changed=0;
+
+let extra=0;
+
+let referenceWords=0;
 
 
 F.forEach(
-(it,i)=>{
+(item,index)=>{
 
 if(
-it.p===pi &&
-prog.seg[i]
+item.p===pi &&
+prog.seg[index]
 ){
 
-const s =
-prog.seg[i];
+const result =
+prog.seg[index];
 
-c+=s[0];
 
-m+=s[1];
+correct+=result[0];
 
-x+=s[2];
+missing+=result[1];
 
-e+=s[3];
+changed+=result[2];
 
-n+=s[4];
+extra+=result[3];
+
+referenceWords+=result[4];
 
 }
 
 });
 
 
-pg.result={
+page.result={
 
 score:
-n
+referenceWords
 ?
-Math.round(c/n*100)
+Math.round(
+correct/
+referenceWords*
+100
+)
 :
 100,
 
-correct:c,
+correct:correct,
 
-missing:m,
+missing:missing,
 
-changed:x,
+changed:changed,
 
-extra:e,
+extra:extra,
 
-referenceWords:n,
+referenceWords:referenceWords,
 
 spokenWords:
-c+x+e,
+correct+
+changed+
+extra,
 
 completed:true,
 
@@ -4678,108 +4844,25 @@ saveBooks();
 
 
 /* =====================================================
-CALCULATE RESULT
-===================================================== */
-
-function calculateResult(
-operations,
-reference,
-spoken
-){
-
-let correct=0;
-
-let missing=0;
-
-let changed=0;
-
-let extra=0;
-
-
-operations.forEach(op=>{
-
-if(op.type==="correct")
-correct++;
-
-if(op.type==="missing")
-missing++;
-
-if(op.type==="changed")
-changed++;
-
-if(op.type==="extra")
-extra++;
-
-});
-
-
-let score=0;
-
-
-if(reference.length){
-
-score=Math.round(
-correct/
-reference.length*
-100
-);
-
-}
-
-
-score=Math.max(
-0,
-Math.min(
-100,
-score
-)
-);
-
-
-return{
-
-score:score,
-
-correct:correct,
-
-missing:missing,
-
-changed:changed,
-
-extra:extra,
-
-referenceWords:
-reference.length,
-
-spokenWords:
-spoken.length,
-
-completed:true,
-
-timestamp:
-new Date().toISOString()
-
-};
-
-}
-
-
-/* =====================================================
-WORD ALIGNMENT
+WORD NORMALIZATION
 ===================================================== */
 
 function normalizeText(text){
 
-return text
+return String(text||"")
+
 .toLowerCase()
+
 .replace(
 /[^\p{L}\p{N}'-]+/gu,
 " "
 )
+
 .replace(
 /\s+/g,
 " "
 )
+
 .trim();
 
 }
@@ -4790,41 +4873,28 @@ function tokenize(text){
 const normalized =
 normalizeText(text);
 
+
 if(!normalized)
 return [];
+
 
 return normalized.split(" ");
 
 }
 
 
-function wordSimilarity(a,b){
-
-if(a===b)
-return 1;
-
-
-const distance =
-levenshtein(a,b);
-
-
-return 1-
-distance/
-Math.max(
-a.length,
-b.length
-);
-
-}
-
+/* =====================================================
+LEVENSHTEIN
+===================================================== */
 
 function levenshtein(a,b){
 
 const matrix =
 Array.from(
-{length:a.length+1},
-()=>
-Array(
+{
+length:a.length+1
+},
+()=>Array(
 b.length+1
 ).fill(0)
 );
@@ -4834,18 +4904,22 @@ for(
 let i=0;
 i<=a.length;
 i++
-)
+){
 
 matrix[i][0]=i;
+
+}
 
 
 for(
 let j=0;
 j<=b.length;
 j++
-)
+){
 
 matrix[0][j]=j;
+
+}
 
 
 for(
@@ -4894,7 +4968,31 @@ b.length
 
 
 /* =====================================================
-ALIGNMENT
+WORD SIMILARITY
+===================================================== */
+
+function wordSimilarity(a,b){
+
+if(a===b)
+return 1;
+
+
+const distance =
+levenshtein(a,b);
+
+
+return 1-
+distance/
+Math.max(
+a.length,
+b.length
+);
+
+}
+
+
+/* =====================================================
+ALIGN WORDS
 ===================================================== */
 
 function alignWords(
@@ -4902,16 +5000,20 @@ reference,
 spoken
 ){
 
-const n=reference.length;
+const n=
+reference.length;
 
-const m=spoken.length;
+
+const m=
+spoken.length;
 
 
 const dp =
 Array.from(
-{length:n+1},
-()=>
-Array(
+{
+length:n+1
+},
+()=>Array(
 m+1
 ).fill(0)
 );
@@ -4921,18 +5023,22 @@ for(
 let i=0;
 i<=n;
 i++
-)
+){
 
 dp[i][0]=i;
+
+}
 
 
 for(
 let j=0;
 j<=m;
 j++
-)
+){
 
 dp[0][j]=j;
+
+}
 
 
 for(
@@ -4980,6 +5086,7 @@ substitution
 
 
 const operations=[];
+
 
 let i=n;
 
@@ -5046,6 +5153,7 @@ spoken:true
 
 }
 
+
 i--;
 
 j--;
@@ -5076,6 +5184,7 @@ spoken:false
 
 });
 
+
 i--;
 
 continue;
@@ -5101,6 +5210,7 @@ spoken[j-1],
 spoken:true
 
 });
+
 
 j--;
 
@@ -5128,6 +5238,7 @@ spoken:true
 
 });
 
+
 i--;
 
 j--;
@@ -5147,6 +5258,7 @@ spoken:false
 
 });
 
+
 i--;
 
 }else{
@@ -5164,6 +5276,7 @@ spoken:true
 
 });
 
+
 j--;
 
 }
@@ -5172,6 +5285,89 @@ j--;
 
 
 return operations;
+
+}
+
+
+/* =====================================================
+CALCULATE RESULT
+===================================================== */
+
+function calculateResult(
+operations,
+reference,
+spoken
+){
+
+let correct=0;
+
+let missing=0;
+
+let changed=0;
+
+let extra=0;
+
+
+operations.forEach(
+op=>{
+
+if(op.type==="correct")
+correct++;
+
+if(op.type==="missing")
+missing++;
+
+if(op.type==="changed")
+changed++;
+
+if(op.type==="extra")
+extra++;
+
+});
+
+
+const score =
+reference.length
+?
+Math.round(
+correct/
+reference.length*
+100
+)
+:
+0;
+
+
+return{
+
+score:Math.max(
+0,
+Math.min(
+100,
+score
+)
+),
+
+correct:correct,
+
+missing:missing,
+
+changed:changed,
+
+extra:extra,
+
+referenceWords:
+reference.length,
+
+spokenWords:
+spoken.length,
+
+completed:true,
+
+timestamp:
+new Date().toISOString()
+
+};
 
 }
 
@@ -5200,7 +5396,8 @@ scoreClass="bad";
 let wordsHTML="";
 
 
-operations.forEach(op=>{
+operations.forEach(
+op=>{
 
 if(op.type==="correct"){
 
@@ -5262,15 +5459,6 @@ wordsHTML+=`
 });
 
 
-const chapter =
-getCurrentChapter();
-
-
-const isLast =
-currentPageIndex===
-chapter.pages.length-1;
-
-
 document.getElementById(
 "pageResult"
 ).innerHTML=`
@@ -5281,9 +5469,11 @@ document.getElementById(
 Page ${page.pageNumber} Result
 </h2>
 
+
 <div class="score ${scoreClass}">
 ${result.score}%
 </div>
+
 
 <p>
 Reading accuracy
@@ -5349,38 +5539,6 @@ ${wordsHTML}
 
 </div>
 
-<br>
-
-
-${
-isLast
-?
-`
-
-<button class="yellow"
-onclick="finishChapter()">
-
-Finish Chapter
-
-</button>
-
-`
-:
-`
-
-<button class="yellow"
-onclick="nextPage()">
-
-Continue to Page
-${page.pageNumber+1}
-→
-
-</button>
-
-`
-
-}
-
 </div>
 
 `;
@@ -5392,11 +5550,14 @@ ${page.pageNumber+1}
 NEXT PAGE
 ===================================================== */
 
-window.nextPage =
-function(){
+window.nextPage=function(){
 
 const chapter =
 getCurrentChapter();
+
+
+if(!chapter)
+return;
 
 
 if(
@@ -5414,11 +5575,12 @@ return;
 currentPageIndex++;
 
 
-chapter.currentPosition =
+chapter.currentPosition=
 currentPageIndex;
 
 
 saveBooks();
+
 
 loadReaderPage();
 
@@ -5429,17 +5591,29 @@ loadReaderPage();
 FINISH CHAPTER
 ===================================================== */
 
-window.finishChapter =
-function(){
+window.finishChapter=function(){
+
+stopSession();
+
 
 const chapter =
 getCurrentChapter();
 
 
+if(!chapter)
+return;
+
+
 const results =
 chapter.pages
-.filter(p=>p.result)
-.map(p=>p.result);
+.filter(
+page=>
+page.result &&
+!page.result.auto
+)
+.map(
+page=>page.result
+);
 
 
 let correct=0;
@@ -5453,7 +5627,8 @@ let extra=0;
 let referenceWords=0;
 
 
-results.forEach(result=>{
+results.forEach(
+result=>{
 
 correct+=result.correct;
 
@@ -5482,11 +5657,13 @@ referenceWords*
 
 
 chapter.completed =
-results.length===
-chapter.pages.length;
+chapter.pages.every(
+page=>
+page.result
+);
 
 
-chapter.lastScore =
+chapter.lastScore=
 score;
 
 
@@ -5495,19 +5672,19 @@ saveBooks();
 
 document.getElementById(
 "reportChapterName"
-).textContent =
+).textContent=
 chapter.title;
 
 
 document.getElementById(
 "overallScore"
-).textContent =
+).textContent=
 score+"%";
 
 
 document.getElementById(
 "reportPages"
-).textContent =
+).textContent=
 results.length+
 "/"+
 chapter.pages.length;
@@ -5515,29 +5692,31 @@ chapter.pages.length;
 
 document.getElementById(
 "reportCorrect"
-).textContent =
+).textContent=
 correct;
 
 
 document.getElementById(
 "reportMissing"
-).textContent =
+).textContent=
 missing;
 
 
 document.getElementById(
 "reportChanged"
-).textContent =
+).textContent=
 changed;
 
 
 document.getElementById(
 "reportExtra"
-).textContent =
+).textContent=
 extra;
 
 
-renderReport(chapter);
+renderReport(
+chapter
+);
 
 
 showSection(
@@ -5558,16 +5737,17 @@ document.getElementById(
 "reportPagesList"
 );
 
+
 container.innerHTML="";
 
 
-chapter.pages.forEach(page=>{
+chapter.pages.forEach(
+page=>{
 
 if(
-!page.result||
+!page.result ||
 page.result.auto
 )
-
 return;
 
 
@@ -5620,7 +5800,7 @@ container.appendChild(div);
 
 
 /* =====================================================
-HELPERS
+CURRENT CHAPTER
 ===================================================== */
 
 function getCurrentChapter(){
@@ -5630,12 +5810,21 @@ books.find(
 b=>b.id===currentBookId
 );
 
-return book?.chapters.find(
+
+if(!book)
+return null;
+
+
+return book.chapters.find(
 c=>c.id===currentChapterId
 );
 
 }
 
+
+/* =====================================================
+FILE TO DATA URL
+===================================================== */
 
 function fileToDataURL(file){
 
@@ -5645,13 +5834,17 @@ return new Promise(
 const reader =
 new FileReader();
 
-reader.onload =
-()=>resolve(
+
+reader.onload=()=>{
+resolve(
 reader.result
 );
+};
 
-reader.onerror =
+
+reader.onerror=
 reject;
+
 
 reader.readAsDataURL(file);
 
@@ -5659,6 +5852,10 @@ reader.readAsDataURL(file);
 
 }
 
+
+/* =====================================================
+ESCAPE HTML
+===================================================== */
 
 function escapeHTML(value){
 
@@ -5692,6 +5889,10 @@ return String(value||"")
 }
 
 
+/* =====================================================
+FORMAT BYTES
+===================================================== */
+
 function formatBytes(bytes){
 
 if(bytes===0)
@@ -5724,28 +5925,14 @@ sizes[i];
 
 
 /* =====================================================
-FINAL OPEN CHAPTER WRAPPER
-===================================================== */
-
-const _oc =
-window.openChapter;
-
-
-window.openChapter =
-function(a,b){
-
-stopSession();
-
-_oc(a,b);
-
-};
-
-
-/* =====================================================
 INITIALIZE
 ===================================================== */
 
 renderBooks();
+
+showSection(
+"homeSection"
+);
 
 </script>
 

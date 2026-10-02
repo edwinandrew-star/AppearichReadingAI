@@ -756,7 +756,7 @@ Continue from here
 
 </div>
 
-<div class="card hidden">
+<div class="card">
 
 <h3>What AI Heard</h3>
 
@@ -1250,22 +1250,843 @@ TEXT EXTRACTION
 ===================================================== */
 
 /*
-IMPORTANT:
+The page image remains the actual page.
 
-The application keeps the page image only so that
-the student can see the physical page reference.
+The extracted text is only the hidden/reference text
+used by the reading supervisor.
 
-The reading reference itself is TEXT.
+The extraction now follows the visual reading order
+of the page instead of simply joining every PDF text
+item together.
 
-For PDFs:
-1. Try native PDF text extraction first.
-2. If the PDF has no selectable text, OCR is used.
-3. Images are NOT extracted as separate content.
+It attempts to ignore:
+
+- page numbers
+- headers
+- footers
+- figure labels
+- image captions
+- table labels
+- source labels
+- isolated short labels
+- obvious non-reading page furniture
 */
+
+
+function cleanReadingCharacters(text){
+
+if(!text)
+return "";
+
+return String(text)
+
+.replace(/\r/g," ")
+
+.replace(/[ \t]+/g," ")
+
+.replace(
+/[ \t]*([,.;:!?%])/g,
+"$1"
+)
+
+.replace(
+/([(\[{])[ \t]+/g,
+"$1"
+)
+
+.replace(
+/[ \t]+([)\]}])/g,
+"$1"
+)
+
+.trim();
+
+}
+
+
+/* =====================================================
+JOIN TEXT FRAGMENTS
+===================================================== */
+
+function joinTextFragments(fragments){
+
+let result="";
+
+for(const fragment of fragments){
+
+let text =
+String(fragment || "")
+.replace(/\s+/g," ")
+.trim();
+
+if(!text)
+continue;
+
+if(!result){
+
+result=text;
+continue;
+
+}
+
+const first =
+text.charAt(0);
+
+const last =
+result.charAt(
+result.length-1
+);
+
+
+/*
+No space before punctuation.
+*/
+
+if(
+/^[,.;:!?%…)\]}]/.test(first)
+){
+
+result += text;
+
+continue;
+
+}
+
+
+/*
+Closing quotation marks should stay
+attached to the previous word.
+*/
+
+if(
+first==="”" ||
+first==="’"
+){
+
+result += text;
+
+continue;
+
+}
+
+
+/*
+Opening brackets attach to the following word.
+*/
+
+if(
+/^[([{]/.test(first)
+){
+
+result += " "+text;
+
+continue;
+
+}
+
+
+/*
+If previous character is an opening bracket,
+do not create a space.
+*/
+
+if(
+last==="(" ||
+last==="[" ||
+last==="{"
+){
+
+result += text;
+
+continue;
+
+}
+
+
+/*
+Hyphen/dash continuation.
+*/
+
+if(
+last==="-" ||
+last==="–" ||
+last==="—"
+){
+
+result += text;
+
+continue;
+
+}
+
+
+/*
+Normal word separation.
+*/
+
+result += " "+text;
+
+}
+
+return cleanReadingCharacters(result);
+
+}
+
+
+/* =====================================================
+OBVIOUS NON-READING LINE
+===================================================== */
+
+function isNonReadingLine(text){
+
+const t =
+String(text||"")
+.trim();
+
+
+if(!t)
+return true;
+
+
+/*
+Page numbers.
+*/
+
+if(
+/^(page\s*)?\d{1,4}$/i.test(t)
+)
+
+return true;
+
+
+/*
+Figure/image/table labels.
+*/
+
+if(
+/^(fig(ure)?|photo|image|illustration|diagram|table|chart|graph|source)\b/i
+.test(t)
+)
+
+return true;
+
+
+/*
+Common textbook source/copyright lines.
+*/
+
+if(
+/^(source|copyright|www\.|https?:\/\/|isbn)\b/i
+.test(t)
+)
+
+return true;
+
+
+/*
+Very short labels that are unlikely to be
+normal reading content.
+*/
+
+const words =
+tokenize(t);
+
+
+if(
+words.length<=2 &&
+!/[.!?]/.test(t)
+)
+
+return true;
+
+
+return false;
+
+}
+
+
+/* =====================================================
+PDF LINE EXTRACTION
+===================================================== */
+
+async function extractStructuredPDFText(pdfPage){
+
+try{
+
+const content =
+await pdfPage.getTextContent({
+normalizeWhitespace:false,
+disableCombineTextItems:false
+});
+
+
+const viewport =
+pdfPage.getViewport({
+scale:1
+});
+
+
+const pageWidth =
+viewport.width;
+
+const pageHeight =
+viewport.height;
+
+
+const raw=[];
+
+
+for(const item of content.items || []){
+
+if(
+!item ||
+typeof item.str!=="string" ||
+!item.str.trim()
+)
+
+continue;
+
+
+const transform =
+pdfjsLib.Util.transform(
+viewport.transform,
+item.transform
+);
+
+
+const x =
+transform[4];
+
+const y =
+transform[5];
+
+
+/*
+Approximate text height.
+*/
+
+const height =
+Math.max(
+1,
+Math.sqrt(
+transform[2]*transform[2]+
+transform[3]*transform[3]
+)
+);
+
+
+/*
+PDF canvas y is measured from the top after
+viewport transformation.
+
+Use it as the baseline and derive top.
+*/
+
+const top =
+y-height;
+
+
+const width =
+Math.max(
+1,
+item.width || 1
+);
+
+
+raw.push({
+
+text:item.str,
+
+x:x,
+
+y:y,
+
+top:top,
+
+bottom:y,
+
+width:width,
+
+height:height
+
+});
+
+}
+
+
+if(!raw.length)
+return "";
+
+
+/* =================================================
+REMOVE OBVIOUS TOP/BOTTOM PAGE FURNITURE
+================================================= */
+
+const bodyTop =
+pageHeight*.035;
+
+const bodyBottom =
+pageHeight*.965;
+
+
+const body =
+raw.filter(item=>{
+
+if(
+item.top<bodyTop ||
+item.bottom>bodyBottom
+){
+
+/*
+Keep it temporarily if it looks like a
+real long paragraph line.
+*/
+
+if(
+item.text.trim().split(/\s+/).length<7
+)
+
+return false;
+
+}
+
+return true;
+
+});
+
+
+/* =================================================
+GROUP WORDS INTO VISUAL LINES
+================================================= */
+
+body.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+);
+
+
+const lines=[];
+
+
+for(const item of body){
+
+let best=null;
+
+
+/*
+Text on the same visual line normally has
+very similar vertical positions.
+*/
+
+for(const line of lines){
+
+const tolerance =
+Math.max(
+4,
+Math.min(
+item.height,
+line.height
+)*.65
+);
+
+
+if(
+Math.abs(
+item.top-line.top
+)<=tolerance
+){
+
+best=line;
+break;
+
+}
+
+}
+
+
+if(!best){
+
+best={
+
+top:item.top,
+
+height:item.height,
+
+items:[]
+
+};
+
+lines.push(best);
+
+}
+
+
+best.items.push(item);
+
+}
+
+
+/* =================================================
+SORT ITEMS INSIDE EACH LINE
+===================================================== */
+
+lines.forEach(line=>{
+
+line.items.sort(
+(a,b)=>a.x-b.x
+);
+
+line.text =
+joinTextFragments(
+line.items.map(
+x=>x.text
+)
+);
+
+line.x =
+Math.min(
+...line.items.map(
+x=>x.x
+)
+);
+
+line.right =
+Math.max(
+...line.items.map(
+x=>x.x+x.width
+)
+);
+
+line.width =
+line.right-line.x;
+
+});
+
+
+/*
+Remove empty and obvious furniture.
+*/
+
+let useful =
+lines.filter(
+line=>
+line.text &&
+!isNonReadingLine(line.text)
+);
+
+
+if(!useful.length)
+return "";
+
+
+/* =================================================
+COLUMN DETECTION
+===================================================== */
+
+/*
+A textbook may have two or more columns.
+
+Global top-to-bottom sorting can incorrectly read:
+
+left line 1
+right line 1
+left line 2
+right line 2
+
+Instead, detect strong horizontal gaps and read
+the left column from top to bottom before the
+right column.
+*/
+
+function detectColumns(input){
+
+if(input.length<6)
+return [input];
+
+
+/*
+Get starting x positions.
+*/
+
+const starts =
+input
+.map(x=>x.x)
+.sort((a,b)=>a-b);
+
+
+const candidates=[];
+
+for(
+let i=1;
+i<starts.length;
+i++
+){
+
+const gap =
+starts[i]-starts[i-1];
+
+if(
+gap>pageWidth*.16
+){
+
+candidates.push({
+index:i,
+gap:gap
+});
+
+}
+
+}
+
+
+if(!candidates.length)
+return [input];
+
+
+/*
+Use the strongest gap.
+*/
+
+candidates.sort(
+(a,b)=>b.gap-a.gap
+);
+
+
+const candidate =
+candidates[0];
+
+
+const splitX =
+(
+starts[candidate.index-1]+
+starts[candidate.index]
+)/2;
+
+
+const left =
+input.filter(
+x=>x.x<splitX
+);
+
+const right =
+input.filter(
+x=>x.x>=splitX
+);
+
+
+/*
+Do not call small indentations columns.
+*/
+
+if(
+left.length<3 ||
+right.length<3
+)
+
+return [input];
+
+
+/*
+Check that the two groups occupy meaningful
+parts of the page.
+*/
+
+const leftRange =
+Math.max(...left.map(x=>x.x))-
+Math.min(...left.map(x=>x.x));
+
+const rightRange =
+Math.max(...right.map(x=>x.x))-
+Math.min(...right.map(x=>x.x));
+
+
+if(
+leftRange<pageWidth*.05 &&
+rightRange<pageWidth*.05 &&
+candidate.gap<pageWidth*.20
+){
+
+return [input];
+
+}
+
+
+return [left,right];
+
+}
+
+
+const columns =
+detectColumns(useful);
+
+
+/* =================================================
+BUILD READING FLOW
+===================================================== */
+
+const ordered=[];
+
+
+columns.forEach(column=>{
+
+column.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+);
+
+
+/*
+Group lines into paragraph blocks.
+
+A larger vertical gap normally means a
+new paragraph.
+*/
+
+let paragraph=[];
+let previous=null;
+
+
+function flush(){
+
+if(!paragraph.length)
+return;
+
+
+const text =
+joinTextFragments(
+paragraph.map(
+x=>x.text
+)
+);
+
+
+if(text){
+
+/*
+Ignore very short isolated labels.
+*/
+
+if(
+tokenize(text).length>=3 ||
+/[.!?]/.test(text)
+){
+
+ordered.push(text);
+
+}
+
+}
+
+
+paragraph=[];
+
+}
+
+
+for(const line of column){
+
+if(!previous){
+
+paragraph.push(line);
+previous=line;
+continue;
+
+}
+
+
+const gap =
+line.top-
+previous.bottom;
+
+
+/*
+Large vertical gap = new paragraph.
+*/
+
+const threshold =
+Math.max(
+previous.height*1.8,
+10
+);
+
+
+if(gap>threshold){
+
+flush();
+
+}
+
+
+paragraph.push(line);
+
+previous=line;
+
+}
+
+
+flush();
+
+});
+
+
+/*
+If column detection produced strange results,
+fallback to normal page order.
+*/
+
+if(
+ordered.length<1
+){
+
+useful.sort(
+(a,b)=>
+a.top-b.top ||
+a.x-b.x
+);
+
+return useful
+.map(x=>x.text)
+.filter(Boolean)
+.join(" ")
+.trim();
+
+}
+
+
+return cleanReadingCharacters(
+ordered.join("\n\n")
+);
+
+}
+
+
+/* =====================================================
+LEGACY PDF EXTRACTION FALLBACK
+===================================================== */
 
 async function extractPDFText(pdfPage){
 
-let extractedText="";
+try{
+
+const structured =
+await extractStructuredPDFText(
+pdfPage
+);
+
+if(structured)
+return structured;
+
+}catch(error){
+
+console.log(
+"Structured PDF extraction failed:",
+error
+);
+
+}
+
 
 try{
 
@@ -1275,29 +2096,312 @@ await pdfPage.getTextContent();
 const items =
 textContent.items || [];
 
-extractedText =
+const fallback =
 items
-.map(item=>{
+.map(
+item=>
+typeof item.str==="string"
+?
+item.str
+:
+""
+)
+.filter(Boolean)
+.join(" ");
 
-if(!item || typeof item.str!=="string")
-return "";
 
-return item.str;
-
-})
-.join(" ")
-.trim();
+return cleanReadingCharacters(
+fallback
+);
 
 }catch(error){
 
 console.log(
-"Native PDF text extraction failed",
+"PDF fallback extraction failed:",
 error
+);
+
+return "";
+
+}
+
+}
+
+
+/* =====================================================
+OCR LAYOUT EXTRACTION
+===================================================== */
+
+function extractOCRLayout(data){
+
+if(!data)
+return "";
+
+
+/*
+Tesseract provides line bounding boxes.
+
+Using lines instead of data.text allows us
+to preserve the page's visual reading order.
+*/
+
+let lines =
+Array.isArray(data.lines)
+?
+data.lines
+.map(line=>({
+
+text:
+String(line.text||"").trim(),
+
+x:
+Number(line.bbox?.x0||0),
+
+y:
+Number(line.bbox?.y0||0),
+
+x1:
+Number(line.bbox?.x1||0),
+
+y1:
+Number(line.bbox?.y1||0)
+
+}))
+.filter(x=>x.text)
+:
+[];
+
+
+/*
+Fallback to OCR words if line information
+is unavailable.
+*/
+
+if(!lines.length && Array.isArray(data.words)){
+
+lines =
+data.words
+.map(word=>({
+
+text:
+String(word.text||"").trim(),
+
+x:
+Number(word.bbox?.x0||0),
+
+y:
+Number(word.bbox?.y0||0),
+
+x1:
+Number(word.bbox?.x1||0),
+
+y1:
+Number(word.bbox?.y1||0)
+
+}))
+.filter(x=>x.text);
+
+}
+
+
+/*
+Sort vertically first.
+*/
+
+lines.sort(
+(a,b)=>
+a.y-b.y ||
+a.x-b.x
+);
+
+
+/*
+Merge lines that Tesseract accidentally
+split at nearly the same height.
+*/
+
+const merged=[];
+
+for(const line of lines){
+
+let target=null;
+
+for(const existing of merged){
+
+const height =
+Math.max(
+2,
+existing.y1-existing.y
+);
+
+const currentHeight =
+Math.max(
+2,
+line.y1-line.y
+);
+
+const tolerance =
+Math.max(
+5,
+Math.min(
+height,
+currentHeight
+)*.7
+);
+
+if(
+Math.abs(
+line.y-existing.y
+)<=tolerance
+){
+
+target=existing;
+break;
+
+}
+
+}
+
+
+if(!target){
+
+merged.push({
+
+text:line.text,
+
+x:line.x,
+
+y:line.y,
+
+x1:line.x1,
+
+y1:line.y1
+
+});
+
+}else{
+
+target.text =
+joinTextFragments([
+target.text,
+line.text
+]);
+
+target.x =
+Math.min(
+target.x,
+line.x
+);
+
+target.x1 =
+Math.max(
+target.x1,
+line.x1
+);
+
+target.y1 =
+Math.max(
+target.y1,
+line.y1
 );
 
 }
 
-return cleanOCR(extractedText);
+}
+
+
+/*
+Remove obvious non-reading lines.
+*/
+
+let useful =
+merged.filter(
+line=>
+!isNonReadingLine(
+line.text
+)
+);
+
+
+/*
+Attempt basic column ordering.
+*/
+
+if(useful.length>=6){
+
+const starts =
+useful
+.map(x=>x.x)
+.sort((a,b)=>a-b);
+
+
+let strongestGap=0;
+let splitIndex=-1;
+
+
+for(
+let i=1;
+i<starts.length;
+i++
+){
+
+const gap =
+starts[i]-starts[i-1];
+
+if(gap>strongestGap){
+
+strongestGap=gap;
+splitIndex=i;
+
+}
+
+}
+
+
+if(
+splitIndex>2 &&
+starts.length-splitIndex>2 &&
+strongestGap>120
+){
+
+const splitX =
+(
+starts[splitIndex-1]+
+starts[splitIndex]
+)/2;
+
+
+const left =
+useful
+.filter(x=>x.x<splitX)
+.sort((a,b)=>a.y-b.y);
+
+const right =
+useful
+.filter(x=>x.x>=splitX)
+.sort((a,b)=>a.y-b.y);
+
+
+if(
+left.length>=3 &&
+right.length>=3
+){
+
+useful =
+left.concat(right);
+
+}
+
+}
+
+}
+
+
+return useful
+.map(x=>x.text)
+.filter(Boolean)
+.join("\n\n")
+.trim();
 
 }
 
@@ -1306,7 +2410,11 @@ return cleanOCR(extractedText);
 OCR
 ===================================================== */
 
-async function runOCR(image,status,prefix=""){
+async function runOCR(
+image,
+status,
+prefix=""
+){
 
 try{
 
@@ -1352,7 +2460,29 @@ ${percent
 }
 );
 
-return cleanOCR(
+
+/*
+Use the page layout rather than the raw
+OCR string.
+*/
+
+const structured =
+extractOCRLayout(
+ocr.data
+);
+
+
+if(structured)
+return cleanReadingCharacters(
+structured
+);
+
+
+/*
+Final fallback.
+*/
+
+return cleanReadingCharacters(
 ocr.data.text || ""
 );
 
@@ -1494,12 +2624,8 @@ await pdf.getPage(pdfPageNumber);
 
 
 /*
-FIRST:
-
-Extract the actual words from the PDF.
-
-This is preferred because it does not need
-to OCR pictures on the page.
+Extract only the reading text from the
+actual PDF layout.
 */
 
 let extractedText =
@@ -1507,10 +2633,10 @@ await extractPDFText(pdfPage);
 
 
 /*
-Render the page ONLY for visual display.
+Render the original page for display.
 
-This image is not used as the reading text
-when the PDF already contains real text.
+This image remains the page the child
+is reading from.
 */
 
 const viewport =
@@ -1545,23 +2671,27 @@ canvas.toDataURL(
 
 
 /*
-ONLY IF THE PDF HAS NO REAL TEXT:
+If there is no usable native text,
+OCR the page.
 
-Use OCR to recover words from a scanned page.
+The OCR result is converted into
+reading-order text.
 */
 
-if(!extractedText){
+if(
+tokenize(extractedText).length<3
+){
 
 status.innerHTML=`
 
 <div class="status">
 
 Page ${pdfPageNumber}
-contains no selectable text.
+contains little or no selectable text.
 
 <br>
 
-Extracting words with OCR...
+Extracting reading text with OCR...
 
 </div>
 
@@ -1578,13 +2708,11 @@ status,
 
 
 /*
-SAVE:
+Store:
 
-The image is the visual page.
+image = existing page
 
-The text is the reading reference.
-
-No separate image objects are extracted.
+text = hidden reading reference
 */
 
 pages.push({
@@ -1593,7 +2721,9 @@ pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanOCR(extractedText),
+text:cleanReadingCharacters(
+extractedText
+),
 
 source:file.name,
 
@@ -1643,7 +2773,7 @@ status.innerHTML=`
 
 <div class="status">
 
-Extracting words from image
+Extracting reading text from image
 ${fileIndex+1}/${files.length}
 
 </div>
@@ -1651,16 +2781,11 @@ ${fileIndex+1}/${files.length}
 `;
 
 
-/*
-For an uploaded page image there is no selectable
-PDF text, so OCR is required.
-*/
-
 const extractedText =
 await runOCR(
 image,
 status,
-"Extracting words"
+"Extracting reading text"
 );
 
 
@@ -1670,7 +2795,9 @@ pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanOCR(extractedText),
+text:cleanReadingCharacters(
+extractedText
+),
 
 source:file.name,
 
@@ -2026,50 +3153,28 @@ const IMG_QUALITY = .6;
 CLEAN EXTRACTED TEXT
 ===================================================== */
 
-/*
-This function cleans OCR/PDF text.
-
-It removes common non-reading labels such as:
-
-Figure
-Fig
-Photo
-Image
-Illustration
-Diagram
-Table
-Source
-Page
-
-It does NOT remove ordinary textbook words.
-*/
-
 function cleanOCR(text){
 
 if(!text)
 return "";
 
-return text
+return cleanReadingCharacters(
+String(text)
 
 .replace(/\r/g," ")
 
-.replace(/\n+/g," ")
-
-.replace(/\s+/g," ")
-
 .replace(
-/\b(fig(ure)?|photo|image|illustration|diagram|table|source)\s*[\w.-]*\b/gi,
+/[ \t]+/g,
 " "
 )
 
 .replace(
-/^\s*page\s*\d+\s*$/gim,
-" "
+/\n{3,}/g,
+"\n\n"
 )
 
-.replace(/\s+/g," ")
-
-.trim();
+.trim()
+);
 
 }
 
@@ -2362,6 +3467,10 @@ const PKEY =
 currentChapterId;
 
 
+/* =====================================================
+BUILD FLAT READING FLOW
+===================================================== */
+
 function buildFlat(chapter){
 
 F=[];
@@ -2412,6 +3521,14 @@ ref:tokenize(t)
 );
 
 });
+
+
+const valid =
+F.filter(
+x=>x.ref.length
+);
+
+F=valid;
 
 }
 
@@ -2578,6 +3695,15 @@ document.getElementById(
 `Page ${pg.pageNumber} of ${ch.pages.length}`;
 
 
+/*
+IMPORTANT:
+
+This is always the original existing
+page image.
+
+It is NOT replaced by extracted text.
+*/
+
 document.getElementById(
 "readerImage"
 ).src =
@@ -2720,8 +3846,14 @@ saveProgress();
 window.goBack =
 function(){
 
+let current =
+F[prog.cursor];
+
+if(!current)
+return;
+
 let pi =
-F[prog.cursor].p-1;
+current.p-1;
 
 
 while(
@@ -2834,6 +3966,10 @@ return true;
 }
 
 
+/* =====================================================
+SPEECH TO TEXT
+===================================================== */
+
 function launch(){
 
 if(!sessionActive)
@@ -2856,8 +3992,29 @@ r.continuous=true;
 r.interimResults=true;
 
 
+/*
+This is the important flow:
+
+VOICE
+  ↓
+SpeechRecognition
+  ↓
+TEXT
+  ↓
+compare with book reference
+*/
+
 r.onstart =
-resetRecordingUI;
+()=>{
+
+resetRecordingUI();
+
+document.getElementById(
+"liveTranscript"
+).textContent =
+"Listening...";
+
+};
 
 
 r.onresult =
@@ -2866,29 +4023,81 @@ ev=>{
 interimWords=[];
 
 
+/*
+Collect both final and interim speech.
+*/
+
+let finalDisplay=[];
+
+let interimDisplay=[];
+
+
 for(
 let i=ev.resultIndex;
 i<ev.results.length;
 i++
 ){
 
-const t =
-tokenize(
+const spokenText =
 ev.results[i][0]
 .transcript
+.trim();
+
+
+const t =
+tokenize(
+spokenText
 );
 
 
 if(
 ev.results[i]
 .isFinal
-)
+){
 
 bufWords.push(...t);
 
-else
+finalDisplay.push(
+spokenText
+);
+
+}else{
 
 interimWords.push(...t);
+
+interimDisplay.push(
+spokenText
+);
+
+}
+
+}
+
+
+/*
+Show exactly what the browser's speech
+recognition engine is converting the
+child's voice into.
+
+This is the text that gets compared
+with the extracted book reference.
+*/
+
+const displayText =
+[
+finalDisplay.join(" "),
+interimDisplay.join(" ")
+]
+.filter(Boolean)
+.join(" ");
+
+
+if(displayText){
+
+document.getElementById(
+"liveTranscript"
+).textContent =
+displayText;
 
 }
 
@@ -2901,6 +4110,11 @@ interimWords.length
 touch();
 
 
+/*
+Now compare speech text with the
+reference text.
+*/
+
 advance();
 
 };
@@ -2908,6 +4122,11 @@ advance();
 
 r.onerror =
 e=>{
+
+console.log(
+"Speech recognition error:",
+e.error
+);
 
 if(
 e.error==="not-allowed"||
@@ -3145,6 +4364,12 @@ if(!it)
 break;
 
 
+/*
+The text currently spoken by the child.
+
+Final speech + current interim speech.
+*/
+
 const words =
 bufWords
 .concat(interimWords)
@@ -3158,6 +4383,14 @@ Math.ceil(it.ref.length*.5)
 
 break;
 
+
+/*
+COMPARE:
+
+Reference words from the book
+against words produced by speech
+recognition.
+*/
 
 const ops =
 alignWords(
@@ -3305,6 +4538,15 @@ prog.cursor++;
 
 moved=true;
 
+
+/*
+The current reference segment has been
+read. If there is another segment on the
+same page, continue there.
+
+If there is another page, load the existing
+next page automatically.
+*/
 
 if(
 prog.cursor>=F.length

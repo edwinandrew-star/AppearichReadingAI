@@ -1,31 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>AI Reading Supervision</title>
-
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
         type="module"></script>
-
+<!-- Tesseract OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
 <style>
-
 *{
     box-sizing:border-box;
 }
-
 body{
     margin:0;
     font-family:Arial,Helvetica,sans-serif;
     background:#f5f5f2;
     color:#080808;
 }
-
 header{
     background:#080808;
     color:white;
@@ -34,23 +27,19 @@ header{
     justify-content:space-between;
     align-items:center;
 }
-
 .logo{
     font-size:22px;
     font-weight:bold;
 }
-
 .brand{
     font-size:13px;
     opacity:.75;
 }
-
 .container{
     max-width:1150px;
     margin:auto;
     padding:25px;
 }
-
 .card{
     background:white;
     padding:22px;
@@ -58,11 +47,9 @@ header{
     margin-bottom:20px;
     box-shadow:0 5px 20px rgba(0,0,0,.06);
 }
-
 h1,h2,h3{
     margin-top:0;
 }
-
 input[type=text]{
     width:100%;
     padding:13px;
@@ -71,7 +58,6 @@ input[type=text]{
     margin:8px 0 15px;
     font-size:16px;
 }
-
 input[type=file]{
     width:100%;
     padding:15px;
@@ -80,7 +66,6 @@ input[type=file]{
     background:#fafafa;
     margin:10px 0 15px;
 }
-
 button{
     border:0;
     border-radius:10px;
@@ -91,40 +76,32 @@ button{
     margin:4px;
     font-size:15px;
 }
-
 button:hover{
     opacity:.9;
 }
-
 button.yellow{
     background:#f3d000;
     color:#080808;
 }
-
 button.secondary{
     background:#eee;
     color:#080808;
 }
-
 button.danger{
     background:#d93025;
 }
-
 button:disabled{
     opacity:.45;
     cursor:not-allowed;
 }
-
 .hidden{
     display:none!important;
 }
-
 .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
     gap:16px;
 }
-
 .bookCard,
 .chapterCard{
     background:white;
@@ -132,7 +109,6 @@ button:disabled{
     border-radius:15px;
     overflow:hidden;
 }
-
 .bookCard img,
 .chapterCard img{
     width:100%;
@@ -140,52 +116,43 @@ button:disabled{
     object-fit:cover;
     background:#eee;
 }
-
 .body{
     padding:16px;
 }
-
 .small{
     color:#666;
     font-size:13px;
 }
-
 .pageList{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
     gap:15px;
 }
-
 .pageCard{
     background:white;
     border:1px solid #ddd;
     border-radius:12px;
     overflow:hidden;
 }
-
 .pageCard img{
     width:100%;
     height:180px;
     object-fit:cover;
     background:#eee;
 }
-
 .pageCard .body{
     padding:12px;
 }
-
 .readerGrid{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:20px;
 }
-
 .bookPage{
     background:white;
     padding:15px;
     border-radius:15px;
 }
-
 .bookPage img{
     width:100%;
     max-height:650px;
@@ -193,7 +160,6 @@ button:disabled{
     border-radius:10px;
     background:#eee;
 }
-
 .reference{
     background:#fafafa;
     border:1px solid #ddd;
@@ -203,7 +169,6 @@ button:disabled{
     max-height:300px;
     overflow:auto;
 }
-
 .transcript{
     background:#080808;
     color:white;
@@ -212,18 +177,15 @@ button:disabled{
     min-height:130px;
     line-height:1.7;
 }
-
 .status{
     background:#eee;
     border-radius:10px;
     padding:13px;
     margin:10px 0;
 }
-
 .status.listening{
     background:#ffe3e3;
 }
-
 .progressOuter{
     height:18px;
     background:#ddd;
@@ -231,48 +193,39 @@ button:disabled{
     overflow:hidden;
     margin:10px 0;
 }
-
 .progressInner{
     height:100%;
     width:0%;
     background:#f3d000;
     transition:.3s;
 }
-
 .score{
     font-size:50px;
     font-weight:bold;
 }
-
 .good{
     color:#14833b;
 }
-
 .warning{
     color:#b77700;
 }
-
 .bad{
     color:#c62828;
 }
-
 .statGrid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
     gap:12px;
 }
-
 .stat{
     background:#f5f5f2;
     border-radius:12px;
     padding:15px;
 }
-
 .stat strong{
     display:block;
     font-size:25px;
 }
-
 .resultBox{
     background:white;
     border:1px solid #ddd;
@@ -280,915 +233,402 @@ button:disabled{
     padding:20px;
     margin-top:20px;
 }
-
 .wordResults{
     line-height:2;
 }
-
 .word{
     display:inline-block;
     margin:2px;
     padding:2px 7px;
     border-radius:5px;
 }
-
 .word.correct{
     background:#d8f5df;
     color:#12652d;
 }
-
 .word.missing{
     background:#ffdcdc;
     color:#9d1c1c;
     text-decoration:line-through;
 }
-
 .word.changed{
     background:#fff0b3;
     color:#795d00;
 }
-
 .word.extra{
     background:#e4e4e4;
     color:#555;
 }
-
 .center{
     text-align:center;
 }
-
 .fileInfo{
     background:#f5f5f2;
     border-radius:10px;
     padding:12px;
     margin-top:10px;
 }
-
 @media(max-width:750px){
-
     .readerGrid{
         grid-template-columns:1fr;
     }
-
     .container{
         padding:15px;
     }
-
     header{
         padding:15px;
     }
-
 }
-
-.seg{
-    padding:10px 12px;
-    margin:6px 0;
-    border-radius:10px;
-    font-size:18px;
-    line-height:1.5;
-}
-
-.seg.done{
-    color:#12652d;
-    background:#eaf8ee;
-    cursor:pointer;
-}
-
-.seg.cur{
-    background:#fff3a6;
-    font-weight:bold;
-    border:2px solid #f3d000;
-}
-
-.seg.next{
-    background:#f5f5f2;
-    cursor:pointer;
-}
-
-.seg.lock{
-    color:#999;
-    background:#f5f5f2;
-}
-
-#welcomeBack.hidden{
-    display:none!important;
-}
-
-#readerSection h3,
-#readerSection .bookPage .small,
-#readerSection .card>p{
-    display:none;
-}
-
-#readerSection .card{
-    box-shadow:none;
-    background:transparent;
-    padding:8px 0;
-    margin-bottom:8px;
-}
-
-#readerSection .readerGrid{
-    grid-template-columns:1fr 1.3fr;
-    align-items:start;
-}
-
-#readerSection .bookPage{
-    background:white;
-    border-radius:16px;
-    padding:10px;
-}
-
-#readerSection .bookPage img{
-    width:100%;
-    border-radius:10px;
-}
-
-#readerSection #readerChapterTitle{
-    font-size:16px;
-    color:#666;
-    font-weight:normal;
-    margin:6px 0;
-}
-
-#readerSection #readingStatus{
-    font-size:18px;
-    padding:8px 0;
-}
-
-#readerSection #startButton{
-    font-size:24px;
-    padding:18px 34px;
-    border-radius:40px;
-}
-
-#readerSection #stopButton{
-    background:#eee;
-    color:#080808;
-    border-radius:40px;
-}
-
-#readerSection #backButton{
-    border-radius:40px;
-}
-
-#readerSection #continueHereButton{
-    font-size:20px;
-    padding:14px 28px;
-    border-radius:40px;
-}
-
-#readerSection #referenceText{
-    background:white;
-    border-radius:16px;
-    padding:12px;
-}
-
-#readerSection .seg{
-    font-size:24px;
-    line-height:1.6;
-}
-
-#readerSection .seg.lock{
-    opacity:.35;
-}
-
-#readerSection .progressOuter{
-    height:8px;
-}
-
-@media(max-width:750px){
-
-    #readerSection .readerGrid{
-        grid-template-columns:1fr;
-    }
-
-    #readerSection .bookPage img{
-        max-height:220px;
-        object-fit:contain;
-    }
-
-}
-
+.seg{padding:10px 12px;margin:6px 0;border-radius:10px;font-size:18px;line-height:1.5}
+.seg.done{color:#12652d;background:#eaf8ee;cursor:pointer}
+.seg.cur{background:#fff3a6;font-weight:bold;border:2px solid #f3d000}
+.seg.next{background:#f5f5f2;cursor:pointer}
+.seg.lock{color:#999;background:#f5f5f2}
+#welcomeBack.hidden{display:none!important}
+/* ---- simple child reader ---- */
+#readerSection h3,#readerSection .bookPage .small,#readerSection .card>p{display:none}
+#readerSection .card{box-shadow:none;background:transparent;padding:8px 0;margin-bottom:8px}
+#readerSection .readerGrid{grid-template-columns:1fr 1.3fr;align-items:start}
+#readerSection .bookPage{background:white;border-radius:16px;padding:10px}
+#readerSection .bookPage img{width:100%;border-radius:10px}
+#readerSection #readerChapterTitle{font-size:16px;color:#666;font-weight:normal;margin:6px 0}
+#readerSection #readingStatus{font-size:18px;padding:8px 0}
+#readerSection #startButton{font-size:24px;padding:18px 34px;border-radius:40px}
+#readerSection #stopButton{background:#eee;color:#080808;border-radius:40px}
+#readerSection #backButton{border-radius:40px}
+#readerSection #continueHereButton{font-size:20px;padding:14px 28px;border-radius:40px}
+#readerSection #referenceText{background:white;border-radius:16px;padding:12px}
+#readerSection .seg{font-size:24px;line-height:1.6}
+#readerSection .seg.lock{opacity:.35}
+#readerSection .progressOuter{height:8px}
+@media(max-width:750px){#readerSection .readerGrid{grid-template-columns:1fr}#readerSection .bookPage img{max-height:220px;object-fit:contain}}
 </style>
-
 </head>
-
 <body>
-
 <header>
-
-<div class="logo">
-AI Reading Supervision
-</div>
-
-<div class="brand">
-Appearich
-</div>
-
+    <div class="logo">AI Reading Supervision</div>
+    <div class="brand">Appearich</div>
 </header>
-
-
 <div class="container">
-
-
 <!-- =====================================================
 HOME
 ===================================================== -->
-
 <section id="homeSection">
-
 <div class="card">
-
 <h1>AI Reading Supervision</h1>
-
 <p>
 Upload a textbook by chapters. The system automatically
 extracts the pages and creates a reading reference for AI
 supervision.
 </p>
-
 <button class="yellow"
-onclick="showSection('createBookSection')">
-
+        onclick="showSection('createBookSection')">
 Create Book
-
 </button>
-
 </div>
-
-
 <div class="card">
-
 <h2>Your Books</h2>
-
-<div id="booksContainer"
-class="grid">
+<div id="booksContainer" class="grid"></div>
 </div>
-
-</div>
-
 </section>
-
-
 <!-- =====================================================
 CREATE BOOK
 ===================================================== -->
-
-<section id="createBookSection"
-class="hidden">
-
+<section id="createBookSection" class="hidden">
 <div class="card">
-
 <h2>Create Book</h2>
-
 <label>Book name</label>
-
 <input id="bookTitle"
-type="text"
-placeholder="Example: English Standard Five">
-
+       type="text"
+       placeholder="Example: English Standard Five">
 <button class="yellow"
-onclick="createBook()">
-
+        onclick="createBook()">
 Create Book
-
 </button>
-
 <button class="secondary"
-onclick="showSection('homeSection')">
-
+        onclick="showSection('homeSection')">
 Cancel
-
 </button>
-
 </div>
-
 </section>
-
-
 <!-- =====================================================
 BOOK
 ===================================================== -->
-
-<section id="bookSection"
-class="hidden">
-
+<section id="bookSection" class="hidden">
 <div class="card">
-
 <button class="secondary"
-onclick="showSection('homeSection')">
-
+        onclick="showSection('homeSection')">
 ← Books
-
 </button>
-
 <h2 id="bookTitleDisplay"></h2>
-
 <button class="yellow"
-onclick="showSection('createChapterSection')">
-
+        onclick="showSection('createChapterSection')">
 + Add Chapter
-
 </button>
-
 </div>
-
-
 <div class="card">
-
 <h2>Chapters</h2>
-
-<div id="chaptersContainer"
-class="grid">
+<div id="chaptersContainer" class="grid"></div>
 </div>
-
-</div>
-
 </section>
-
-
 <!-- =====================================================
 CREATE CHAPTER
 ===================================================== -->
-
-<section id="createChapterSection"
-class="hidden">
-
+<section id="createChapterSection" class="hidden">
 <div class="card">
-
 <h2>Add Chapter</h2>
-
 <label>Chapter name</label>
-
 <input id="chapterTitle"
-type="text"
-placeholder="Example: Chapter 1 - The New School">
-
-
+       type="text"
+       placeholder="Example: Chapter 1 - The New School">
 <label>Upload chapter pages</label>
-
 <input id="chapterFiles"
-type="file"
-multiple
-accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
-
-
+       type="file"
+       multiple
+       accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
 <div class="fileInfo">
-
 <strong>Supported:</strong>
-
 <br>
-
 📄 PDF files
-
 <br>
-
 🖼️ JPG / JPEG / PNG / WEBP images
-
 <br><br>
-
 You can select multiple files at once.
-
 A PDF can contain many pages.
-
 </div>
-
-
 <div id="selectedFiles"></div>
-
 <div id="ocrStatus"></div>
-
 <button class="yellow"
-id="extractButton"
-onclick="processChapterFiles()">
-
+        id="extractButton"
+        onclick="processChapterFiles()">
 Extract Chapter
-
 </button>
-
-
 <button class="secondary"
-onclick="openBook(currentBookId)">
-
+        onclick="openBook(currentBookId)">
 Cancel
-
 </button>
-
 </div>
-
-
 <div id="ocrPreview"></div>
-
 </section>
-
-
 <!-- =====================================================
 CHAPTER
 ===================================================== -->
-
-<section id="chapterSection"
-class="hidden">
-
+<section id="chapterSection" class="hidden">
 <div class="card">
-
 <button class="secondary"
-onclick="openBook(currentBookId)">
-
+        onclick="openBook(currentBookId)">
 ← Book
-
 </button>
-
 <h2 id="chapterTitleDisplay"></h2>
-
 <p id="chapterDetails"></p>
-
 <button class="yellow"
-onclick="startChapter()">
-
+        onclick="startChapter()">
 Start / Continue Reading
-
 </button>
-
 </div>
-
-
 <div class="card">
-
 <h3>Chapter Pages</h3>
-
 <div id="chapterPages"
-class="pageList">
+     class="pageList">
 </div>
-
 </div>
-
 </section>
-
-
 <!-- =====================================================
 READER
 ===================================================== -->
-
-<section id="readerSection"
-class="hidden">
-
+<section id="readerSection" class="hidden">
 <div class="card">
-
 <button class="secondary"
-onclick="openChapter(currentBookId,currentChapterId)">
-
+        onclick="openChapter(currentBookId,currentChapterId)">
 ← Exit
-
 </button>
-
 <h2 id="readerChapterTitle"></h2>
-
-
 <div id="readingStatus"
-class="status">
-
+     class="status">
 Ready
-
 </div>
-
-
 <p>
 Chapter progress:
 <strong id="progressText">0%</strong>
 </p>
-
-
 <div class="progressOuter">
-
 <div id="progressBar"
-class="progressInner">
+     class="progressInner">
 </div>
-
 </div>
-
 </div>
-
-
 <div class="readerGrid">
-
-
+<!-- PAGE -->
 <div class="bookPage">
-
 <h3 id="readerPageTitle">
 Page 1
 </h3>
-
 <img id="readerImage">
-
 <p class="small">
-
 Read from the physical textbook.
 The phone acts as the AI supervisor.
-
 </p>
-
 </div>
-
-
+<!-- AI -->
 <div>
-
-
 <div class="card">
-
 <h3>Reading Supervision</h3>
-
-
 <button id="startButton"
-class="yellow"
-onclick="startRecording()">
-
+        class="yellow"
+        onclick="startRecording()">
 🎤 Start Reading
-
 </button>
-
-
 <button id="stopButton"
-class="danger"
-onclick="stopRecording()"
-disabled>
-
+        class="danger"
+        onclick="stopRecording()"
+        disabled>
 ⏸ Pause
-
 </button>
-
-
-<button id="backButton"
-class="secondary"
-onclick="goBack()">
-
-← Back
-
-</button>
-
-
-<button id="continueHereButton"
-class="yellow hidden"
-onclick="continueHere()">
-
-Continue from here
-
-</button>
-
+<button id="backButton" class="secondary" onclick="goBack()">← Back</button>
+<button id="continueHereButton" class="yellow hidden" onclick="continueHere()">Continue from here</button>
 </div>
-
-
 <div class="card">
-
 <h3>Read this</h3>
-
 <div id="referenceText"
-class="reference">
+     class="reference">
 </div>
-
 </div>
-
-
 <div class="card hidden">
-
 <h3>What AI Heard</h3>
-
 <div id="liveTranscript"
-class="transcript">
-
+     class="transcript">
 Nothing recorded yet.
-
 </div>
-
 </div>
-
-
 </div>
-
 </div>
-
-
 <div id="pageResult"></div>
-
 </section>
-
-
 <!-- =====================================================
 REPORT
 ===================================================== -->
-
-<section id="reportSection"
-class="hidden">
-
+<section id="reportSection" class="hidden">
 <div class="card center">
-
 <h1>Chapter Completed 🎉</h1>
-
 <h2 id="reportChapterName"></h2>
-
 <div id="overallScore"
-class="score">
-
+     class="score">
 0%
-
 </div>
-
 <p>
 Overall reading accuracy
 </p>
-
 </div>
-
-
 <div class="card">
-
 <h2>Chapter Report</h2>
-
 <div class="statGrid">
-
-
 <div class="stat">
-
-<strong id="reportPages">
-0
-</strong>
-
+<strong id="reportPages">0</strong>
 Pages
-
 </div>
-
-
 <div class="stat">
-
-<strong id="reportCorrect">
-0
-</strong>
-
+<strong id="reportCorrect">0</strong>
 Correct
-
 </div>
-
-
 <div class="stat">
-
-<strong id="reportMissing">
-0
-</strong>
-
+<strong id="reportMissing">0</strong>
 Missing
-
 </div>
-
-
 <div class="stat">
-
-<strong id="reportChanged">
-0
-</strong>
-
+<strong id="reportChanged">0</strong>
 Changed
-
 </div>
-
-
 <div class="stat">
-
-<strong id="reportExtra">
-0
-</strong>
-
+<strong id="reportExtra">0</strong>
 Extra
-
 </div>
-
-
 </div>
-
 </div>
-
-
 <div class="card">
-
 <h3>Page-by-Page Results</h3>
-
 <div id="reportPagesList"></div>
-
 </div>
-
-
 <div class="card center">
-
 <button class="yellow"
-onclick="openChapter(currentBookId,currentChapterId)">
-
+        onclick="openChapter(currentBookId,currentChapterId)">
 Back to Chapter
-
 </button>
-
-
 <button class="secondary"
-onclick="openBook(currentBookId)">
-
+        onclick="openBook(currentBookId)">
 Back to Book
-
 </button>
-
 </div>
-
 </section>
-
 </div>
-
-
-<!-- =====================================================
-WELCOME BACK
-===================================================== -->
-
-<div id="welcomeBack"
-class="hidden"
-style="
-position:fixed;
-inset:0;
-background:rgba(8,8,8,.88);
-z-index:99;
-display:flex;
-align-items:center;
-justify-content:center;
-text-align:center;
-color:white;
-padding:30px">
-
-<div>
-
-<h1 style="font-size:38px">
-Welcome back! 👋
-</h1>
-
-<p style="font-size:20px">
-Tap Continue to keep reading.
-</p>
-
-<button class="yellow"
-style="font-size:22px;padding:16px 40px"
-onclick="welcomeContinue()">
-
-Continue
-
-</button>
-
-</div>
-
-</div>
-
-
-<!-- =====================================================
-MAIN SCRIPT
-===================================================== -->
-
+<div id="welcomeBack" class="hidden" style="position:fixed;inset:0;background:rgba(8,8,8,.88);z-index:99;display:flex;align-items:center;justify-content:center;text-align:center;color:white;padding:30px">
+<div><h1 style="font-size:38px">Welcome back! 👋</h1><p style="font-size:20px">Tap Continue to keep reading.</p>
+<button class="yellow" style="font-size:22px;padding:16px 40px" onclick="welcomeContinue()">Continue</button></div></div>
 <script type="module">
-
-
 /* =====================================================
 PDF.JS
 ===================================================== */
-
 import * as pdfjsLib from
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
-
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
-
-
 /* =====================================================
 DATA
 ===================================================== */
-
 let books =
 JSON.parse(
 localStorage.getItem("appearich_reading_books") || "[]"
 );
-
-let currentBookId=null;
-let currentChapterId=null;
-let currentPageIndex=0;
-
-let sessionActive=false;
-
-let bufWords=[];
-let interimWords=[];
-
-let restartTimer=null;
-let idleTimer=null;
-
-let F=[];
-
-let prog=null;
-
-const LONG_BREAK_MS =
-10*60*1000;
-
-
+let currentBookId = null;
+let currentChapterId = null;
+let currentPageIndex = 0;
+let recognition = null;
+let isRecording = false;
+let finalTranscript = "";
+let shouldCompareAfterStop = false;
 /* =====================================================
 STORAGE
 ===================================================== */
-
 function saveBooks(){
-
-try{
-
-localStorage.setItem(
-"appearich_reading_books",
-JSON.stringify(books)
-);
-
-}catch(e){
-
-console.error(e);
-
-alert(
-"Storage is full. Please delete an old book or chapter."
-);
-
+try{localStorage.setItem("appearich_reading_books",JSON.stringify(books));}
+catch(e){alert("Storage is full. Please delete an old book or chapter.");}
 }
-
-}
-
-
 /* =====================================================
 SECTION NAVIGATION
 ===================================================== */
-
-window.showSection=function(id){
-
+window.showSection = function(id){
 document.querySelectorAll("section")
-.forEach(section=>{
-section.classList.add("hidden");
-});
-
-const section =
-document.getElementById(id);
-
-if(section){
-
-section.classList.remove("hidden");
-
-}
-
+.forEach(s=>s.classList.add("hidden"));
+document.getElementById(id)
+.classList.remove("hidden");
 };
-
-
 /* =====================================================
 BOOKS
 ===================================================== */
-
 function renderBooks(){
-
 const container =
 document.getElementById("booksContainer");
-
 container.innerHTML="";
-
-
 if(books.length===0){
-
 container.innerHTML=`
-
 <p class="small">
 No books created yet.
 </p>
-
 `;
-
 return;
-
 }
-
-
 books.forEach(book=>{
-
 let cover="";
-
 for(const chapter of book.chapters){
-
-if(chapter.pages &&
-chapter.pages.length){
-
-cover=chapter.pages[0].image;
-
+if(chapter.pages.length){
+cover =
+chapter.pages[0].image;
 break;
-
 }
-
 }
-
-
 const div =
 document.createElement("div");
-
 div.className="bookCard";
-
-
 div.innerHTML=`
-
 ${
 cover
 ?
@@ -1196,192 +636,91 @@ cover
 :
 `<div style="height:180px;background:#eee"></div>`
 }
-
 <div class="body">
-
 <h3>
 ${escapeHTML(book.title)}
 </h3>
-
 <p class="small">
 ${book.chapters.length} chapter(s)
 </p>
-
-
 <button class="yellow"
 onclick="openBook('${book.id}')">
-
 Open
-
 </button>
-
-
 <button class="danger"
 onclick="deleteBook('${book.id}')">
-
 Delete
-
 </button>
-
 </div>
-
 `;
-
-
 container.appendChild(div);
-
 });
-
 }
-
-
-window.createBook=function(){
-
-const input =
-document.getElementById("bookTitle");
-
+window.createBook = function(){
 const title =
-input.value.trim();
-
-
+document.getElementById("bookTitle")
+.value.trim();
 if(!title){
-
 alert("Enter a book title.");
-
 return;
-
 }
-
-
 const book={
-
 id:Date.now().toString(),
-
 title:title,
-
 chapters:[]
-
 };
-
-
 books.push(book);
-
 saveBooks();
-
-
-input.value="";
-
-
+document.getElementById("bookTitle")
+.value="";
 openBook(book.id);
-
 };
-
-
-window.deleteBook=function(id){
-
+window.deleteBook = function(id){
 if(!confirm("Delete this book?"))
 return;
-
-
 books =
-books.filter(
-book=>book.id!==id
-);
-
-
+books.filter(book=>book.id!==id);
 saveBooks();
-
 renderBooks();
-
 };
-
-
 /* =====================================================
 OPEN BOOK
 ===================================================== */
-
-window.openBook=function(id){
-
-stopSession();
-
-
+window.openBook = function(id){
 currentBookId=id;
-
-
 const book =
-books.find(
-b=>b.id===id
-);
-
-
-if(!book)
-return;
-
-
+books.find(b=>b.id===id);
+if(!book)return;
 document.getElementById(
 "bookTitleDisplay"
 ).textContent=book.title;
-
-
 renderChapters();
-
 showSection("bookSection");
-
 };
-
-
 /* =====================================================
 CHAPTERS
 ===================================================== */
-
 function renderChapters(){
-
 const book =
-books.find(
-b=>b.id===currentBookId
-);
-
-
-if(!book)
-return;
-
-
+books.find(b=>b.id===currentBookId);
 const container =
 document.getElementById("chaptersContainer");
-
 container.innerHTML="";
-
-
 if(book.chapters.length===0){
-
 container.innerHTML=`
-
 <p class="small">
 No chapters yet.
 </p>
-
 `;
-
 return;
-
 }
-
-
 book.chapters.forEach(chapter=>{
-
 const firstPage =
-chapter.pages &&
 chapter.pages[0];
-
-
 const div =
 document.createElement("div");
-
 div.className="chapterCard";
-
-
 div.innerHTML=`
-
 ${
 firstPage
 ?
@@ -1389,733 +728,197 @@ firstPage
 :
 `<div style="height:180px;background:#eee"></div>`
 }
-
-
 <div class="body">
-
 <h3>
 ${escapeHTML(chapter.title)}
 </h3>
-
-
 <p class="small">
-
 ${chapter.pages.length} page(s)
-
 </p>
-
-
 <button class="yellow"
 onclick="openChapter('${currentBookId}','${chapter.id}')">
-
 Open Chapter
-
 </button>
-
-
 <button class="danger"
 onclick="deleteChapter('${chapter.id}')">
-
 Delete
-
 </button>
-
 </div>
-
 `;
-
-
 container.appendChild(div);
-
 });
-
 }
-
-
-window.deleteChapter=function(id){
-
+window.deleteChapter = function(id){
 if(!confirm("Delete this chapter?"))
 return;
-
-
 const book =
-books.find(
-b=>b.id===currentBookId
-);
-
-
-if(!book)
-return;
-
-
+books.find(b=>b.id===currentBookId);
 book.chapters =
-book.chapters.filter(
-c=>c.id!==id
-);
-
-
+book.chapters.filter(c=>c.id!==id);
 saveBooks();
-
 renderChapters();
-
 };
-
-
 /* =====================================================
 FILE DISPLAY
 ===================================================== */
-
 document.getElementById(
 "chapterFiles"
-).addEventListener(
-"change",
-function(){
-
+).addEventListener("change",function(){
 const files =
 Array.from(this.files);
-
 const box =
 document.getElementById("selectedFiles");
-
 box.innerHTML="";
-
-
 files.forEach((file,index)=>{
-
-box.innerHTML+=`
-
+box.innerHTML += `
 <div class="fileInfo">
-
 <strong>
 ${index+1}. ${escapeHTML(file.name)}
 </strong>
-
 <br>
-
 <span class="small">
 ${formatBytes(file.size)}
 </span>
-
 </div>
-
 `;
-
 });
-
 });
-
-
 /* =====================================================
-TEXT HELPERS
+PROCESS CHAPTER FILES
 ===================================================== */
-
-function normalizeExtractedLine(text){
-
-return String(text||"")
-.replace(/\s+/g," ")
-.trim();
-
+window.processChapterFiles =
+async function(){
+const title =
+document.getElementById("chapterTitle")
+.value.trim();
+const files =
+Array.from(
+document.getElementById("chapterFiles").files
+);
+if(!title){
+alert("Enter a chapter name.");
+return;
 }
-
-
-function joinTextParts(parts){
-
-let out="";
-
-
-for(const raw of parts){
-
-const t =
-normalizeExtractedLine(raw);
-
-
-if(!t)
-continue;
-
-
-if(!out){
-
-out=t;
-
-continue;
-
+if(files.length===0){
+alert("Select PDF or image files.");
+return;
 }
-
-
-const first=t[0];
-const last=out[out.length-1];
-
-
+const button =
+document.getElementById("extractButton");
+button.disabled=true;
+const status =
+document.getElementById("ocrStatus");
+const preview =
+document.getElementById("ocrPreview");
+preview.innerHTML="";
+const pages=[];
+let pageNumber=1;
+/*
+Process every selected file.
+*/
+for(let fileIndex=0;
+    fileIndex<files.length;
+    fileIndex++){
+const file=files[fileIndex];
+status.innerHTML=`
+<div class="status">
+Processing file
+${fileIndex+1}/${files.length}
+<br>
+<strong>
+${escapeHTML(file.name)}
+</strong>
+</div>
+`;
+/* =================================================
+PDF
+================================================= */
 if(
-/^[,.;:!?%…)\]}]/.test(first)
+file.type==="application/pdf" ||
+file.name.toLowerCase().endsWith(".pdf")
 ){
-
-out+=t;
-
-}
-
-else if(
-(first==="\""||
-first==="”"||
-first==="’")
-&&
-/[A-Za-z0-9]/.test(last)
-){
-
-out+=t;
-
-}
-
-else if(
-/^[([{]/.test(first)
-){
-
-out+=t;
-
-}
-
-else if(
-/[-–—]$/.test(last)
-){
-
-out+=t;
-
-}
-
-else{
-
-out+=" "+t;
-
-}
-
-}
-
-
-return out
-
-.replace(
-/\s+([,.;:!?%…)\]}])/g,
-"$1"
-)
-
-.replace(
-/([([{])\s+/g,
-"$1"
-)
-
-.replace(/\s+/g," ")
-.trim();
-
-}
-
-
-/* =====================================================
-FURNITURE DETECTION
-===================================================== */
-
-function isFurnitureLine(text){
-
-const t =
-normalizeExtractedLine(text);
-
-
-if(!t)
-return true;
-
-
-if(/^\d{1,4}$/.test(t))
-return true;
-
-
-if(
-/^(page|p\.?)\s*\d+$/i
-.test(t)
-)
-return true;
-
-
-if(
-/^(fig\.?|figure|photo|image|illustration|diagram|table|source)\b/i
-.test(t)
-)
-return true;
-
-
-if(
-/^(isbn|www\.|https?:\/\/)/i
-.test(t)
-)
-return true;
-
-
-return false;
-
-}
-
-
-/* =====================================================
-COLUMN DETECTION
-===================================================== */
-
-function clusterColumns(lines,pageWidth){
-
-if(lines.length<6){
-
-return [
-lines.slice()
-.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-)
-];
-
-}
-
-
-const sorted =
-lines.slice()
-.sort(
-(a,b)=>a.x-b.x
-);
-
-
-const xs =
-sorted.map(l=>l.x);
-
-
-const gaps=[];
-
-
-for(
-let i=1;
-i<xs.length;
-i++
-){
-
-gaps.push({
-
-gap:xs[i]-xs[i-1],
-
-index:i
-
-});
-
-}
-
-
-gaps.sort(
-(a,b)=>b.gap-a.gap
-);
-
-
-const split =
-gaps.find(
-g=>g.gap>pageWidth*.18
-);
-
-
-if(!split){
-
-return [
-lines.slice()
-.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-)
-];
-
-}
-
-
-const left =
-sorted.slice(
-0,
-split.index
-);
-
-
-const right =
-sorted.slice(
-split.index
-);
-
-
-if(
-left.length<3 ||
-right.length<3
-){
-
-return [
-lines.slice()
-.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-)
-];
-
-}
-
-
-left.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-);
-
-
-right.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-);
-
-
-return [left,right];
-
-}
-
-
-/* =====================================================
-FINAL TEXT CLEANING
-===================================================== */
-
-function cleanFinalReference(text){
-
-return String(text||"")
-
-.replace(/\r/g,"")
-
-.split(/\n+/)
-
-.map(normalizeExtractedLine)
-
-.filter(Boolean)
-
-.filter(
-line=>!isFurnitureLine(line)
-)
-
-.join("\n")
-
-.replace(
-/[ \t]+([,.;:!?])/g,
-"$1"
-)
-
-.trim();
-
-}
-
-
-/* =====================================================
-PDF TEXT EXTRACTION
-===================================================== */
-
-async function extractPDFText(pdfPage){
-
 try{
-
-const viewport =
-pdfPage.getViewport({
-scale:1
-});
-
-
-const textContent =
-await pdfPage.getTextContent({
-normalizeWhitespace:false,
-disableCombineTextItems:false
-});
-
-
-const raw=[];
-
-
+const pdf =
+await pdfjsLib.getDocument({
+data:await file.arrayBuffer()
+}).promise;
 for(
-const item of textContent.items||[]
+let pdfPageNumber=1;
+pdfPageNumber<=pdf.numPages;
+pdfPageNumber++
 ){
-
-if(
-!item ||
-typeof item.str!=="string" ||
-!item.str.trim()
-)
-continue;
-
-
-const tx =
-pdfjsLib.Util.transform(
-viewport.transform,
-item.transform
-);
-
-
-const x=tx[4];
-const y=tx[5];
-
-
-const h =
-Math.max(
-1,
-Math.hypot(
-tx[2],
-tx[3]
-)
-);
-
-
-raw.push({
-
-text:item.str,
-
-x:x,
-
-top:y-h,
-
-bottom:y,
-
-height:h,
-
-width:Math.abs(
-item.width||0
-)
-
-});
-
-}
-
-
-if(!raw.length)
-return "";
-
-
-raw.sort(
-(a,b)=>
-a.top-b.top ||
-a.x-b.x
-);
-
-
-const lines=[];
-
-
-for(const item of raw){
-
-const last =
-lines[lines.length-1];
-
-
-const tolerance =
-Math.max(
-3,
-Math.min(
-12,
-item.height*.55
-)
-);
-
-
-if(
-last &&
-Math.abs(
-item.top-last.top
-)<=tolerance
-){
-
-last.items.push(item);
-
-last.x =
-Math.min(
-last.x,
-item.x
-);
-
-last.right =
-Math.max(
-last.right,
-item.x+item.width
-);
-
-last.top =
-Math.min(
-last.top,
-item.top
-);
-
-last.bottom =
-Math.max(
-last.bottom,
-item.bottom
-);
-
-last.height =
-Math.max(
-last.height,
-item.height
-);
-
-}else{
-
-lines.push({
-
-items:[item],
-
-x:item.x,
-
-right:item.x+item.width,
-
-top:item.top,
-
-bottom:item.bottom,
-
-height:item.height
-
-});
-
-}
-
-}
-
-
-lines.forEach(line=>{
-
-line.items.sort(
-(a,b)=>a.x-b.x
-);
-
-line.text =
-joinTextParts(
-line.items.map(
-i=>i.text
-)
-);
-
-});
-
-
-const pageWidth =
-viewport.width;
-
-
-const columns =
-clusterColumns(
-lines.filter(
-l=>l.text
-),
-pageWidth
-);
-
-
-const ordered=[];
-
-
-columns.forEach(column=>{
-
-column.forEach(line=>{
-
-if(
-line.text &&
-!isFurnitureLine(line.text)
-){
-
-ordered.push(line);
-
-}
-
-});
-
-});
-
-
-let output="";
-let previous=null;
-
-
-for(const line of ordered){
-
-if(!output){
-
-output=line.text;
-
-previous=line;
-
-continue;
-
-}
-
-
-const gap =
-line.top-previous.bottom;
-
-
-if(
-gap>
-Math.max(
-14,
-previous.height*1.8
-)
-){
-
-output+=
-"\n\n"+
-line.text;
-
-}else{
-
-output+=" "+
-line.text;
-
-}
-
-
-previous=line;
-
-}
-
-
-return cleanFinalReference(output);
-
+status.innerHTML=`
+<div class="status">
+Reading PDF:
+${escapeHTML(file.name)}
+<br>
+Page ${pdfPageNumber}
+of ${pdf.numPages}
+</div>
+`;
+const pdfPage =
+await pdf.getPage(pdfPageNumber);
+/*
+First try extracting actual PDF text.
+*/
+let extractedText="";
+try{
+const textContent =
+await pdfPage.getTextContent();
+extractedText =
+textContent.items
+.map(item=>item.str)
+.join(" ")
+.trim();
 }catch(error){
-
-console.error(
-"PDF text extraction failed:",
+console.log(
+"PDF text extraction failed",
 error
 );
-
-return "";
-
 }
-
-}
-
-
-/* =====================================================
-OCR
-===================================================== */
-
-async function runOCR(image,status,prefix=""){
-
+/*
+Render page to canvas.
+We need the image even when
+the PDF already has text.
+*/
+const viewport =
+pdfPage.getViewport({
+scale:1.5
+});
+const canvas =
+document.createElement("canvas");
+canvas.width =
+Math.ceil(viewport.width);
+canvas.height =
+Math.ceil(viewport.height);
+const context =
+canvas.getContext("2d");
+await pdfPage.render({
+canvasContext:context,
+viewport:viewport
+}).promise;
+const image =
+canvas.toDataURL("image/jpeg",.82);
+/*
+If PDF has no selectable text,
+use OCR.
+*/
+if(!extractedText){
+status.innerHTML=`
+<div class="status">
+PDF page ${pdfPageNumber}
+has no selectable text.
+Running OCR...
+</div>
+`;
 try{
-
-const result =
+const ocr =
 await Tesseract.recognize(
 image,
 "eng",
 {
-
 logger:info=>{
-
-if(!info)
-return;
-
-
-if(
-info.status
-){
-
+if(info.status){
 const percent =
 info.progress
 ?
@@ -2124,809 +927,192 @@ info.progress*100
 )
 :
 "";
-
-
 status.innerHTML=`
-
 <div class="status">
-
-${escapeHTML(prefix)}
-
+OCR:
+Page ${pdfPageNumber}/${pdf.numPages}
 <br>
-
-${escapeHTML(info.status)}
-
-${
-percent
+${info.status}
+${percent
 ?
 " "+percent+"%"
 :
-""
-}
-
+""}
 </div>
-
 `;
-
 }
-
 }
-
 }
 );
-
-
-const lines =
-(result.data.lines||[])
-.map(line=>{
-
-const b =
-line.bbox||{};
-
-
-return {
-
-text:
-normalizeExtractedLine(
-line.text||""
-),
-
-x:b.x0||0,
-
-top:b.y0||0,
-
-bottom:b.y1||0,
-
-height:
-Math.max(
-1,
-(b.y1||0)-
-(b.y0||0)
-),
-
-right:b.x1||0
-
-};
-
-})
-.filter(
-l=>l.text
+extractedText =
+cleanOCR(
+ocr.data.text
 );
-
-
-if(!lines.length){
-
-return cleanFinalReference(
-result.data.text||""
-);
-
-}
-
-
-const pageWidth =
-Math.max(
-...lines.map(l=>l.right),
-1
-);
-
-
-const columns =
-clusterColumns(
-lines,
-pageWidth
-);
-
-
-const ordered=[];
-
-
-columns.forEach(column=>{
-
-column.forEach(line=>{
-
-if(
-!isFurnitureLine(line.text)
-){
-
-ordered.push(line);
-
-}
-
-});
-
-});
-
-
-let output="";
-let previous=null;
-
-
-for(const line of ordered){
-
-if(!output){
-
-output=line.text;
-
-previous=line;
-
-continue;
-
-}
-
-
-const gap =
-line.top-previous.bottom;
-
-
-if(
-gap>
-Math.max(
-14,
-previous.height*1.8
-)
-){
-
-output+=
-"\n\n"+
-line.text;
-
-}else{
-
-output+=" "+
-line.text;
-
-}
-
-
-previous=line;
-
-}
-
-
-return cleanFinalReference(output);
-
 }catch(error){
-
 console.error(
-"OCR failed:",
+"PDF OCR failed",
 error
 );
-
-return "";
-
+extractedText="";
 }
-
 }
-
-
-/* =====================================================
-PROCESS CHAPTER FILES
-===================================================== */
-
-window.processChapterFiles =
-async function(){
-
-const title =
-document.getElementById(
-"chapterTitle"
-).value.trim();
-
-
-const files =
-Array.from(
-document.getElementById(
-"chapterFiles"
-).files
-);
-
-
-if(!title){
-
-alert("Enter a chapter name.");
-
-return;
-
-}
-
-
-if(!files.length){
-
-alert("Select PDF or image files.");
-
-return;
-
-}
-
-
-const button =
-document.getElementById(
-"extractButton"
-);
-
-
-const status =
-document.getElementById(
-"ocrStatus"
-);
-
-
-const preview =
-document.getElementById(
-"ocrPreview"
-);
-
-
-button.disabled=true;
-
-preview.innerHTML="";
-
-
-const pages=[];
-
-let pageNumber=1;
-
-
-for(
-let fileIndex=0;
-fileIndex<files.length;
-fileIndex++
-){
-
-const file =
-files[fileIndex];
-
-
-status.innerHTML=`
-
-<div class="status">
-
-Processing file
-${fileIndex+1}/${files.length}
-
-<br>
-
-<strong>
-${escapeHTML(file.name)}
-</strong>
-
-</div>
-
-`;
-
-
-/* =================================================
-PDF
-===================================================== */
-
-if(
-file.type==="application/pdf" ||
-file.name.toLowerCase().endsWith(".pdf")
-){
-
-try{
-
-const pdf =
-await pdfjsLib.getDocument({
-data:await file.arrayBuffer()
-}).promise;
-
-
-for(
-let pdfPageNumber=1;
-pdfPageNumber<=pdf.numPages;
-pdfPageNumber++
-){
-
-status.innerHTML=`
-
-<div class="status">
-
-Reading PDF:
-
-${escapeHTML(file.name)}
-
-<br>
-
-Page ${pdfPageNumber}
-of ${pdf.numPages}
-
-</div>
-
-`;
-
-
-const pdfPage =
-await pdf.getPage(
-pdfPageNumber
-);
-
-
-let extractedText =
-await extractPDFText(
-pdfPage
-);
-
-
-/* Render visual page */
-
-const viewport =
-pdfPage.getViewport({
-scale:1.5
-});
-
-
-const canvas =
-document.createElement("canvas");
-
-
-canvas.width =
-Math.ceil(
-viewport.width
-);
-
-
-canvas.height =
-Math.ceil(
-viewport.height
-);
-
-
-const context =
-canvas.getContext("2d");
-
-
-await pdfPage.render({
-
-canvasContext:context,
-
-viewport:viewport
-
-}).promise;
-
-
-const image =
-canvas.toDataURL(
-"image/jpeg",
-.82
-);
-
-
-/* OCR scanned PDF */
-
-if(
-tokenize(extractedText).length<3
-){
-
-status.innerHTML=`
-
-<div class="status">
-
-Page ${pdfPageNumber}
-contains little or no selectable text.
-
-<br>
-
-Extracting words with OCR...
-
-</div>
-
-`;
-
-
-extractedText =
-await runOCR(
-image,
-status,
-`OCR Page ${pdfPageNumber}/${pdf.numPages}`
-);
-
-}
-
-
+/*
+Save page.
+*/
 pages.push({
-
 pageNumber:pageNumber++,
-
 image:image,
-
-text:cleanFinalReference(
-extractedText
-),
-
+text:cleanOCR(extractedText),
 source:file.name,
-
 sourceType:"pdf",
-
 pdfPage:pdfPageNumber,
-
 transcript:"",
-
 result:null
-
 });
-
-
 showOCRPreview(
 pages[pages.length-1]
 );
-
 }
-
 }catch(error){
-
 console.error(error);
-
-
 alert(
 "Could not process PDF: "+
 file.name
 );
-
 }
-
 }
-
-
 /* =================================================
 IMAGE
-===================================================== */
-
-else if(
-file.type.startsWith("image/")
-){
-
+================================================= */
+else if(file.type.startsWith("image/")){
 try{
-
 const image =
 await fileToDataURL(file);
-
-
 status.innerHTML=`
-
 <div class="status">
-
-Extracting words from image
+Running OCR on image
 ${fileIndex+1}/${files.length}
-
 </div>
-
 `;
-
-
-const extractedText =
-await runOCR(
+const ocr =
+await Tesseract.recognize(
 image,
-status,
-"Extracting words"
+"eng",
+{
+logger:info=>{
+if(info.status){
+const percent =
+info.progress
+?
+Math.round(info.progress*100)
+:
+"";
+status.innerHTML=`
+<div class="status">
+OCR:
+${info.status}
+${percent
+?
+" "+percent+"%"
+:
+""}
+</div>
+`;
+}
+}
+}
 );
-
-
+const extractedText =
+cleanOCR(
+ocr.data.text
+);
 pages.push({
-
 pageNumber:pageNumber++,
-
 image:image,
-
-text:cleanFinalReference(
-extractedText
-),
-
+text:extractedText,
 source:file.name,
-
 sourceType:"image",
-
 transcript:"",
-
 result:null
-
 });
-
-
 showOCRPreview(
 pages[pages.length-1]
 );
-
 }catch(error){
-
 console.error(error);
-
-
 alert(
 "Could not process image: "+
 file.name
 );
-
 }
-
-}else{
-
+}
+else{
 alert(
-"Unsupported file: "+
-file.name
+"Unsupported file: "+file.name
 );
-
 }
-
 }
-
-
-/* Remove repeated header/footer lines */
-
-removeRepeatedFurniture(
-pages
-);
-
-
-if(!pages.length){
-
+/* =================================================
+SAVE CHAPTER
+================================================= */
+if(pages.length===0){
 status.innerHTML=`
-
 <div class="status">
-
 No pages were successfully processed.
-
 </div>
-
 `;
-
 button.disabled=false;
-
 return;
-
 }
-
-
-/* Prepare storage */
-
-status.innerHTML=`
-
-<div class="status">
-
-Optimising pages...
-
-</div>
-
-`;
-
-
-const prepared =
-await prepareStorage(
-pages
-);
-
-
-if(!prepared){
-
-status.innerHTML=`
-
-<div class="status">
-
-Not enough storage.
-
-Delete an old book or upload fewer pages.
-
-</div>
-
-`;
-
+status.innerHTML='<div class="status">Optimising pages...</div>';
+if(!(await prepareStorage(pages))){
+status.innerHTML=`<div class="status">Not enough storage (${MAX_STORAGE_MB} MB limit). Delete an old book or upload fewer pages.</div>`;
 button.disabled=false;
-
 return;
-
 }
-
-
-const book =
-books.find(
-b=>b.id===currentBookId
-);
-
-
-if(!book){
-
-button.disabled=false;
-
-alert(
-"Book could not be found."
-);
-
-return;
-
-}
-
-
+const book = books.find(b=>b.id===currentBookId);
 const chapter={
-
 id:Date.now().toString(),
-
 title:title,
-
 pages:pages,
-
 currentPosition:0,
-
 completed:false,
-
 lastScore:null
-
 };
-
-
 book.chapters.push(chapter);
-
 saveBooks();
-
-
 status.innerHTML=`
-
 <div class="status">
-
 ✓ Chapter created successfully.
-
 <br>
-
 ${pages.length} page(s) processed.
-
 </div>
-
 `;
-
-
 button.disabled=false;
-
-
 setTimeout(()=>{
-
 document.getElementById(
 "chapterTitle"
 ).value="";
-
-
 document.getElementById(
 "chapterFiles"
 ).value="";
-
-
 openChapter(
 currentBookId,
 chapter.id
 );
-
-},500);
-
+},700);
 };
-
-
-/* =====================================================
-REPEATED HEADER / FOOTER
-===================================================== */
-
-function removeRepeatedFurniture(pages){
-
-const occurrences=new Map();
-
-
-pages.forEach(page=>{
-
-const lines =
-(page.text||"")
-.split(/\n+/);
-
-
-lines.forEach(line=>{
-
-const t =
-normalizeExtractedLine(
-line
-).toLowerCase();
-
-
-if(
-!t ||
-tokenize(t).length>12
-)
-return;
-
-
-if(
-isFurnitureLine(t)
-)
-return;
-
-
-if(!occurrences.has(t)){
-
-occurrences.set(t,[]);
-
-}
-
-
-occurrences.get(t).push(
-page.pageNumber
-);
-
-});
-
-});
-
-
-const repeated =
-new Set();
-
-
-occurrences.forEach(
-(pageNumbers,text)=>{
-
-if(
-pageNumbers.length>=2
-){
-
-repeated.add(text);
-
-}
-
-});
-
-
-pages.forEach(page=>{
-
-const lines =
-(page.text||"")
-.split(/\n+/);
-
-
-page.text =
-lines
-
-.map(
-normalizeExtractedLine
-)
-
-.filter(Boolean)
-
-.filter(
-line=>{
-
-const lower =
-line.toLowerCase();
-
-
-return !isFurnitureLine(line) &&
-!repeated.has(lower);
-
-}
-)
-
-.join("\n")
-
-.trim();
-
-});
-
-}
-
-
 /* =====================================================
 OCR PREVIEW
 ===================================================== */
-
 function showOCRPreview(page){
-
 const preview =
-document.getElementById(
-"ocrPreview"
-);
-
-
-preview.innerHTML+=`
-
+document.getElementById("ocrPreview");
+preview.innerHTML += `
 <div class="card">
-
 <h3>
 Page ${page.pageNumber}
 </h3>
-
-
 <img src="${page.image}"
 style="
 width:160px;
@@ -2935,3007 +1121,906 @@ object-fit:contain;
 border-radius:8px;
 background:#eee;
 ">
-
-
 <p class="small">
-
 <strong>
-Extracted reading text:
+Extracted text:
 </strong>
-
 <br>
-
-${escapeHTML(
-page.text.substring(0,600)
-)}
-
 ${
-page.text.length>600
-?
-"..."
-:
-""
+escapeHTML(
+page.text.substring(0,600)
+)
 }
-
+${page.text.length>600?"...":""}
 </p>
-
 </div>
-
 `;
-
 }
-
-
 /* =====================================================
 OPEN CHAPTER
 ===================================================== */
-
 window.openChapter =
 function(bookId,chapterId){
-
-stopSession();
-
-
 currentBookId=bookId;
-
 currentChapterId=chapterId;
-
-
 const book =
 books.find(
 b=>b.id===bookId
 );
-
-
 const chapter =
 book?.chapters.find(
 c=>c.id===chapterId
 );
-
-
-if(!chapter)
-return;
-
-
+if(!chapter)return;
 document.getElementById(
 "chapterTitleDisplay"
 ).textContent=
 chapter.title;
-
-
 document.getElementById(
 "chapterDetails"
 ).textContent=
 `${chapter.pages.length} pages`;
-
-
-renderChapterPages(
-chapter
-);
-
-
-showSection(
-"chapterSection"
-);
-
+renderChapterPages(chapter);
+showSection("chapterSection");
 };
-
-
-/* =====================================================
-RENDER CHAPTER PAGES
-===================================================== */
-
 function renderChapterPages(chapter){
-
-window.__pp={};
-
-
-chapter.pages.forEach(
-page=>{
-window.__pp[page.pageNumber]=page;
-}
-);
-
-
+window.__pp={};chapter.pages.forEach(p=>window.__pp[p.pageNumber]=p);
 const container =
-document.getElementById(
-"chapterPages"
-);
-
-
+document.getElementById("chapterPages");
 container.innerHTML="";
-
-
 chapter.pages.forEach(page=>{
-
 let status="Not read";
-
-
 if(page.result){
-
 status =
 `${page.result.score}% accuracy`;
-
 }
-
-
 const div =
 document.createElement("div");
-
-
 div.className="pageCard";
-
-
 div.innerHTML=`
-
 <img src="${page.image}">
-
-
 <div class="body">
-
 <strong>
 Page ${page.pageNumber}
 </strong>
-
-
 <p class="small">
-
-${status}
-
+${page.result&&page.result.auto?"Pictures only":status}
 </p>
-
-
-<details>
-
-<summary class="small">
-Reading text
-</summary>
-
-
-<textarea
-style="
-width:100%;
-height:110px
-"
-oninput="editRef(${page.pageNumber},this.value)"
->${escapeHTML(page.text)}</textarea>
-
-
-<div class="small"
-id="segCount${page.pageNumber}">
-
-${buildSegments(page.text).length}
-reading sentence(s)
-
-</div>
-
+<details><summary class="small">Reading text</summary>
+<textarea style="width:100%;height:110px" oninput="editRef(${page.pageNumber},this.value)">${escapeHTML(page.text)}</textarea>
+<div class="small" id="segCount${page.pageNumber}">${(page.segments||[]).length} reading sentence(s)</div>
 </details>
-
 </div>
-
 `;
-
-
 container.appendChild(div);
-
 });
-
 }
-
-
-/* =====================================================
-EDIT REFERENCE
-===================================================== */
-
-window.editRef =
-function(pageNumber,value){
-
-const page =
-window.__pp &&
-window.__pp[pageNumber];
-
-
-if(!page)
-return;
-
-
-page.text =
-value.trim();
-
-
-page.segments =
-buildSegments(
-page.text
-);
-
-
-saveBooks();
-
-
-const count =
-document.getElementById(
-"segCount"+pageNumber
-);
-
-
-if(count){
-
-count.textContent =
-page.segments.length+
-" reading sentence(s)";
-
-}
-
-};
-
-
 /* =====================================================
 CONFIG
 ===================================================== */
-
-const MAX_STORAGE_MB=4.5;
-
-const IMG_MAX_SIDE=1400;
-
-const IMG_QUALITY=.6;
-
-
+const MAX_STORAGE_MB = 4.5;            // configurable storage limit (localStorage is ~5 MB)
+const LONG_BREAK_MS  = 10*60*1000;     // 10 minutes of silence = long interruption
+const IMG_MAX_SIDE = 1400, IMG_QUALITY = .6;
 /* =====================================================
-STORAGE IMAGE
+CLEAN READING TEXT -> SEGMENTS (sentences)
+Captions, page numbers, figure/table labels are dropped.
 ===================================================== */
-
-function shrinkImage(src){
-
-return new Promise(resolve=>{
-
-const img =
-new Image();
-
-
-img.onload=()=>{
-
-const k =
-Math.min(
-1,
-IMG_MAX_SIDE/
-Math.max(
-img.width,
-img.height
-)
-);
-
-
-const canvas =
-document.createElement("canvas");
-
-
-canvas.width =
-Math.round(
-img.width*k
-);
-
-
-canvas.height =
-Math.round(
-img.height*k
-);
-
-
-canvas
-.getContext("2d")
-.drawImage(
-img,
-0,
-0,
-canvas.width,
-canvas.height
-);
-
-
-resolve(
-canvas.toDataURL(
-"image/jpeg",
-IMG_QUALITY
-)
-);
-
-};
-
-
-img.onerror=()=>{
-resolve(src);
-};
-
-
-img.src=src;
-
-});
-
-}
-
-
-function hashStr(s){
-
-let h=5381;
-
-
-for(
-let i=0;
-i<s.length;
-i++
-){
-
-h =
-((h<<5)+h+s.charCodeAt(i))
-|0;
-
-}
-
-
-return h+":"+s.length;
-
-}
-
-
-async function prepareStorage(pages){
-
-const seen =
-new Set();
-
-
-const keep=[];
-
-
-for(const page of pages){
-
-page.image =
-await shrinkImage(
-page.image
-);
-
-
-const hash =
-hashStr(
-page.image
-);
-
-
-if(
-seen.has(hash)
-)
-continue;
-
-
-seen.add(hash);
-
-
-page.segments =
-buildSegments(
-page.text
-);
-
-
-page.transcript="";
-
-
-keep.push(page);
-
-}
-
-
-pages.length=0;
-
-
-keep.forEach(
-(page,index)=>{
-
-page.pageNumber=index+1;
-
-pages.push(page);
-
-});
-
-
-const used =
-JSON.stringify(books).length+
-JSON.stringify(pages).length;
-
-
-return (
-used<=
-MAX_STORAGE_MB*1024*1024
-);
-
-}
-
-
-/* =====================================================
-BUILD SEGMENTS
-===================================================== */
-
 function buildSegments(text){
-
-const raw =
-String(text||"")
-.match(
-/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g
-) || [];
-
-
-const output=[];
-
-
-raw.forEach(segment=>{
-
-segment =
-segment.trim();
-
-
-if(
-!/[a-z]/i.test(segment)
-)
-return;
-
-
-if(
-/^(fig(ure)?|table|photo|source|image|illustration|diagram|page)\b/i
-.test(segment)
-)
-return;
-
-
-const count =
-tokenize(segment).length;
-
-
-if(
-count<2 &&
-!/[!?.]$/.test(segment)
-)
-return;
-
-
-if(count>30){
-
-let current="";
-
-
-segment
-.split(
-/(?<=[,;:])\s+/
-)
-.forEach(part=>{
-
-current +=
-(current?" ":"")+
-part;
-
-
-if(
-tokenize(current).length>=8
-){
-
-output.push(current);
-
-current="";
-
+  const raw = (text||"").match(/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g) || [];
+  const out = [];
+  raw.forEach(s=>{
+    s = s.trim();
+    if(!/[a-z]/i.test(s)) return;                                   // numbers / symbols only
+    if(/^(fig(ure)?|table|photo|source|image|illustration|diagram|page)\b/i.test(s)) return;
+    const n = tokenize(s).length;
+    if(n < 2 && !/[!?.]$/.test(s)) return;                          // lone header word
+    if(n > 30){                                                     // split very long sentences
+      let cur = "";
+      s.split(/(?<=[,;:])\s+/).forEach(part=>{
+        cur += (cur?" ":"") + part;
+        if(tokenize(cur).length >= 8){ out.push(cur); cur=""; }
+      });
+      if(cur){ if(out.length && tokenize(cur).length<4) out[out.length-1]+=" "+cur; else out.push(cur); }
+    } else out.push(s);
+  });
+  return out;
 }
-
-});
-
-
-if(current){
-
-if(
-output.length &&
-tokenize(current).length<4
-){
-
-output[
-output.length-1
-]+=" "+current;
-
-}else{
-
-output.push(current);
-
+window.editRef = function(n,val){
+  const p = window.__pp && window.__pp[n];
+  if(!p) return;
+  p.text = val.trim();
+  p.segments = buildSegments(p.text);
+  saveBooks();
+  const c = document.getElementById("segCount"+n);
+  if(c) c.textContent = p.segments.length+" reading sentence(s)";
+};
+/* =====================================================
+STORAGE LIMIT: shrink, de-duplicate, check quota
+===================================================== */
+function shrinkImage(src){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const k = Math.min(1, IMG_MAX_SIDE/Math.max(img.width,img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL("image/jpeg",IMG_QUALITY));
+    };
+    img.onerror = ()=>res(src);
+    img.src = src;
+  });
 }
-
+function hashStr(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return h+":"+s.length; }
+async function prepareStorage(pages){
+  const seen = new Set(), keep = [];
+  for(const p of pages){
+    p.image = await shrinkImage(p.image);
+    const h = hashStr(p.image);
+    if(seen.has(h)) continue;                 // duplicate image
+    seen.add(h);
+    p.segments = buildSegments(p.text);
+    p.transcript = "";                        // transcripts are never stored
+    keep.push(p);
+  }
+  pages.length = 0;
+  keep.forEach((p,i)=>{ p.pageNumber=i+1; pages.push(p); });
+  const used = JSON.stringify(books).length + JSON.stringify(pages).length;
+  return used <= MAX_STORAGE_MB*1024*1024;
 }
-
-}else{
-
-output.push(segment);
-
-}
-
-});
-
-
-return output;
-
-}
-
-
 /* =====================================================
 READING SESSION
 ===================================================== */
-
+let F = [], prog = null, sessionActive = false;
+let bufWords = [], interimWords = [], ptr = 0;
+let restartTimer = null, idleTimer = null;
+const PKEY = ()=>"appearich_progress_"+currentChapterId;
 function buildFlat(chapter){
-
-F=[];
-
-
-chapter.pages.forEach(
-(pg,pi)=>{
-
-if(!pg.segments){
-
-pg.segments =
-buildSegments(
-pg.text||""
-);
-
+  F = [];
+  chapter.pages.forEach((pg,pi)=>{
+    if(!pg.segments) pg.segments = buildSegments(pg.text||"");
+    if(!pg.segments.length && !pg.result)
+      pg.result = {score:100,correct:0,missing:0,changed:0,extra:0,referenceWords:0,auto:true,completed:true};
+    pg.segments.forEach((t,si)=>F.push({p:pi,s:si,text:t,ref:tokenize(t)}));
+  });
 }
-
-
-if(
-!pg.segments.length &&
-!pg.result
-){
-
-pg.result={
-
-score:100,
-
-correct:0,
-
-missing:0,
-
-changed:0,
-
-extra:0,
-
-referenceWords:0,
-
-auto:true,
-
-completed:true
-
+const firstIdxOfPage = pi=>F.findIndex(x=>x.p===pi);
+function resetBuffer(){ bufWords=[]; interimWords=[]; ptr=0; }
+function saveProgress(){ try{ localStorage.setItem(PKEY(),JSON.stringify(prog)); }catch(e){} }
+function touch(){ prog.lastActive = Date.now(); }
+window.startChapter = function(){
+  const ch = getCurrentChapter();
+  if(!ch) return;
+  buildFlat(ch);
+  if(!F.length){ alert("No reading text found in this chapter. Open the chapter and check the reading text of each page."); return; }
+  try{ prog = JSON.parse(localStorage.getItem(PKEY())); }catch(e){ prog = null; }
+  if(!prog || typeof prog.cursor!=="number") prog = {cursor:0,reached:0,seg:[],lastActive:0};
+  prog.reached = Math.min(prog.reached,F.length);
+  prog.cursor  = prog.reached>=F.length ? 0 : Math.min(prog.cursor,prog.reached);
+  resetBuffer();
+  loadReaderPage();
+  showSection("readerSection");
+  if(prog.reached>0 && Date.now()-(prog.lastActive||0) >= LONG_BREAK_MS) showWelcome();
 };
-
-}
-
-
-pg.segments.forEach(
-(t,si)=>{
-
-F.push({
-
-p:pi,
-
-s:si,
-
-text:t,
-
-ref:tokenize(t)
-
-});
-
-});
-
-});
-
-}
-
-
-/* =====================================================
-PAGE INDEX HELPER
-===================================================== */
-
-function firstIdxOfPage(pi){
-
-return F.findIndex(
-x=>x.p===pi
-);
-
-}
-
-
-/* =====================================================
-BUFFER
-===================================================== */
-
-function resetBuffer(){
-
-bufWords=[];
-
-interimWords=[];
-
-ptr=0;
-
-}
-
-
-/* =====================================================
-PROGRESS
-===================================================== */
-
-function PKEY(){
-
-return "appearich_progress_"+
-currentChapterId;
-
-}
-
-
-function saveProgress(){
-
-try{
-
-localStorage.setItem(
-PKEY(),
-JSON.stringify(prog)
-);
-
-}catch(e){}
-
-}
-
-
-function touch(){
-
-if(prog){
-
-prog.lastActive=
-Date.now();
-
-}
-
-}
-
-
-/* =====================================================
-START CHAPTER
-===================================================== */
-
-window.startChapter =
-function(){
-
-const chapter =
-getCurrentChapter();
-
-
-if(!chapter)
-return;
-
-
-buildFlat(
-chapter
-);
-
-
-if(!F.length){
-
-alert(
-"No reading text found in this chapter. Open the chapter and check the reading text."
-);
-
-return;
-
-}
-
-
-try{
-
-prog =
-JSON.parse(
-localStorage.getItem(
-PKEY()
-)
-);
-
-}catch(e){
-
-prog=null;
-
-}
-
-
-if(
-!prog ||
-typeof prog.cursor!=="number"
-){
-
-prog={
-
-cursor:0,
-
-reached:0,
-
-seg:[],
-
-lastActive:0
-
-};
-
-}
-
-
-prog.reached =
-Math.min(
-prog.reached||0,
-F.length
-);
-
-
-prog.cursor =
-prog.reached>=F.length
-?
-0
-:
-Math.min(
-prog.cursor,
-prog.reached
-);
-
-
-resetBuffer();
-
-
-loadReaderPage();
-
-
-showSection(
-"readerSection"
-);
-
-
-if(
-prog.reached>0 &&
-Date.now()-
-(prog.lastActive||0)
->=LONG_BREAK_MS
-){
-
-showWelcome();
-
-}
-
-};
-
-
-/* =====================================================
-LOAD READER PAGE
-===================================================== */
-
 function loadReaderPage(){
-
-const chapter =
-getCurrentChapter();
-
-
-const item =
-F[prog.cursor];
-
-
-if(!chapter||!item)
-return;
-
-
-const page =
-chapter.pages[item.p];
-
-
-document.getElementById(
-"readerChapterTitle"
-).textContent=
-chapter.title;
-
-
-document.getElementById(
-"readerPageTitle"
-).textContent=
-`Page ${page.pageNumber} of ${chapter.pages.length}`;
-
-
-document.getElementById(
-"readerImage"
-).src=
-page.image;
-
-
-renderSegments(
-item.p
-);
-
-
-document.getElementById(
-"backButton"
-).disabled=
-F[0].p===item.p;
-
-
-document.getElementById(
-"continueHereButton"
-).classList.toggle(
-"hidden",
-prog.cursor>=prog.reached
-);
-
-
-document.getElementById(
-"pageResult"
-).innerHTML="";
-
-
-resetRecordingUI();
-
-
-updateChapterProgress();
-
+  const ch = getCurrentChapter();
+  const it = F[prog.cursor];
+  if(!ch || !it) return;
+  const pg = ch.pages[it.p];
+  document.getElementById("readerChapterTitle").textContent = ch.title;
+  document.getElementById("readerPageTitle").textContent = `Page ${pg.pageNumber} of ${ch.pages.length}`;
+  document.getElementById("readerImage").src = pg.image;
+  renderSegments(it.p);
+  document.getElementById("backButton").disabled = F[0].p===it.p;
+  document.getElementById("continueHereButton").classList.toggle("hidden", prog.cursor>=prog.reached);
+  document.getElementById("pageResult").innerHTML = "";
+  resetRecordingUI();
+  updateChapterProgress();
 }
-
-
-/* =====================================================
-RENDER SEGMENTS
-===================================================== */
-
 function renderSegments(pi){
-
-const box =
-document.getElementById(
-"referenceText"
-);
-
-
-box.innerHTML="";
-
-
-F.forEach(
-(item,index)=>{
-
-if(item.p!==pi)
-return;
-
-
-const state =
-index===prog.cursor
-?
-"cur"
-:
-index<prog.reached
-?
-"done"
-:
-index===prog.reached
-?
-"next"
-:
-"lock";
-
-
-const div =
-document.createElement("div");
-
-
-div.className=
-"seg "+state;
-
-
-div.textContent=
-
-(
-state==="cur"
-?
-"→ "
-:
-state==="done"
-?
-"✓ "
-:
-state==="lock"
-?
-"🔒 "
-:
-"• "
-)+
-item.text;
-
-
-if(index<=prog.reached){
-
-div.onclick=()=>{
-
-jumpTo(index);
-
+  const box = document.getElementById("referenceText");
+  box.innerHTML = "";
+  F.forEach((x,i)=>{
+    if(x.p!==pi) return;
+    const st = i===prog.cursor ? "cur" : i<prog.reached ? "done" : i===prog.reached ? "next" : "lock";
+    const d = document.createElement("div");
+    d.className = "seg "+st;
+    d.textContent = (st==="cur"?"→ ":st==="done"?"✓ ":st==="lock"?"🔒 ":"• ")+x.text;
+    if(i<=prog.reached) d.onclick = ()=>jumpTo(i);   // never beyond what was reached
+    box.appendChild(d);
+    if(st==="cur") setTimeout(()=>d.scrollIntoView({block:"nearest"}),0);
+  });
+}
+function jumpTo(i){
+  if(i>prog.reached) return;
+  prog.cursor = i; resetBuffer(); loadReaderPage(); saveProgress();
+}
+window.goBack = function(){
+  let pi = F[prog.cursor].p-1;
+  while(pi>=0 && firstIdxOfPage(pi)<0) pi--;
+  if(pi<0) return;
+  jumpTo(firstIdxOfPage(pi));
 };
-
-}
-
-
-box.appendChild(div);
-
-
-if(state==="cur"){
-
-setTimeout(
-()=>{
-
-div.scrollIntoView({
-block:"nearest"
-});
-
-},
-0
-);
-
-}
-
-});
-
-}
-
-
-/* =====================================================
-JUMP TO
-===================================================== */
-
-function jumpTo(index){
-
-if(!prog)
-return;
-
-
-if(index>prog.reached)
-return;
-
-
-prog.cursor=index;
-
-
-resetBuffer();
-
-
-saveProgress();
-
-
-loadReaderPage();
-
-}
-
-
-/* =====================================================
-BACK
-===================================================== */
-
-window.goBack=function(){
-
-if(!F.length)
-return;
-
-
-const current =
-F[prog.cursor];
-
-
-if(!current)
-return;
-
-
-let pageIndex =
-current.p-1;
-
-
-while(
-pageIndex>=0 &&
-firstIdxOfPage(pageIndex)<0
-){
-
-pageIndex--;
-
-}
-
-
-if(pageIndex<0)
-return;
-
-
-jumpTo(
-firstIdxOfPage(pageIndex)
-);
-
-};
-
-
-/* =====================================================
-CONTINUE HERE
-===================================================== */
-
-window.continueHere=function(){
-
-if(!F.length)
-return;
-
-
-jumpTo(
-Math.min(
-prog.reached,
-F.length-1
-)
-);
-
-};
-
-
-/* =====================================================
-PROGRESS
-===================================================== */
-
+window.continueHere = function(){ jumpTo(Math.min(prog.reached,F.length-1)); };
 function updateChapterProgress(){
-
-const percent =
-F.length
-?
-Math.round(
-prog.reached/
-F.length*
-100
-)
-:
-0;
-
-
-document.getElementById(
-"progressText"
-).textContent=
-percent+"%";
-
-
-document.getElementById(
-"progressBar"
-).style.width=
-percent+"%";
-
+  const percent = F.length ? Math.round(prog.reached/F.length*100) : 0;
+  document.getElementById("progressText").textContent = percent+"%";
+  document.getElementById("progressBar").style.width = percent+"%";
 }
-
-
-/* =====================================================
-MICROPHONE
-===================================================== */
-
+/* ---------- continuous microphone ---------- */
 function startListening(){
-
-const SpeechRecognition =
-window.SpeechRecognition||
-window.webkitSpeechRecognition;
-
-
-if(!SpeechRecognition){
-
-alert(
-"Speech recognition is not supported here. Please use Chrome or Edge."
-);
-
-return false;
-
+  if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){
+    alert("Speech recognition is not supported here. Please use Chrome or Edge.");
+    return false;
+  }
+  sessionActive = true; touch(); resetBuffer();
+  launch();
+  clearInterval(idleTimer);
+  idleTimer = setInterval(()=>{ saveProgress(); checkIdle(); },15000);
+  return true;
 }
-
-
-sessionActive=true;
-
-touch();
-
-resetBuffer();
-
-launch();
-
-
-clearInterval(
-idleTimer
-);
-
-
-idleTimer=
-setInterval(
-()=>{
-
-saveProgress();
-
-checkIdle();
-
-},
-15000
-);
-
-
-return true;
-
-}
-
-
-/* =====================================================
-LAUNCH SPEECH RECOGNITION
-===================================================== */
-
 function launch(){
-
-if(!sessionActive)
-return;
-
-
-const SpeechRecognition =
-window.SpeechRecognition||
-window.webkitSpeechRecognition;
-
-
-if(!SpeechRecognition)
-return;
-
-
-const recognition =
-new SpeechRecognition();
-
-
-recognition.lang="en-US";
-
-recognition.continuous=true;
-
-recognition.interimResults=true;
-
-
-recognition.onstart=()=>{
-
-resetRecordingUI();
-
-};
-
-
-recognition.onresult=(event)=>{
-
-interimWords=[];
-
-
-let currentSpeech=[];
-
-
-for(
-let i=event.resultIndex;
-i<event.results.length;
-i++
-){
-
-const transcript =
-event.results[i][0]
-.transcript;
-
-
-currentSpeech.push(
-transcript
-);
-
-
-const words =
-tokenize(
-transcript
-);
-
-
-if(
-event.results[i].isFinal
-){
-
-bufWords.push(
-...words
-);
-
-}else{
-
-interimWords.push(
-...words
-);
-
+  if(!sessionActive) return;
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  const r = new SR();
+  r.lang="en-US"; r.continuous=true; r.interimResults=true;
+  r.onstart = resetRecordingUI;
+  r.onresult = ev=>{
+    interimWords = [];
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const t = tokenize(ev.results[i][0].transcript);
+      if(ev.results[i].isFinal) bufWords.push(...t); else interimWords.push(...t);
+    }
+    if(bufWords.length+interimWords.length) touch();
+    advance();
+  };
+  r.onerror = e=>{
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ alert("Please allow microphone access."); stopSession(); }
+  };
+  r.onend = ()=>{                                  // browser stopped it: restart silently
+    interimWords = [];
+    if(sessionActive){ clearTimeout(restartTimer); restartTimer = setTimeout(launch,300); }
+  };
+  window._rec = r;
+  try{ r.start(); }catch(e){}
 }
-
-}
-
-
-const allHeard =
-bufWords
-.concat(interimWords)
-.join(" ");
-
-
-const live =
-document.getElementById(
-"liveTranscript"
-);
-
-
-if(live){
-
-live.textContent =
-allHeard ||
-"Listening...";
-
-}
-
-
-if(
-allHeard.length
-){
-
-touch();
-
-}
-
-
-advance();
-
-};
-
-
-recognition.onerror=(event)=>{
-
-console.error(
-"Speech recognition error:",
-event.error
-);
-
-
-if(
-event.error==="not-allowed"||
-event.error==="service-not-allowed"
-){
-
-alert(
-"Please allow microphone access."
-);
-
-stopSession();
-
-return;
-
-}
-
-
-if(
-event.error==="no-speech"
-){
-
-return;
-
-}
-
-};
-
-
-recognition.onend=()=>{
-
-if(!sessionActive)
-return;
-
-
-clearTimeout(
-restartTimer
-);
-
-
-restartTimer =
-setTimeout(
-()=>{
-
-if(sessionActive){
-
-launch();
-
-}
-
-},
-300
-);
-
-};
-
-
-window._rec =
-recognition;
-
-
-try{
-
-recognition.start();
-
-}catch(error){
-
-console.log(
-"Recognition start:",
-error
-);
-
-}
-
-}
-
-
-/* =====================================================
-STOP SESSION
-===================================================== */
-
 function stopSession(){
-
-sessionActive=false;
-
-
-clearTimeout(
-restartTimer
-);
-
-
-clearInterval(
-idleTimer
-);
-
-
-try{
-
-if(window._rec){
-
-window._rec.abort();
-
+  sessionActive = false;
+  clearTimeout(restartTimer); clearInterval(idleTimer);
+  try{ window._rec && window._rec.abort(); }catch(e){}
+  window._rec = null;
+  if(prog) saveProgress();
+  resetRecordingUI();
 }
-
-}catch(e){}
-
-
-window._rec=null;
-
-
-if(prog){
-
-saveProgress();
-
-}
-
-
-resetRecordingUI();
-
-}
-
-
-/* =====================================================
-START RECORDING BUTTON
-===================================================== */
-
-window.startRecording=function(){
-
-if(!F.length){
-
-alert(
-"Start a chapter first."
-);
-
-return;
-
-}
-
-
-if(!sessionActive){
-
-startListening();
-
-}
-
-};
-
-
-/* =====================================================
-STOP RECORDING BUTTON
-===================================================== */
-
-window.stopRecording=function(){
-
-stopSession();
-
-};
-
-
-/* =====================================================
-RECORDING UI
-===================================================== */
-
+window.startRecording = function(){ if(!sessionActive && F.length){ startListening(); resetRecordingUI(); } };
+window.stopRecording = stopSession;
 function resetRecordingUI(){
-
-const status =
-document.getElementById(
-"readingStatus"
-);
-
-
-const start =
-document.getElementById(
-"startButton"
-);
-
-
-const stop =
-document.getElementById(
-"stopButton"
-);
-
-
-if(!status||!start||!stop)
-return;
-
-
-start.disabled=
-sessionActive;
-
-
-stop.disabled=
-!sessionActive;
-
-
-status.className =
-sessionActive
-?
-"status listening"
-:
-"status";
-
-
-status.textContent =
-sessionActive
-?
-"🎤 Listening... just read"
-:
-"Tap Start Reading";
-
+  const s = document.getElementById("readingStatus");
+  document.getElementById("startButton").disabled = sessionActive;
+  document.getElementById("stopButton").disabled = !sessionActive;
+  s.className = sessionActive ? "status listening" : "status";
+  s.textContent = sessionActive ? "🎤 Listening... just read" : "Tap Start Reading";
 }
-
-
-/* =====================================================
-LONG PAUSE
-===================================================== */
-
+/* ---------- long interruption ---------- */
 function checkIdle(){
-
-if(
-sessionActive &&
-prog &&
-Date.now()-
-prog.lastActive
->=LONG_BREAK_MS
-){
-
-showWelcome();
-
+  if(sessionActive && prog && Date.now()-prog.lastActive >= LONG_BREAK_MS) showWelcome();
 }
-
-}
-
-
-function showWelcome(){
-
-stopSession();
-
-
-document.getElementById(
-"welcomeBack"
-).classList.remove(
-"hidden"
-);
-
-}
-
-
-window.welcomeContinue=function(){
-
-document.getElementById(
-"welcomeBack"
-).classList.add(
-"hidden"
-);
-
-
-startListening();
-
+function showWelcome(){ stopSession(); document.getElementById("welcomeBack").classList.remove("hidden"); }
+window.welcomeContinue = function(){
+  document.getElementById("welcomeBack").classList.add("hidden");
+  startListening(); resetRecordingUI();            // resumes at the saved cursor
 };
-
-
-/* =====================================================
-VISIBILITY
-===================================================== */
-
-document.addEventListener(
-"visibilitychange",
-()=>{
-
-if(!document.hidden){
-
-checkIdle();
-
-}
-
-});
-
-
-window.addEventListener(
-"beforeunload",
-()=>{
-
-if(prog){
-
-saveProgress();
-
-}
-
-});
-
-
-/* =====================================================
-FOLLOW READING
-===================================================== */
-
-let ptr=0;
-
-
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkIdle(); });
+window.addEventListener("beforeunload",()=>{ if(prog) saveProgress(); });
+/* ---------- follow the child's reading ---------- */
 function advance(){
-
-if(!prog||!F.length)
-return;
-
-
-let moved=false;
-
-
-for(
-let guard=0;
-guard<6;
-guard++
-){
-
-const item =
-F[prog.cursor];
-
-
-if(!item)
-break;
-
-
-const words =
-bufWords
-.concat(interimWords)
-.slice(ptr);
-
-
-if(
-words.length<
-Math.ceil(
-item.ref.length*.5
-)
-){
-
-break;
-
+  let moved = false;
+  for(let guard=0; guard<6; guard++){
+    const it = F[prog.cursor];
+    if(!it) break;
+    const words = bufWords.concat(interimWords).slice(ptr);
+    if(words.length < Math.ceil(it.ref.length*.5)) break;
+    const ops = alignWords(it.ref, words.slice(0,it.ref.length*2+6));
+    let last=-1, r=0;
+    ops.forEach((o,k)=>{
+      if(o.type!=="extra"){
+        if((o.type==="correct"||o.type==="changed") && r>=it.ref.length-2) last=k;
+        r++;
+      }
+    });
+    if(last<0) break;
+    const used = ops.slice(0,last+1);
+    const matched = used.filter(o=>o.type==="correct"||o.type==="changed").length;
+    if(matched < it.ref.length*.5) break;          // not really this sentence yet
+    const refUsed = used.filter(o=>o.type!=="extra").length;
+    const c = used.filter(o=>o.type==="correct").length;
+    const ch = used.filter(o=>o.type==="changed").length;
+    const e = used.filter(o=>o.type==="extra").length;
+    const m = used.filter(o=>o.type==="missing").length + (it.ref.length-refUsed);
+    const consumed = used.filter(o=>o.spoken).length;
+    const fresh = prog.cursor===prog.reached;      // rereading never changes saved scores
+    if(fresh){ prog.seg[prog.cursor]=[c,m,ch,e,it.ref.length]; prog.reached++; }
+    ptr += consumed;
+    if(ptr>150 && ptr<=bufWords.length){ bufWords.splice(0,ptr); ptr=0; }
+    const prevPage = it.p;
+    prog.cursor++;
+    moved = true;
+    if(prog.cursor>=F.length){ if(fresh) finalizePage(prevPage); touch(); saveProgress(); stopSession(); finishChapter(); return; }
+    if(fresh && F[prog.cursor].p!==prevPage) finalizePage(prevPage);   // page done -> next page opens by itself
+  }
+  if(moved){ touch(); saveProgress(); loadReaderPage(); }
 }
-
-
-const sample =
-words.slice(
-0,
-item.ref.length*2+6
-);
-
-
-const operations =
-alignWords(
-item.ref,
-sample
-);
-
-
-let last=-1;
-
-let refCount=0;
-
-
-operations.forEach(
-(op,index)=>{
-
-if(op.type!=="extra"){
-
-if(
-(
-op.type==="correct"||
-op.type==="changed"
-)&&
-refCount>=item.ref.length-2
-){
-
-last=index;
-
-}
-
-
-refCount++;
-
-}
-
-});
-
-
-if(last<0)
-break;
-
-
-const used =
-operations.slice(
-0,
-last+1
-);
-
-
-const matched =
-used.filter(
-op=>
-op.type==="correct"||
-op.type==="changed"
-).length;
-
-
-if(
-matched<
-item.ref.length*.5
-){
-
-break;
-
-}
-
-
-const refUsed =
-used.filter(
-op=>op.type!=="extra"
-).length;
-
-
-const correct =
-used.filter(
-op=>op.type==="correct"
-).length;
-
-
-const changed =
-used.filter(
-op=>op.type==="changed"
-).length;
-
-
-const extra =
-used.filter(
-op=>op.type==="extra"
-).length;
-
-
-const missing =
-used.filter(
-op=>op.type==="missing"
-).length+
-(
-item.ref.length-refUsed
-);
-
-
-const consumed =
-used.filter(
-op=>op.spoken
-).length;
-
-
-const isNew =
-prog.cursor===
-prog.reached;
-
-
-if(isNew){
-
-prog.seg[
-prog.cursor
-]=[
-
-correct,
-
-missing,
-
-changed,
-
-extra,
-
-item.ref.length
-
-];
-
-
-prog.reached++;
-
-}
-
-
-ptr+=consumed;
-
-
-if(
-ptr>150 &&
-ptr<=bufWords.length
-){
-
-bufWords.splice(
-0,
-ptr
-);
-
-ptr=0;
-
-}
-
-
-const previousPage =
-item.p;
-
-
-prog.cursor++;
-
-moved=true;
-
-
-if(
-prog.cursor>=F.length
-){
-
-if(isNew){
-
-finalizePage(
-previousPage
-);
-
-}
-
-
-touch();
-
-saveProgress();
-
-stopSession();
-
-finishChapter();
-
-return;
-
-}
-
-
-if(
-isNew &&
-F[prog.cursor].p!==previousPage
-){
-
-finalizePage(
-previousPage
-);
-
-}
-
-}
-
-
-if(moved){
-
-touch();
-
-saveProgress();
-
-loadReaderPage();
-
-}
-
-}
-
-
-/* =====================================================
-FINALIZE PAGE
-===================================================== */
-
 function finalizePage(pi){
-
-const chapter =
-getCurrentChapter();
-
-
-if(!chapter)
-return;
-
-
-const page =
-chapter.pages[pi];
-
-
-if(!page)
-return;
-
-
-let correct=0;
-
-let missing=0;
-
-let changed=0;
-
-let extra=0;
-
-let referenceWords=0;
-
-
-F.forEach(
-(item,index)=>{
-
-if(
-item.p===pi &&
-prog.seg[index]
-){
-
-const result =
-prog.seg[index];
-
-
-correct+=result[0];
-
-missing+=result[1];
-
-changed+=result[2];
-
-extra+=result[3];
-
-referenceWords+=result[4];
-
+  const ch = getCurrentChapter(), pg = ch.pages[pi];
+  let c=0,m=0,x=0,e=0,n=0;
+  F.forEach((it,i)=>{ if(it.p===pi && prog.seg[i]){ const s=prog.seg[i]; c+=s[0]; m+=s[1]; x+=s[2]; e+=s[3]; n+=s[4]; } });
+  pg.result = {score:n?Math.round(c/n*100):100,correct:c,missing:m,changed:x,extra:e,referenceWords:n,spokenWords:c+x+e,completed:true,timestamp:new Date().toISOString()};
+  saveBooks();
 }
-
-});
-
-
-page.result={
-
-score:
-referenceWords
-?
-Math.round(
-correct/
-referenceWords*
-100
-)
-:
-100,
-
-correct:correct,
-
-missing:missing,
-
-changed:changed,
-
-extra:extra,
-
-referenceWords:referenceWords,
-
-spokenWords:
-correct+
-changed+
-extra,
-
-completed:true,
-
-timestamp:
-new Date().toISOString()
-
-};
-
-
-saveBooks();
-
-}
-
-
-/* =====================================================
-WORD NORMALIZATION
-===================================================== */
-
-function normalizeText(text){
-
-return String(text||"")
-
-.toLowerCase()
-
-.replace(
-/[^\p{L}\p{N}'-]+/gu,
-" "
-)
-
-.replace(
-/\s+/g,
-" "
-)
-
-.trim();
-
-}
-
-
-function tokenize(text){
-
-const normalized =
-normalizeText(text);
-
-
-if(!normalized)
-return [];
-
-
-return normalized.split(" ");
-
-}
-
-
-/* =====================================================
-LEVENSHTEIN
-===================================================== */
-
-function levenshtein(a,b){
-
-const matrix =
-Array.from(
-{
-length:a.length+1
-},
-()=>Array(
-b.length+1
-).fill(0)
-);
-
-
-for(
-let i=0;
-i<=a.length;
-i++
-){
-
-matrix[i][0]=i;
-
-}
-
-
-for(
-let j=0;
-j<=b.length;
-j++
-){
-
-matrix[0][j]=j;
-
-}
-
-
-for(
-let i=1;
-i<=a.length;
-i++
-){
-
-for(
-let j=1;
-j<=b.length;
-j++
-){
-
-const cost =
-a[i-1]===b[j-1]
-?
-0
-:
-1;
-
-
-matrix[i][j]=
-Math.min(
-
-matrix[i-1][j]+1,
-
-matrix[i][j-1]+1,
-
-matrix[i-1][j-1]+cost
-
-);
-
-}
-
-}
-
-
-return matrix[
-a.length
-][
-b.length
-];
-
-}
-
-
-/* =====================================================
-WORD SIMILARITY
-===================================================== */
-
-function wordSimilarity(a,b){
-
-if(a===b)
-return 1;
-
-
-const distance =
-levenshtein(a,b);
-
-
-return 1-
-distance/
-Math.max(
-a.length,
-b.length
-);
-
-}
-
-
-/* =====================================================
-ALIGN WORDS
-===================================================== */
-
-function alignWords(
-reference,
-spoken
-){
-
-const n=
-reference.length;
-
-
-const m=
-spoken.length;
-
-
-const dp =
-Array.from(
-{
-length:n+1
-},
-()=>Array(
-m+1
-).fill(0)
-);
-
-
-for(
-let i=0;
-i<=n;
-i++
-){
-
-dp[i][0]=i;
-
-}
-
-
-for(
-let j=0;
-j<=m;
-j++
-){
-
-dp[0][j]=j;
-
-}
-
-
-for(
-let i=1;
-i<=n;
-i++
-){
-
-for(
-let j=1;
-j<=m;
-j++
-){
-
-const similarity =
-wordSimilarity(
-reference[i-1],
-spoken[j-1]
-);
-
-
-const substitution =
-similarity>=.70
-?
-0
-:
-1;
-
-
-dp[i][j]=
-Math.min(
-
-dp[i-1][j]+1,
-
-dp[i][j-1]+1,
-
-dp[i-1][j-1]+
-substitution
-
-);
-
-}
-
-}
-
-
-const operations=[];
-
-
-let i=n;
-
-let j=m;
-
-
-while(
-i>0 ||
-j>0
-){
-
-if(
-i>0 &&
-j>0
-){
-
-const similarity =
-wordSimilarity(
-reference[i-1],
-spoken[j-1]
-);
-
-
-if(
-similarity>=.70 &&
-dp[i][j]===
-dp[i-1][j-1]
-){
-
-if(
-reference[i-1]===
-spoken[j-1]
-){
-
-operations.unshift({
-
-type:"correct",
-
-reference:
-reference[i-1],
-
-spoken:
-spoken[j-1],
-
-spoken:true
-
-});
-
-}else{
-
-operations.unshift({
-
-type:"changed",
-
-reference:
-reference[i-1],
-
-spoken:
-spoken[j-1],
-
-spoken:true
-
-});
-
-}
-
-
-i--;
-
-j--;
-
-continue;
-
-}
-
-}
-
-
-if(
-i>0 &&
-dp[i][j]===
-dp[i-1][j]+1
-){
-
-operations.unshift({
-
-type:"missing",
-
-reference:
-reference[i-1],
-
-spoken:"",
-
-spoken:false
-
-});
-
-
-i--;
-
-continue;
-
-}
-
-
-if(
-j>0 &&
-dp[i][j]===
-dp[i][j-1]+1
-){
-
-operations.unshift({
-
-type:"extra",
-
-reference:"",
-
-spoken:
-spoken[j-1],
-
-spoken:true
-
-});
-
-
-j--;
-
-continue;
-
-}
-
-
-if(
-i>0 &&
-j>0
-){
-
-operations.unshift({
-
-type:"changed",
-
-reference:
-reference[i-1],
-
-spoken:
-spoken[j-1],
-
-spoken:true
-
-});
-
-
-i--;
-
-j--;
-
-}else if(i>0){
-
-operations.unshift({
-
-type:"missing",
-
-reference:
-reference[i-1],
-
-spoken:"",
-
-spoken:false
-
-});
-
-
-i--;
-
-}else{
-
-operations.unshift({
-
-type:"extra",
-
-reference:"",
-
-spoken:
-spoken[j-1],
-
-spoken:true
-
-});
-
-
-j--;
-
-}
-
-}
-
-
-return operations;
-
-}
-
-
 /* =====================================================
 CALCULATE RESULT
 ===================================================== */
-
 function calculateResult(
 operations,
 reference,
 spoken
 ){
-
 let correct=0;
-
 let missing=0;
-
 let changed=0;
-
 let extra=0;
-
-
-operations.forEach(
-op=>{
-
+operations.forEach(op=>{
 if(op.type==="correct")
 correct++;
-
 if(op.type==="missing")
 missing++;
-
 if(op.type==="changed")
 changed++;
-
 if(op.type==="extra")
 extra++;
-
 });
-
-
-const score =
-reference.length
-?
-Math.round(
-correct/
-reference.length*
+let score=0;
+if(reference.length){
+score=Math.round(
+correct /
+reference.length *
 100
-)
-:
-0;
-
-
-return{
-
-score:Math.max(
+);
+}
+score=Math.max(
 0,
-Math.min(
-100,
-score
-)
-),
-
+Math.min(100,score)
+);
+return{
+score:score,
 correct:correct,
-
 missing:missing,
-
 changed:changed,
-
 extra:extra,
-
 referenceWords:
 reference.length,
-
 spokenWords:
 spoken.length,
-
 completed:true,
-
 timestamp:
 new Date().toISOString()
-
 };
-
 }
-
-
+/* =====================================================
+WORD ALIGNMENT
+===================================================== */
+function normalizeText(text){
+return text
+.toLowerCase()
+.replace(/[^\p{L}\p{N}'-]+/gu," ")
+.replace(/\s+/g," ")
+.trim();
+}
+function tokenize(text){
+const normalized =
+normalizeText(text);
+if(!normalized)
+return [];
+return normalized.split(" ");
+}
+function wordSimilarity(a,b){
+if(a===b)
+return 1;
+const distance =
+levenshtein(a,b);
+return 1 -
+distance /
+Math.max(
+a.length,
+b.length
+);
+}
+function levenshtein(a,b){
+const matrix =
+Array.from(
+{length:a.length+1},
+()=>Array(b.length+1).fill(0)
+);
+for(
+let i=0;
+i<=a.length;
+i++
+)
+matrix[i][0]=i;
+for(
+let j=0;
+j<=b.length;
+j++
+)
+matrix[0][j]=j;
+for(
+let i=1;
+i<=a.length;
+i++
+){
+for(
+let j=1;
+j<=b.length;
+j++
+){
+const cost =
+a[i-1]===b[j-1]
+?0
+:1;
+matrix[i][j]=Math.min(
+matrix[i-1][j]+1,
+matrix[i][j-1]+1,
+matrix[i-1][j-1]+cost
+);
+}
+}
+return matrix[a.length][b.length];
+}
+/* =====================================================
+ALIGNMENT
+===================================================== */
+function alignWords(reference,spoken){
+const n=reference.length;
+const m=spoken.length;
+const dp =
+Array.from(
+{length:n+1},
+()=>Array(m+1).fill(0)
+);
+for(let i=0;i<=n;i++)
+dp[i][0]=i;
+for(let j=0;j<=m;j++)
+dp[0][j]=j;
+for(let i=1;i<=n;i++){
+for(let j=1;j<=m;j++){
+const similarity =
+wordSimilarity(
+reference[i-1],
+spoken[j-1]
+);
+const substitution =
+similarity>=.70
+?0
+:1;
+dp[i][j]=Math.min(
+dp[i-1][j]+1,
+dp[i][j-1]+1,
+dp[i-1][j-1]+substitution
+);
+}
+}
+const operations=[];
+let i=n;
+let j=m;
+while(i>0 || j>0){
+if(i>0 && j>0){
+const similarity =
+wordSimilarity(
+reference[i-1],
+spoken[j-1]
+);
+if(
+similarity>=.70 &&
+dp[i][j]===dp[i-1][j-1]
+){
+if(
+reference[i-1]===
+spoken[j-1]
+){
+operations.unshift({
+type:"correct",
+reference:
+reference[i-1],
+spoken:
+spoken[j-1]
+});
+}else{
+operations.unshift({
+type:"changed",
+reference:
+reference[i-1],
+spoken:
+spoken[j-1]
+});
+}
+i--;
+j--;
+continue;
+}
+}
+if(
+i>0 &&
+dp[i][j]===
+dp[i-1][j]+1
+){
+operations.unshift({
+type:"missing",
+reference:
+reference[i-1],
+spoken:""
+});
+i--;
+continue;
+}
+if(
+j>0 &&
+dp[i][j]===
+dp[i][j-1]+1
+){
+operations.unshift({
+type:"extra",
+reference:"",
+spoken:
+spoken[j-1]
+});
+j--;
+continue;
+}
+if(i>0 && j>0){
+operations.unshift({
+type:"changed",
+reference:
+reference[i-1],
+spoken:
+spoken[j-1]
+});
+i--;
+j--;
+}else if(i>0){
+operations.unshift({
+type:"missing",
+reference:
+reference[i-1],
+spoken:""
+});
+i--;
+}else{
+operations.unshift({
+type:"extra",
+reference:"",
+spoken:
+spoken[j-1]
+});
+j--;
+}
+}
+return operations;
+}
 /* =====================================================
 PAGE RESULT
 ===================================================== */
-
 function showPageResult(
 page,
 result,
 operations
 ){
-
 let scoreClass="good";
-
-
 if(result.score<80)
 scoreClass="warning";
-
-
 if(result.score<60)
 scoreClass="bad";
-
-
 let wordsHTML="";
-
-
-operations.forEach(
-op=>{
-
+operations.forEach(op=>{
 if(op.type==="correct"){
-
 wordsHTML+=`
-
 <span class="word correct">
 ${escapeHTML(op.reference)}
 </span>
-
 `;
-
 }
-
-
 if(op.type==="missing"){
-
 wordsHTML+=`
-
 <span class="word missing">
 ${escapeHTML(op.reference)}
 </span>
-
 `;
-
 }
-
-
 if(op.type==="changed"){
-
 wordsHTML+=`
-
 <span class="word changed">
-
 ${escapeHTML(op.spoken)}
-
 <small>
 (${escapeHTML(op.reference)})
 </small>
-
 </span>
-
 `;
-
 }
-
-
 if(op.type==="extra"){
-
 wordsHTML+=`
-
 <span class="word extra">
 +${escapeHTML(op.spoken)}
 </span>
-
 `;
-
 }
-
 });
-
-
+const chapter =
+getCurrentChapter();
+const isLast =
+currentPageIndex===
+chapter.pages.length-1;
 document.getElementById(
 "pageResult"
 ).innerHTML=`
-
 <div class="resultBox">
-
 <h2>
 Page ${page.pageNumber} Result
 </h2>
-
-
 <div class="score ${scoreClass}">
 ${result.score}%
 </div>
-
-
 <p>
 Reading accuracy
 </p>
-
-
 <div class="statGrid">
-
 <div class="stat">
-
 <strong>
 ${result.correct}
 </strong>
-
 Correct
-
 </div>
-
-
 <div class="stat">
-
 <strong>
 ${result.missing}
 </strong>
-
 Missing
-
 </div>
-
-
 <div class="stat">
-
 <strong>
 ${result.changed}
 </strong>
-
 Changed
-
 </div>
-
-
 <div class="stat">
-
 <strong>
 ${result.extra}
 </strong>
-
 Extra
-
 </div>
-
 </div>
-
-
 <h3>
 Word Comparison
 </h3>
-
-
 <div class="wordResults">
-
 ${wordsHTML}
-
 </div>
-
-</div>
-
-`;
-
+<br>
+${
+isLast
+?
+`
+<button class="yellow"
+onclick="finishChapter()">
+Finish Chapter
+</button>
+`
+:
+`
+<button class="yellow"
+onclick="nextPage()">
+Continue to Page ${page.pageNumber+1} →
+</button>
+`
 }
-
-
+</div>
+`;
+}
 /* =====================================================
 NEXT PAGE
 ===================================================== */
-
-window.nextPage=function(){
-
+window.nextPage =
+function(){
 const chapter =
 getCurrentChapter();
-
-
-if(!chapter)
-return;
-
-
 if(
-currentPageIndex>=
+currentPageIndex >=
 chapter.pages.length-1
 ){
-
 finishChapter();
-
 return;
-
 }
-
-
 currentPageIndex++;
-
-
 chapter.currentPosition=
 currentPageIndex;
-
-
 saveBooks();
-
-
 loadReaderPage();
-
 };
-
-
 /* =====================================================
 FINISH CHAPTER
 ===================================================== */
-
-window.finishChapter=function(){
-
-stopSession();
-
-
+window.finishChapter =
+function(){
 const chapter =
 getCurrentChapter();
-
-
-if(!chapter)
-return;
-
-
 const results =
-chapter.pages
-.filter(
-page=>
-page.result &&
-!page.result.auto
-)
-.map(
-page=>page.result
+chapter.pages.filter(
+p=>p.result
+).map(
+p=>p.result
 );
-
-
 let correct=0;
-
 let missing=0;
-
 let changed=0;
-
 let extra=0;
-
 let referenceWords=0;
-
-
-results.forEach(
-result=>{
-
+results.forEach(result=>{
 correct+=result.correct;
-
 missing+=result.missing;
-
 changed+=result.changed;
-
 extra+=result.extra;
-
 referenceWords+=
 result.referenceWords;
-
 });
-
-
 const score =
 referenceWords
 ?
 Math.round(
-correct/
-referenceWords*
+correct /
+referenceWords *
 100
 )
 :
 0;
-
-
 chapter.completed =
-chapter.pages.every(
-page=>
-page.result
-);
-
-
+results.length===
+chapter.pages.length;
 chapter.lastScore=
 score;
-
-
 saveBooks();
-
-
 document.getElementById(
 "reportChapterName"
 ).textContent=
 chapter.title;
-
-
 document.getElementById(
 "overallScore"
 ).textContent=
 score+"%";
-
-
 document.getElementById(
 "reportPages"
 ).textContent=
 results.length+
 "/"+
 chapter.pages.length;
-
-
 document.getElementById(
 "reportCorrect"
 ).textContent=
 correct;
-
-
 document.getElementById(
 "reportMissing"
 ).textContent=
 missing;
-
-
 document.getElementById(
 "reportChanged"
 ).textContent=
 changed;
-
-
 document.getElementById(
 "reportExtra"
 ).textContent=
 extra;
-
-
-renderReport(
-chapter
-);
-
-
-showSection(
-"reportSection"
-);
-
+renderReport(chapter);
+showSection("reportSection");
 };
-
-
 /* =====================================================
 REPORT
 ===================================================== */
-
 function renderReport(chapter){
-
 const container =
 document.getElementById(
 "reportPagesList"
 );
-
-
 container.innerHTML="";
-
-
-chapter.pages.forEach(
-page=>{
-
-if(
-!page.result ||
-page.result.auto
-)
-return;
-
-
+chapter.pages.forEach(page=>{
+if(!page.result||page.result.auto)return;
 const div =
 document.createElement("div");
-
-
 div.className="stat";
-
 div.style.marginBottom="10px";
-
-
 div.innerHTML=`
-
 <strong>
-
 Page ${page.pageNumber}:
 ${page.result.score}%
-
 </strong>
-
 <br>
-
 Correct:
 ${page.result.correct}
-
 &nbsp; · &nbsp;
-
 Missing:
 ${page.result.missing}
-
 &nbsp; · &nbsp;
-
 Changed:
 ${page.result.changed}
-
 &nbsp; · &nbsp;
-
 Extra:
 ${page.result.extra}
-
 `;
-
-
 container.appendChild(div);
-
 });
-
 }
-
-
 /* =====================================================
-CURRENT CHAPTER
+HELPERS
 ===================================================== */
-
 function getCurrentChapter(){
-
 const book =
 books.find(
 b=>b.id===currentBookId
 );
-
-
-if(!book)
-return null;
-
-
-return book.chapters.find(
+return book?.chapters.find(
 c=>c.id===currentChapterId
 );
-
 }
-
-
-/* =====================================================
-FILE TO DATA URL
-===================================================== */
-
 function fileToDataURL(file){
-
 return new Promise(
 (resolve,reject)=>{
-
 const reader =
 new FileReader();
-
-
-reader.onload=()=>{
-resolve(
-reader.result
-);
-};
-
-
+reader.onload=
+()=>resolve(reader.result);
 reader.onerror=
 reject;
-
-
 reader.readAsDataURL(file);
-
-});
-
 }
-
-
-/* =====================================================
-ESCAPE HTML
-===================================================== */
-
-function escapeHTML(value){
-
-return String(value||"")
-
-.replace(
-/&/g,
-"&amp;"
-)
-
-.replace(
-/</g,
-"&lt;"
-)
-
-.replace(
-/>/g,
-"&gt;"
-)
-
-.replace(
-/"/g,
-"&quot;"
-)
-
-.replace(
-/'/g,
-"&#039;"
 );
-
 }
-
-
-/* =====================================================
-FORMAT BYTES
-===================================================== */
-
+function cleanOCR(text){
+return text
+.replace(/\r/g," ")
+.replace(/\n+/g," ")
+.replace(/\s+/g," ")
+.trim();
+}
+function escapeHTML(value){
+return String(value || "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+}
 function formatBytes(bytes){
-
 if(bytes===0)
 return "0 Bytes";
-
-
 const sizes=[
 "Bytes",
 "KB",
 "MB",
 "GB"
 ];
-
-
 const i =
 Math.floor(
-Math.log(bytes)/
+Math.log(bytes) /
 Math.log(1024)
 );
-
-
 return (
-bytes/
+bytes /
 Math.pow(1024,i)
 ).toFixed(1)
 +" "+
 sizes[i];
-
 }
-
-
-/* =====================================================
-INITIALIZE
-===================================================== */
-
+const _oc=window.openChapter;
+window.openChapter=function(a,b){stopSession();_oc(a,b);};
+/* INITIALIZE */
 renderBooks();
-
-showSection(
-"homeSection"
-);
-
 </script>
-
 </body>
-
 </html>
+```[cite: 1]

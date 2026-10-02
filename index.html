@@ -1144,5 +1144,3326 @@ function putBook(book){
         (resolve,reject)=>{
 
             const tx =
-                d
+                db.transaction(
+                    "books",
+                    "readwrite"
+                );
+
+
+            const request =
+                tx
+                .objectStore("books")
+                .put(book);
+
+
+            request.onsuccess =
+                () =>
+                    resolve();
+
+
+            request.onerror =
+                () =>
+                    reject(
+                        request.error
+                    );
+
+        }
+    );
+}
+
+
+function getBooks(){
+
+    return new Promise(
+        (resolve,reject)=>{
+
+            const tx =
+                db.transaction(
+                    "books",
+                    "readonly"
+                );
+
+
+            const request =
+                tx
+                .objectStore("books")
+                .getAll();
+
+
+            request.onsuccess =
+                () =>
+                    resolve(
+                        request.result || []
+                    );
+
+
+            request.onerror =
+                () =>
+                    reject(
+                        request.error
+                    );
+
+        }
+    );
+}
+
+
+function deleteBook(id){
+
+    return new Promise(
+        (resolve,reject)=>{
+
+            const tx =
+                db.transaction(
+                    "books",
+                    "readwrite"
+                );
+
+
+            const request =
+                tx
+                .objectStore("books")
+                .delete(id);
+
+
+            request.onsuccess =
+                () =>
+                    resolve();
+
+
+            request.onerror =
+                () =>
+                    reject(
+                        request.error
+                    );
+
+        }
+    );
+}
+
+
+function clearBooks(){
+
+    return new Promise(
+        (resolve,reject)=>{
+
+            const tx =
+                db.transaction(
+                    "books",
+                    "readwrite"
+                );
+
+
+            const request =
+                tx
+                .objectStore("books")
+                .clear();
+
+
+            request.onsuccess =
+                () =>
+                    resolve();
+
+
+            request.onerror =
+                () =>
+                    reject(
+                        request.error
+                    );
+
+        }
+    );
+}
+
+
+/* =====================================================
+HELPERS
+===================================================== */
+
+function $(id){
+
+    return document.getElementById(id);
+
+}
+
+
+function sleep(ms){
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
+    );
+
+}
+
+
+function escapeHTML(value){
+
+    return String(value)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+function show(screen){
+
+    [
+        "homeScreen",
+        "builderScreen",
+        "booksScreen",
+        "readingScreen"
+    ]
+    .forEach(
+        id => {
+
+            $(id)
+            .classList
+            .add("hidden");
+
+        }
+    );
+
+
+    $(screen)
+        .classList
+        .remove("hidden");
+
+}
+
+
+function toast(message){
+
+    const element =
+        $("toast");
+
+
+    element.textContent =
+        message;
+
+
+    element.style.display =
+        "block";
+
+
+    clearTimeout(
+        window.toastTimeout
+    );
+
+
+    window.toastTimeout =
+        setTimeout(
+            ()=>{
+                element.style.display =
+                    "none";
+            },
+            3500
+        );
+
+}
+
+
+/* =====================================================
+STORAGE
+===================================================== */
+
+function estimateBookSize(book){
+
+    let total =
+        new Blob([
+            book.title || ""
+        ]).size;
+
+
+    for(
+        const page of book.pages || []
+    ){
+
+        total +=
+            new Blob([
+                page.text || ""
+            ]).size;
+
+
+        total +=
+            (page.image || "").length;
+
+
+        for(
+            const sentence
+            of page.sentences || []
+        ){
+
+            total +=
+                new Blob([
+                    sentence.text || ""
+                ]).size;
+
+        }
+
+    }
+
+
+    return total;
+
+}
+
+
+async function getStorageSize(){
+
+    const books =
+        await getBooks();
+
+
+    return books.reduce(
+        (total,book)=>
+            total +
+            estimateBookSize(book),
+        0
+    );
+
+}
+
+
+async function updateStorage(){
+
+    const size =
+        await getStorageSize();
+
+
+    const max =
+        CONFIG.MAX_STORAGE;
+
+
+    const percent =
+        Math.min(
+            100,
+            size / max * 100
+        );
+
+
+    const mb =
+        size /
+        1024 /
+        1024;
+
+
+    const maxMB =
+        max /
+        1024 /
+        1024;
+
+
+    $("storageText")
+        .textContent =
+        `${mb.toFixed(1)} MB / ${maxMB} MB`;
+
+
+    $("storagePercent")
+        .textContent =
+        `${percent.toFixed(0)}%`;
+
+
+    $("storageFill")
+        .style
+        .width =
+        `${percent}%`;
+
+
+    $("storageMini")
+        .textContent =
+        `Storage: ${mb.toFixed(1)} MB`;
+
+}
+
+
+/* =====================================================
+PDF UPLOAD
+===================================================== */
+
+let uploadedPages = [];
+
+
+$("pdfInput")
+.addEventListener(
+    "change",
+    async event => {
+
+        const file =
+            event.target.files[0];
+
+
+        if(!file){
+
+            return;
+        }
+
+
+        if(
+            !file.name
+                .toLowerCase()
+                .endsWith(".pdf")
+        ){
+
+            toast(
+                "Please select a PDF file."
+            );
+
+            return;
+        }
+
+
+        if(
+            !$("bookName")
+            .value
+            .trim()
+        ){
+
+            $("bookName")
+                .value =
+                file.name
+                    .replace(
+                        /\.pdf$/i,
+                        ""
+                    );
+
+        }
+
+
+        await loadPDF(file);
+
+    }
+);
+
+
+/* =====================================================
+LOAD PDF
+===================================================== */
+
+async function loadPDF(file){
+
+    try{
+
+        uploadedPages = [];
+
+
+        $("pdfProgressBox")
+            .classList
+            .remove("hidden");
+
+
+        $("pdfPages")
+            .classList
+            .add("hidden");
+
+
+        $("saveBookCard")
+            .classList
+            .add("hidden");
+
+
+        $("pdfProgressText")
+            .textContent =
+            "Reading PDF...";
+
+
+        $("pdfProgressFill")
+            .style
+            .width =
+            "3%";
+
+
+        /*
+         * Read the actual file.
+         */
+
+        const buffer =
+            await file.arrayBuffer();
+
+
+        if(
+            !buffer ||
+            buffer.byteLength === 0
+        ){
+
+            throw new Error(
+                "The PDF file is empty."
+            );
+
+        }
+
+
+        $("pdfProgressText")
+            .textContent =
+            "Opening PDF...";
+
+
+        /*
+         * IMPORTANT:
+         *
+         * Use Uint8Array.
+         * This is more reliable with PDF.js.
+         */
+
+        const pdf =
+            await pdfjsLib
+            .getDocument({
+                data:
+                    new Uint8Array(buffer)
+            })
+            .promise;
+
+
+        console.log(
+            "PDF loaded:",
+            pdf.numPages
+        );
+
+
+        if(
+            pdf.numPages < 1
+        ){
+
+            throw new Error(
+                "The PDF contains no pages."
+            );
+
+        }
+
+
+        /*
+         * Process every page.
+         */
+
+        for(
+            let number = 1;
+            number <= pdf.numPages;
+            number++
+        ){
+
+            $("pdfProgressText")
+                .textContent =
+                `Converting page ${number} of ${pdf.numPages}...`;
+
+
+            const page =
+                await pdf.getPage(
+                    number
+                );
+
+
+            /*
+             * Get original dimensions.
+             */
+
+            const original =
+                page.getViewport({
+                    scale:1
+                });
+
+
+            /*
+             * Maximum image width.
+             *
+             * Prevents enormous images.
+             */
+
+            const maxWidth =
+                1500;
+
+
+            let scale =
+                maxWidth /
+                original.width;
+
+
+            /*
+             * Do not make small pages
+             * smaller than their original size.
+             */
+
+            if(scale < 1){
+
+                scale = 1;
+
+            }
+
+
+            /*
+             * Prevent excessive resolution.
+             */
+
+            if(scale > 2){
+
+                scale = 2;
+
+            }
+
+
+            const viewport =
+                page.getViewport({
+                    scale
+                });
+
+
+            const canvas =
+                document.createElement(
+                    "canvas"
+                );
+
+
+            canvas.width =
+                Math.ceil(
+                    viewport.width
+                );
+
+
+            canvas.height =
+                Math.ceil(
+                    viewport.height
+                );
+
+
+            const context =
+                canvas.getContext(
+                    "2d"
+                );
+
+
+            context.fillStyle =
+                "#ffffff";
+
+
+            context.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            await page.render({
+
+                canvasContext:
+                    context,
+
+                viewport:
+                    viewport,
+
+                background:
+                    "white"
+
+            }).promise;
+
+
+            /*
+             * Convert page into an image.
+             */
+
+            const image =
+                canvas.toDataURL(
+                    "image/jpeg",
+                    0.84
+                );
+
+
+            /*
+             * We deliberately DO NOT require
+             * PDF text extraction here.
+             *
+             * A scanned PDF may have no text layer.
+             *
+             * The image always loads.
+             */
+
+            let text = "";
+
+
+            /*
+             * Optional PDF text extraction.
+             *
+             * If available, it becomes a draft only.
+             *
+             * If unavailable, the page still works.
+             */
+
+            try{
+
+                const textContent =
+                    await page.getTextContent();
+
+
+                text =
+                    textContent.items
+                    .map(
+                        item =>
+                            item.str || ""
+                    )
+                    .join(" ")
+                    .replace(
+                        /\s+/g,
+                        " "
+                    )
+                    .trim();
+
+            }catch(error){
+
+                console.log(
+                    "No text layer on page",
+                    number
+                );
+
+            }
+
+
+            uploadedPages.push({
+
+                pageNumber:
+                    number,
+
+                image:
+                    image,
+
+                text:
+                    text
+
+            });
+
+
+            const percent =
+                (
+                    number /
+                    pdf.numPages
+                ) * 100;
+
+
+            $("pdfProgressFill")
+                .style
+                .width =
+                `${percent}%`;
+
+
+            await sleep(10);
+
+        }
+
+
+        $("pdfProgressFill")
+            .style
+            .width =
+            "100%";
+
+
+        $("pdfProgressText")
+            .textContent =
+            `Done — ${pdf.numPages} pages loaded.`;
+
+
+        $("pageCount")
+            .textContent =
+            `${pdf.numPages} pages`;
+
+
+        $("pdfPages")
+            .classList
+            .remove("hidden");
+
+
+        $("saveBookCard")
+            .classList
+            .remove("hidden");
+
+
+        renderPageEditors();
+
+
+        toast(
+            "PDF loaded successfully."
+        );
+
+
+    }catch(error){
+
+        console.error(
+            "PDF ERROR:",
+            error
+        );
+
+
+        $("pdfProgressText")
+            .textContent =
+            "PDF could not be loaded.";
+
+
+        $("pdfProgressFill")
+            .style
+            .width =
+            "0%";
+
+
+        $("pdfPages")
+            .classList
+            .add("hidden");
+
+
+        $("saveBookCard")
+            .classList
+            .add("hidden");
+
+
+        toast(
+            "Could not read PDF. " +
+            (
+                error.message ||
+                "Unknown PDF error."
+            )
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+PAGE EDITORS
+===================================================== */
+
+function renderPageEditors(){
+
+    const container =
+        $("pageEditor");
+
+
+    container.innerHTML =
+        "";
+
+
+    uploadedPages.forEach(
+        (page,index)=>{
+
+            const wrapper =
+                document.createElement(
+                    "div"
+                );
+
+
+            wrapper.className =
+                "builder-page";
+
+
+            wrapper.innerHTML = `
+
+                <div>
+
+                    <div class="page-number">
+                        Page ${page.pageNumber}
+                    </div>
+
+                    <img
+                        src="${page.image}"
+                        alt="Book page ${page.pageNumber}"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <div class="page-number">
+                        Reading Reference
+                    </div>
+
+                    <div class="page-note">
+
+                        Only this clean text is used
+                        for speech comparison.
+
+                    </div>
+
+
+                    <textarea
+                        data-page="${index}"
+                        placeholder="Enter or paste the clean text the student should read on this page..."
+                    >${escapeHTML(page.text)}</textarea>
+
+
+                    <p class="muted">
+
+                        Remove page numbers,
+                        picture labels,
+                        diagrams,
+                        captions and other text
+                        that the student is not expected
+                        to read.
+
+                    </p>
+
+                </div>
+
+            `;
+
+
+            container.appendChild(
+                wrapper
+            );
+
+        }
+    );
+
+
+    container
+    .querySelectorAll(
+        "[data-page]"
+    )
+    .forEach(
+        textarea => {
+
+            textarea.addEventListener(
+                "input",
+                event => {
+
+                    const index =
+                        Number(
+                            event.target
+                                .dataset
+                                .page
+                        );
+
+
+                    uploadedPages[index]
+                        .text =
+                        event.target.value;
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+SAVE BOOK
+===================================================== */
+
+$("saveBookBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        const title =
+            $("bookName")
+                .value
+                .trim();
+
+
+        if(!title){
+
+            toast(
+                "Enter the book or chapter name."
+            );
+
+            return;
+        }
+
+
+        if(
+            !uploadedPages.length
+        ){
+
+            toast(
+                "Upload a PDF first."
+            );
+
+            return;
+        }
+
+
+        /*
+         * Every page must have
+         * clean reading text.
+         */
+
+        for(
+            const page
+            of uploadedPages
+        ){
+
+            if(
+                !page.text.trim()
+            ){
+
+                toast(
+                    `Add reading text for page ${page.pageNumber}.`
+                );
+
+                return;
+            }
+
+        }
+
+
+        const pages =
+            uploadedPages.map(
+                page => {
+
+                    const sentenceList =
+                        splitSentences(
+                            page.text
+                        );
+
+
+                    return {
+
+                        id:
+                            crypto.randomUUID(),
+
+                        pageNumber:
+                            page.pageNumber,
+
+                        image:
+                            page.image,
+
+                        text:
+                            page.text,
+
+                        sentences:
+                            sentenceList.map(
+                                text => ({
+
+                                    text:
+
+                                        text,
+
+                                    normalized:
+
+                                        normalize(text),
+
+                                    completed:
+
+                                        false
+
+                                })
+                            )
+
+                    };
+
+                }
+            );
+
+
+        const book = {
+
+            id:
+                crypto.randomUUID(),
+
+            title:
+                title,
+
+            createdAt:
+                Date.now(),
+
+            pages:
+                pages,
+
+            progress:{
+
+                pageIndex:
+                    0,
+
+                sentenceIndex:
+                    0,
+
+                updatedAt:
+                    Date.now()
+
+            }
+
+        };
+
+
+        /*
+         * Check storage.
+         */
+
+        const existingSize =
+            await getStorageSize();
+
+
+        const newSize =
+            estimateBookSize(
+                book
+            );
+
+
+        if(
+            existingSize +
+            newSize >
+            CONFIG.MAX_STORAGE
+        ){
+
+            toast(
+                "Not enough storage space."
+            );
+
+            return;
+        }
+
+
+        try{
+
+            await putBook(
+                book
+            );
+
+
+            uploadedPages =
+                [];
+
+
+            $("bookName")
+                .value =
+                "";
+
+
+            $("pdfInput")
+                .value =
+                "";
+
+
+            $("pageEditor")
+                .innerHTML =
+                "";
+
+
+            $("pdfPages")
+                .classList
+                .add("hidden");
+
+
+            $("saveBookCard")
+                .classList
+                .add("hidden");
+
+
+            await renderBooks();
+
+
+            show(
+                "homeScreen"
+            );
+
+
+            toast(
+                "Book saved."
+            );
+
+
+        }catch(error){
+
+            console.error(
+                error
+            );
+
+
+            toast(
+                "Could not save book."
+            );
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+SENTENCE SPLITTER
+===================================================== */
+
+function splitSentences(text){
+
+    text =
+        text
+        .replace(
+            /\r\n/g,
+            "\n"
+        )
+        .trim();
+
+
+    if(!text){
+
+        return [];
+
+    }
+
+
+    const matches =
+        text.match(
+            /[^.!?]+[.!?]+|[^.!?]+$/g
+        );
+
+
+    return (
+        matches ||
+        [text]
+    )
+    .map(
+        item =>
+            item.trim()
+    )
+    .filter(Boolean);
+
+}
+
+
+/* =====================================================
+NORMALIZE
+===================================================== */
+
+function normalize(text){
+
+    return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .replace(
+            /[^\p{L}\p{N}\s']/gu,
+            " "
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+
+}
+
+
+function words(text){
+
+    return normalize(text)
+        .split(/\s+/)
+        .filter(Boolean);
+
+}
+
+
+/* =====================================================
+LEVENSHTEIN
+===================================================== */
+
+function levenshtein(a,b){
+
+    const matrix = [];
+
+
+    for(
+        let i = 0;
+        i <= b.length;
+        i++
+    ){
+
+        matrix[i] = [i];
+
+    }
+
+
+    for(
+        let j = 0;
+        j <= a.length;
+        j++
+    ){
+
+        matrix[0][j] = j;
+
+    }
+
+
+    for(
+        let i = 1;
+        i <= b.length;
+        i++
+    ){
+
+        for(
+            let j = 1;
+            j <= a.length;
+            j++
+        ){
+
+            if(
+                b[i - 1] ===
+                a[j - 1]
+            ){
+
+                matrix[i][j] =
+                    matrix[i - 1][j - 1];
+
+            }else{
+
+                matrix[i][j] =
+                    Math.min(
+
+                        matrix[i - 1][j] + 1,
+
+                        matrix[i][j - 1] + 1,
+
+                        matrix[i - 1][j - 1] + 1
+
+                    );
+
+            }
+
+        }
+
+    }
+
+
+    return matrix[b.length][a.length];
+
+}
+
+
+/* =====================================================
+SIMILARITY
+===================================================== */
+
+function similarity(a,b){
+
+    a =
+        normalize(a);
+
+    b =
+        normalize(b);
+
+
+    if(!a || !b){
+
+        return 0;
+
+    }
+
+
+    if(a === b){
+
+        return 1;
+
+    }
+
+
+    const distance =
+        levenshtein(
+            a,
+            b
+        );
+
+
+    return (
+        1 -
+        distance /
+        Math.max(
+            a.length,
+            b.length
+        )
+    );
+
+}
+
+
+/* =====================================================
+WORD OVERLAP
+===================================================== */
+
+function overlap(expected,spoken){
+
+    const expectedWords =
+        words(expected);
+
+
+    const spokenWords =
+        words(spoken);
+
+
+    if(
+        !expectedWords.length
+    ){
+
+        return 0;
+
+    }
+
+
+    let matched = 0;
+
+
+    for(
+        const word
+        of expectedWords
+    ){
+
+        if(
+            spokenWords.includes(
+                word
+            )
+        ){
+
+            matched++;
+
+            continue;
+
+        }
+
+
+        for(
+            const spoken
+            of spokenWords
+        ){
+
+            if(
+                word.length >= 4 &&
+                spoken.length >= 4 &&
+                similarity(
+                    word,
+                    spoken
+                ) >= .78
+            ){
+
+                matched++;
+
+                break;
+
+            }
+
+        }
+
+    }
+
+
+    return (
+        matched /
+        expectedWords.length
+    );
+
+}
+
+
+/* =====================================================
+READING VARIABLES
+===================================================== */
+
+let currentBook =
+    null;
+
+let pageIndex =
+    0;
+
+let sentenceIndex =
+    0;
+
+let readingActive =
+    false;
+
+let recognition =
+    null;
+
+let recognitionRunning =
+    false;
+
+let keepListening =
+    false;
+
+let lastActivity =
+    Date.now();
+
+let inactivityTimer =
+    null;
+
+let changingPage =
+    false;
+
+
+/* =====================================================
+OPEN BOOK
+===================================================== */
+
+async function openBook(book){
+
+    currentBook =
+        book;
+
+
+    pageIndex =
+        book.progress?.pageIndex || 0;
+
+
+    sentenceIndex =
+        book.progress?.sentenceIndex || 0;
+
+
+    pageIndex =
+        Math.max(
+            0,
+            Math.min(
+                pageIndex,
+                book.pages.length - 1
+            )
+        );
+
+
+    const page =
+        book.pages[pageIndex];
+
+
+    /*
+     * Never allow a saved position
+     * to jump ahead of legitimate progress.
+     */
+
+    let furthest =
+        0;
+
+
+    page.sentences.forEach(
+        (sentence,index)=>{
+
+            if(
+                sentence.completed
+            ){
+
+                furthest =
+                    index + 1;
+
+            }
+
+        }
+    );
+
+
+    sentenceIndex =
+        Math.max(
+            sentenceIndex,
+            furthest
+        );
+
+
+    sentenceIndex =
+        Math.min(
+            sentenceIndex,
+            page.sentences.length
+        );
+
+
+    readingActive =
+        false;
+
+
+    keepListening =
+        false;
+
+
+    renderReading();
+
+
+    $("startReadingBtn")
+        .classList
+        .remove("hidden");
+
+
+    $("pauseBtn")
+        .classList
+        .add("hidden");
+
+
+    $("status")
+        .className =
+        "status";
+
+
+    $("status")
+        .textContent =
+        "Tap Start Reading.";
+
+
+    show(
+        "readingScreen"
+    );
+
+
+    if(
+        pageIndex > 0 ||
+        sentenceIndex > 0
+    ){
+
+        toast(
+            "Your saved reading position was restored."
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+RENDER READING
+===================================================== */
+
+function renderReading(){
+
+    if(!currentBook){
+
+        return;
+
+    }
+
+
+    const page =
+        currentBook
+        .pages[pageIndex];
+
+
+    if(!page){
+
+        return;
+
+    }
+
+
+    $("currentPageImage")
+        .src =
+        page.image;
+
+
+    $("progressText")
+        .textContent =
+        `${currentBook.title} • Page ${pageIndex + 1} of ${currentBook.pages.length}`;
+
+
+    const progress =
+        currentBook.pages.length
+        ? (
+            pageIndex /
+            currentBook.pages.length
+        ) * 100
+        : 0;
+
+
+    $("readingProgressFill")
+        .style
+        .width =
+        `${progress}%`;
+
+
+    const container =
+        $("readingText");
+
+
+    container.innerHTML =
+        "";
+
+
+    page.sentences.forEach(
+        (sentence,index)=>{
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "sentence";
+
+
+            if(
+                sentence.completed
+            ){
+
+                element.classList
+                    .add(
+                        "completed"
+                    );
+
+            }
+
+
+            if(
+                index ===
+                sentenceIndex
+            ){
+
+                element.classList
+                    .add(
+                        "current"
+                    );
+
+            }
+
+
+            if(
+                index >
+                sentenceIndex
+            ){
+
+                element.classList
+                    .add(
+                        "locked"
+                    );
+
+            }
+
+
+            element.textContent =
+                sentence.text;
+
+
+            container.appendChild(
+                element
+            );
+
+        }
+    );
+
+
+    const current =
+        container.querySelector(
+            ".current"
+        );
+
+
+    if(current){
+
+        setTimeout(
+            ()=>{
+                current.scrollIntoView({
+                    behavior:"smooth",
+                    block:"center"
+                });
+            },
+            50
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+START READING
+===================================================== */
+
+$("startReadingBtn")
+.addEventListener(
+    "click",
+    ()=>{
+
+        if(!currentBook){
+
+            return;
+
+        }
+
+
+        readingActive =
+            true;
+
+
+        keepListening =
+            true;
+
+
+        lastActivity =
+            Date.now();
+
+
+        $("startReadingBtn")
+            .classList
+            .add("hidden");
+
+
+        $("pauseBtn")
+            .classList
+            .remove("hidden");
+
+
+        $("status")
+            .className =
+            "status listen";
+
+
+        $("status")
+            .textContent =
+            "I'm listening. Keep reading.";
+
+
+        startSpeech();
+
+
+        startInactivity();
+
+
+        saveProgress();
+
+    }
+);
+
+
+/* =====================================================
+PAUSE
+===================================================== */
+
+$("pauseBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        readingActive =
+            false;
+
+
+        keepListening =
+            false;
+
+
+        stopSpeech();
+
+
+        $("pauseBtn")
+            .classList
+            .add("hidden");
+
+
+        $("startReadingBtn")
+            .classList
+            .remove("hidden");
+
+
+        $("status")
+            .className =
+            "status";
+
+
+        $("status")
+            .textContent =
+            "Reading paused.";
+
+
+        await saveProgress();
+
+    }
+);
+
+
+/* =====================================================
+SPEECH RECOGNITION
+===================================================== */
+
+function createRecognition(){
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+
+    if(!SpeechRecognition){
+
+        return null;
+
+    }
+
+
+    const rec =
+        new SpeechRecognition();
+
+
+    rec.lang =
+        "en-US";
+
+
+    rec.continuous =
+        true;
+
+
+    rec.interimResults =
+        true;
+
+
+    rec.maxAlternatives =
+        3;
+
+
+    rec.onstart =
+        ()=>{
+
+            recognitionRunning =
+                true;
+
+
+            $("micDot")
+                .classList
+                .add("active");
+
+
+            $("micText")
+                .textContent =
+                "Listening…";
+
+        };
+
+
+    rec.onresult =
+        event => {
+
+            let finalText =
+                "";
+
+
+            let interimText =
+                "";
+
+
+            for(
+                let i =
+                    event.resultIndex;
+                i <
+                    event.results.length;
+                i++
+            ){
+
+                const result =
+                    event.results[i];
+
+
+                const transcript =
+                    result[0]
+                        .transcript;
+
+
+                if(
+                    result.isFinal
+                ){
+
+                    finalText +=
+                        " " +
+                        transcript;
+
+                }else{
+
+                    interimText +=
+                        " " +
+                        transcript;
+
+                }
+
+            }
+
+
+            lastActivity =
+                Date.now();
+
+
+            if(
+                finalText.trim()
+            ){
+
+                evaluateSpeech(
+                    finalText
+                );
+
+            }
+
+
+            if(
+                interimText.trim()
+            ){
+
+                evaluateSpeech(
+                    interimText
+                );
+
+            }
+
+        };
+
+
+    rec.onerror =
+        event => {
+
+            console.log(
+                "Speech error:",
+                event.error
+            );
+
+
+            recognitionRunning =
+                false;
+
+
+            $("micDot")
+                .classList
+                .remove("active");
+
+
+            if(
+                event.error ===
+                    "not-allowed" ||
+                event.error ===
+                    "service-not-allowed"
+            ){
+
+                keepListening =
+                    false;
+
+
+                readingActive =
+                    false;
+
+
+                $("status")
+                    .className =
+                    "status error";
+
+
+                $("status")
+                    .textContent =
+                    "Please allow microphone access.";
+
+            }
+
+        };
+
+
+    rec.onend =
+        ()=>{
+
+            recognitionRunning =
+                false;
+
+
+            $("micDot")
+                .classList
+                .remove("active");
+
+
+            /*
+             * Chrome/Edge may stop recognition
+             * automatically.
+             *
+             * Restart it.
+             */
+
+            if(
+                keepListening &&
+                readingActive
+            ){
+
+                setTimeout(
+                    ()=>{
+
+                        if(
+                            keepListening &&
+                            readingActive &&
+                            !recognitionRunning
+                        ){
+
+                            try{
+
+                                rec.start();
+
+                            }catch{}
+
+                        }
+
+                    },
+                    CONFIG.RESTART_DELAY
+                );
+
+            }
+
+        };
+
+
+    return rec;
+
+}
+
+
+/* =====================================================
+START SPEECH
+===================================================== */
+
+function startSpeech(){
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+
+    if(!SpeechRecognition){
+
+        $("status")
+            .className =
+            "status error";
+
+
+        $("status")
+            .textContent =
+            "Speech recognition is not supported in this browser. Use Chrome or Edge.";
+
+
+        return;
+
+    }
+
+
+    if(!recognition){
+
+        recognition =
+            createRecognition();
+
+    }
+
+
+    keepListening =
+        true;
+
+
+    if(
+        recognitionRunning
+    ){
+
+        return;
+
+    }
+
+
+    try{
+
+        recognition.start();
+
+    }catch{
+
+        setTimeout(
+            ()=>{
+                if(
+                    keepListening &&
+                    readingActive &&
+                    !recognitionRunning
+                ){
+
+                    try{
+
+                        recognition.start();
+
+                    }catch{}
+
+                }
+
+            },
+            800
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+STOP SPEECH
+===================================================== */
+
+function stopSpeech(){
+
+    keepListening =
+        false;
+
+
+    if(
+        recognition
+    ){
+
+        try{
+
+            recognition.stop();
+
+        }catch{}
+
+    }
+
+}
+
+
+/* =====================================================
+EVALUATE SPEECH
+===================================================== */
+
+function evaluateSpeech(spoken){
+
+    if(
+        !currentBook ||
+        !readingActive ||
+        changingPage
+    ){
+
+        return;
+
+    }
+
+
+    const page =
+        currentBook
+        .pages[pageIndex];
+
+
+    const expectedSentence =
+        page
+        .sentences[sentenceIndex];
+
+
+    if(!expectedSentence){
+
+        return;
+
+    }
+
+
+    const expected =
+        expectedSentence.normalized;
+
+
+    const spokenNormalized =
+        normalize(spoken);
+
+
+    if(!spokenNormalized){
+
+        return;
+
+    }
+
+
+    const sim =
+        similarity(
+            expected,
+            spokenNormalized
+        );
+
+
+    const wordScore =
+        overlap(
+            expected,
+            spokenNormalized
+        );
+
+
+    const score =
+        Math.max(
+            sim,
+            wordScore
+        );
+
+
+    console.log(
+        "Reading:",
+        spokenNormalized,
+        "Expected:",
+        expected,
+        "Score:",
+        score
+    );
+
+
+    if(
+        score >=
+        CONFIG.MATCH_THRESHOLD
+    ){
+
+        completeCurrentSentence();
+
+    }
+
+}
+
+
+/* =====================================================
+COMPLETE CURRENT SENTENCE
+===================================================== */
+
+async function completeCurrentSentence(){
+
+    if(
+        !currentBook ||
+        changingPage
+    ){
+
+        return;
+
+    }
+
+
+    const page =
+        currentBook
+        .pages[pageIndex];
+
+
+    const sentence =
+        page
+        .sentences[sentenceIndex];
+
+
+    if(!sentence){
+
+        return;
+
+    }
+
+
+    if(
+        sentence.completed
+    ){
+
+        return;
+
+    }
+
+
+    sentence.completed =
+        true;
+
+
+    sentenceIndex++;
+
+
+    renderReading();
+
+
+    await saveProgress();
+
+
+    /*
+     * Final sentence:
+     * automatically turn page.
+     */
+
+    if(
+        sentenceIndex >=
+        page.sentences.length
+    ){
+
+        await nextPage();
+
+    }
+
+}
+
+
+/* =====================================================
+NEXT PAGE
+===================================================== */
+
+async function nextPage(){
+
+    if(
+        changingPage ||
+        !currentBook
+    ){
+
+        return;
+
+    }
+
+
+    changingPage =
+        true;
+
+
+    /*
+     * Finished book.
+     */
+
+    if(
+        pageIndex + 1 >=
+        currentBook.pages.length
+    ){
+
+        await saveProgress();
+
+
+        readingActive =
+            false;
+
+
+        stopSpeech();
+
+
+        $("status")
+            .className =
+            "status";
+
+
+        $("status")
+            .textContent =
+            "🎉 Reading completed!";
+
+
+        $("readingText")
+            .innerHTML = `
+
+                <div style="
+                    text-align:center;
+                    padding:40px 10px;
+                ">
+
+                    <div style="
+                        font-size:55px;
+                    ">
+                        🎉
+                    </div>
+
+                    <h2>
+                        Well done!
+                    </h2>
+
+                    <p class="muted">
+                        You finished this book or chapter.
+                    </p>
+
+                    <button
+                        id="finishedButton"
+                        class="btn primary">
+                        Done
+                    </button>
+
+                </div>
+
+            `;
+
+
+        $("finishedButton")
+            .onclick =
+            async ()=>{
+
+                currentBook =
+                    null;
+
+                show(
+                    "homeScreen"
+                );
+
+                await renderBooks();
+
+            };
+
+
+        changingPage =
+            false;
+
+
+        return;
+
+    }
+
+
+    $("status")
+        .className =
+        "status";
+
+
+    $("status")
+        .textContent =
+        "Page complete…";
+
+
+    await sleep(500);
+
+
+    pageIndex++;
+
+
+    sentenceIndex =
+        0;
+
+
+    currentBook.progress = {
+
+        pageIndex:
+            pageIndex,
+
+        sentenceIndex:
+            sentenceIndex,
+
+        updatedAt:
+            Date.now()
+
+    };
+
+
+    renderReading();
+
+
+    await saveProgress();
+
+
+    $("status")
+        .className =
+        "status listen";
+
+
+    $("status")
+        .textContent =
+        "Keep reading.";
+
+
+    changingPage =
+        false;
+
+}
+
+
+/* =====================================================
+PREVIOUS PAGE
+===================================================== */
+
+$("previousBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        if(
+            !currentBook
+        ){
+
+            return;
+
+        }
+
+
+        if(
+            pageIndex <= 0
+        ){
+
+            toast(
+                "This is the first page."
+            );
+
+            return;
+
+        }
+
+
+        changingPage =
+            true;
+
+
+        pageIndex--;
+
+
+        const page =
+            currentBook
+            .pages[pageIndex];
+
+
+        /*
+         * Find exactly how far
+         * this page has already been read.
+         */
+
+        let furthest =
+            0;
+
+
+        page.sentences.forEach(
+            (sentence,index)=>{
+
+                if(
+                    sentence.completed
+                ){
+
+                    furthest =
+                        index + 1;
+
+                }
+
+            }
+        );
+
+
+        sentenceIndex =
+            furthest;
+
+
+        currentBook.progress = {
+
+            pageIndex:
+                pageIndex,
+
+            sentenceIndex:
+                sentenceIndex,
+
+            updatedAt:
+                Date.now()
+
+        };
+
+
+        renderReading();
+
+
+        await saveProgress();
+
+
+        $("status")
+            .className =
+            "status listen";
+
+
+        $("status")
+            .textContent =
+            "Continue from your saved position.";
+
+
+        changingPage =
+            false;
+
+
+        if(
+            readingActive
+        ){
+
+            startSpeech();
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+SAVE PROGRESS
+===================================================== */
+
+async function saveProgress(){
+
+    if(!currentBook){
+
+        return;
+
+    }
+
+
+    currentBook.progress = {
+
+        pageIndex:
+            pageIndex,
+
+        sentenceIndex:
+            sentenceIndex,
+
+        updatedAt:
+            Date.now()
+
+    };
+
+
+    try{
+
+        await putBook(
+            currentBook
+        );
+
+
+        await updateStorage();
+
+    }catch(error){
+
+        console.error(
+            "Progress save error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+INACTIVITY
+===================================================== */
+
+function startInactivity(){
+
+    clearInterval(
+        inactivityTimer
+    );
+
+
+    inactivityTimer =
+        setInterval(
+            ()=>{
+
+                if(
+                    !readingActive
+                ){
+
+                    return;
+
+                }
+
+
+                const inactive =
+                    Date.now() -
+                    lastActivity;
+
+
+                if(
+                    inactive >=
+                    CONFIG.LONG_PAUSE
+                ){
+
+                    handleLongPause();
+
+                }
+
+            },
+            5000
+        );
+
+}
+
+
+function handleLongPause(){
+
+    if(
+        !readingActive
+    ){
+
+        return;
+
+    }
+
+
+    readingActive =
+        false;
+
+
+    keepListening =
+        false;
+
+
+    stopSpeech();
+
+
+    saveProgress();
+
+
+    $("welcomeOverlay")
+        .classList
+        .remove("hidden");
+
+}
+
+
+$("continueBtn")
+.addEventListener(
+    "click",
+    ()=>{
+
+        $("welcomeOverlay")
+            .classList
+            .add("hidden");
+
+
+        readingActive =
+            true;
+
+
+        keepListening =
+            true;
+
+
+        lastActivity =
+            Date.now();
+
+
+        $("status")
+            .className =
+            "status listen";
+
+
+        $("status")
+            .textContent =
+            "Welcome back. Keep reading.";
+
+
+        $("startReadingBtn")
+            .classList
+            .add("hidden");
+
+
+        $("pauseBtn")
+            .classList
+            .remove("hidden");
+
+
+        startSpeech();
+
+    }
+);
+
+
+/* =====================================================
+BOOK LIST
+===================================================== */
+
+async function renderBooks(){
+
+    const books =
+        await getBooks();
+
+
+    renderBookContainer(
+        $("booksGrid"),
+        books
+    );
+
+
+    renderBookContainer(
+        $("booksGrid2"),
+        books
+    );
+
+
+    await updateStorage();
+
+}
+
+
+function renderBookContainer(
+    container,
+    books
+){
+
+    container.innerHTML =
+        "";
+
+
+    if(
+        !books.length
+    ){
+
+        container.innerHTML = `
+
+            <div class="empty">
+
+                <h3>
+                    No books yet
+                </h3>
+
+                <p>
+                    Upload a PDF to create your first book.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    books.forEach(
+        book => {
+
+            const progress =
+                calculateProgress(
+                    book
+                );
+
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "book-card";
+
+
+            const cover =
+                book
+                .pages?.[0]
+                ?.image || "";
+
+
+            card.innerHTML = `
+
+                <div class="book-cover">
+
+                    ${
+                        cover
+
+                        ?
+
+                        `
+                            <img
+                                src="${cover}"
+                                alt=""
+                            >
+                        `
+
+                        :
+
+                        `
+                            <span>
+                                Book
+                            </span>
+                        `
+                    }
+
+                </div>
+
+
+                <div class="book-info">
+
+                    <h3>
+                        ${escapeHTML(book.title)}
+                    </h3>
+
+                    <p class="muted">
+                        ${book.pages.length} pages
+                    </p>
+
+                    <p class="muted">
+                        ${progress}% completed
+                    </p>
+
+
+                    <div class="row">
+
+                        <button
+                            class="btn primary small"
+                            data-open="${book.id}">
+                            ${
+                                progress > 0
+                                ? "Continue"
+                                : "Start"
+                            }
+                        </button>
+
+
+                        <button
+                            class="btn red small"
+                            data-delete="${book.id}">
+                            Delete
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            container.appendChild(
+                card
+            );
+
+        }
+    );
+
+
+    container
+    .querySelectorAll(
+        "[data-open]"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                async ()=>{
+
+                    const books =
+                        await getBooks();
+
+
+                    const book =
+                        books.find(
+                            item =>
+                                item.id ===
+                                button.dataset.open
+                        );
+
+
+                    if(book){
+
+                        await openBook(
+                            book
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    container
+    .querySelectorAll(
+        "[data-delete]"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                async ()=>{
+
+                    if(
+                        !confirm(
+                            "Delete this book?"
+                        )
+                    ){
+
+                        return;
+
+                    }
+
+
+                    await deleteBook(
+                        button.dataset.delete
+                    );
+
+
+                    await renderBooks();
+
+
+                    toast(
+                        "Book deleted."
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+BOOK PROGRESS
+===================================================== */
+
+function calculateProgress(book){
+
+    let total =
+        0;
+
+
+    let completed =
+        0;
+
+
+    for(
+        const page
+        of book.pages
+    ){
+
+        for(
+            const sentence
+            of page.sentences
+        ){
+
+            total++;
+
+
+            if(
+                sentence.completed
+            ){
+
+                completed++;
+
+            }
+
+        }
+
+    }
+
+
+    if(
+        total === 0
+    ){
+
+        return 0;
+
+    }
+
+
+    return Math.round(
+        completed /
+        total *
+        100
+    );
+
+}
+
+
+/* =====================================================
+NAVIGATION
+===================================================== */
+
+$("startBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        await renderBooks();
+
+        show(
+            "booksScreen"
+        );
+
+    }
+);
+
+
+$("addBookBtn")
+.addEventListener(
+    "click",
+    ()=>{
+
+        show(
+            "builderScreen"
+        );
+
+    }
+);
+
+
+$("builderBack")
+.addEventListener(
+    "click",
+    ()=>{
+
+        show(
+            "homeScreen"
+        );
+
+    }
+);
+
+
+$("booksBack")
+.addEventListener(
+    "click",
+    ()=>{
+
+        show(
+            "homeScreen"
+        );
+
+    }
+);
+
+
+$("homeBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        stopSpeech();
+
+
+        readingActive =
+            false;
+
+
+        currentBook =
+            null;
+
+
+        show(
+            "homeScreen"
+        );
+
+
+        await renderBooks();
+
+    }
+);
+
+
+$("exitReadingBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        await saveProgress();
+
+
+        stopSpeech();
+
+
+        readingActive =
+            false;
+
+
+        currentBook =
+            null;
+
+
+        show(
+            "homeScreen"
+        );
+
+
+        await renderBooks();
+
+    }
+);
+
+
+$("refreshBtn")
+.addEventListener(
+    "click",
+    renderBooks
+);
+
+
+/* =====================================================
+DELETE ALL
+===================================================== */
+
+$("clearBooksBtn")
+.addEventListener(
+    "click",
+    async ()=>{
+
+        const books =
+            await getBooks();
+
+
+        if(
+            !books.length
+        ){
+
+            toast(
+                "There are no books."
+            );
+
+            return;
+
+        }
+
+
+        if(
+            !confirm(
+                "Delete all books and progress?"
+            )
+        ){
+
+            return;
+
+        }
+
+
+        stopSpeech();
+
+
+        readingActive =
+            false;
+
+
+        currentBook =
+            null;
+
+
+        await clearBooks();
+
+
+        await renderBooks();
+
+
+        toast(
+            "All books deleted."
+        );
+
+    }
+);
+
+
+/* =====================================================
+SAVE WHEN LEAVING TAB
+===================================================== */
+
+document.addEventListener(
+    "visibilitychange",
+    async ()=>{
+
+        if(
+            document.visibilityState ===
+            "hidden"
+        ){
+
+            await saveProgress();
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+START APP
+===================================================== */
+
+async function init(){
+
+    try{
+
+        await openDB();
+
+        await renderBooks();
+
+        show(
+            "homeScreen"
+        );
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+
+        alert(
+            "The application could not start."
+        );
+
+    }
+
+}
+
+
+init();
+
+</script>
+
+</body>
+</html>
 ```

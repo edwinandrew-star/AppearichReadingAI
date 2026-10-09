@@ -7,8 +7,6 @@
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
         type="module"></script>
-<!-- Tesseract OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{
     box-sizing:border-box;
@@ -385,19 +383,19 @@ CREATE CHAPTER
 <input id="chapterFiles"
        type="file"
        multiple
-       accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
+       accept=".pdf">
 <div class="fileInfo">
 <strong>Supported:</strong>
 <br>
 📄 PDF files
 <br>
-🖼️ JPG / JPEG / PNG / WEBP images
+Text-based PDF only. Scanned/image-only PDFs are flagged and are not OCR-processed.
 <br><br>
-You can select multiple files at once.
-A PDF can contain many pages.
+You can select multiple PDF files at once.
+Every PDF page is retained separately, including pages with missing text, which are flagged for parent review.
 </div>
 <div id="selectedFiles"></div>
-<div id="ocrStatus"></div>
+<div id="pdfExtractionStatus"></div>
 <button class="yellow"
         id="extractButton"
         onclick="processChapterFiles()">
@@ -408,7 +406,7 @@ Extract Chapter
 Cancel
 </button>
 </div>
-<div id="ocrPreview"></div>
+<div id="pdfExtractionPreview"></div>
 </section>
 <!-- =====================================================
 CHAPTER
@@ -800,16 +798,16 @@ alert("Enter a chapter name.");
 return;
 }
 if(files.length===0){
-alert("Select PDF or image files.");
+alert("Select a text-based PDF file.");
 return;
 }
 const button =
 document.getElementById("extractButton");
 button.disabled=true;
 const status =
-document.getElementById("ocrStatus");
+document.getElementById("pdfExtractionStatus");
 const preview =
-document.getElementById("ocrPreview");
+document.getElementById("pdfExtractionPreview");
 preview.innerHTML="";
 const pages=[];
 let pageNumber=1;
@@ -831,230 +829,57 @@ ${escapeHTML(file.name)}
 </div>
 `;
 /* =================================================
-PDF
+PDF TEXT-LAYER EXTRACTION (NO OCR)
 ================================================= */
-if(
-file.type==="application/pdf" ||
-file.name.toLowerCase().endsWith(".pdf")
-){
+if(!(file.type==="application/pdf" || file.name.toLowerCase().endsWith(".pdf"))){
+  status.innerHTML=`<div class="status">Only text-based PDFs are supported. This file was not imported: ${escapeHTML(file.name)}</div>`;
+  continue;
+}
 try{
-const pdf =
-await pdfjsLib.getDocument({
-data:await file.arrayBuffer()
-}).promise;
-for(
-let pdfPageNumber=1;
-pdfPageNumber<=pdf.numPages;
-pdfPageNumber++
-){
-status.innerHTML=`
-<div class="status">
-Reading PDF:
-${escapeHTML(file.name)}
-<br>
-Page ${pdfPageNumber}
-of ${pdf.numPages}
-</div>
-`;
-const pdfPage =
-await pdf.getPage(pdfPageNumber);
-/*
-First try extracting actual PDF text.
-*/
-let extractedText="";
-try{
-const textContent =
-await pdfPage.getTextContent();
-extractedText =
-textContent.items
-.map(item=>item.str)
-.join(" ")
-.trim();
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  for(let pdfPageNumber=1;pdfPageNumber<=pdf.numPages;pdfPageNumber++){
+    status.innerHTML=`<div class="status">Extracting PDF text: ${escapeHTML(file.name)}<br>Page ${pdfPageNumber} of ${pdf.numPages}</div>`;
+    const pdfPage=await pdf.getPage(pdfPageNumber);
+    let extractedText="";
+    try{
+      const tc=await pdfPage.getTextContent();
+      const positioned=tc.items.filter(item=>item.str&&item.str.trim()).map(item=>({
+        text:item.str.trim(), x:item.transform?item.transform[4]:0, y:item.transform?item.transform[5]:0,
+        eol:!!item.hasEOL
+      })).sort((a,b)=>Math.abs(a.y-b.y)>2.5?b.y-a.y:a.x-b.x);
+      const lines=[];
+      positioned.forEach(item=>{
+        let line=lines[lines.length-1];
+        if(!line||Math.abs(line.y-item.y)>2.5){line={y:item.y,items:[]};lines.push(line);}
+        line.items.push(item);
+        if(item.eol) line.forceBreak=true;
+      });
+      extractedText=lines.map(line=>line.items.map(x=>x.text).join(" ").replace(/\s+/g," ").trim()).filter(Boolean).join("\n");
+    }catch(extractionError){console.warn("PDF text extraction failed on page",pdfPageNumber,extractionError);}
+    const viewport=pdfPage.getViewport({scale:1.5});
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+    const context=canvas.getContext("2d");
+    await pdfPage.render({canvasContext:context,viewport}).promise;
+    const image=canvas.toDataURL("image/jpeg",.82);
+    const pageText=cleanExtractedText(extractedText);
+    const wordCount=tokenize(pageText).length;
+    const extractionWarning=wordCount===0
+      ?"No selectable text was found on this PDF page. This page was retained; no OCR or replacement text was used."
+      :wordCount<12
+        ?`Only ${wordCount} selectable word(s) were found. Check this page in the parent/admin preview before reading.`
+        :"";
+    pages.push({pageNumber:pageNumber++,image,text:pageText,source:file.name,sourceType:"pdf",pdfPage:pdfPageNumber,transcript:"",result:null,extractionWarning,extractedWordCount:wordCount});
+    showPDFExtractionPreview(pages[pages.length-1]);
+  }
 }catch(error){
-console.log(
-"PDF text extraction failed",
-error
-);
-}
-/*
-Render page to canvas.
-We need the image even when
-the PDF already has text.
-*/
-const viewport =
-pdfPage.getViewport({
-scale:1.5
-});
-const canvas =
-document.createElement("canvas");
-canvas.width =
-Math.ceil(viewport.width);
-canvas.height =
-Math.ceil(viewport.height);
-const context =
-canvas.getContext("2d");
-await pdfPage.render({
-canvasContext:context,
-viewport:viewport
-}).promise;
-const image =
-canvas.toDataURL("image/jpeg",.82);
-/*
-If PDF has no selectable text,
-use OCR.
-*/
-if(!extractedText){
-status.innerHTML=`
-<div class="status">
-PDF page ${pdfPageNumber}
-has no selectable text.
-Running OCR...
-</div>
-`;
-try{
-const ocr =
-await Tesseract.recognize(
-image,
-"eng",
-{
-logger:info=>{
-if(info.status){
-const percent =
-info.progress
-?
-Math.round(
-info.progress*100
-)
-:
-"";
-status.innerHTML=`
-<div class="status">
-OCR:
-Page ${pdfPageNumber}/${pdf.numPages}
-<br>
-${info.status}
-${percent
-?
-" "+percent+"%"
-:
-""}
-</div>
-`;
-}
-}
-}
-);
-extractedText =
-cleanOCR(
-ocr.data.text
-);
-}catch(error){
-console.error(
-"PDF OCR failed",
-error
-);
-extractedText="";
-}
-}
-/*
-Save page.
-*/
-pages.push({
-pageNumber:pageNumber++,
-image:image,
-text:cleanOCR(extractedText),
-source:file.name,
-sourceType:"pdf",
-pdfPage:pdfPageNumber,
-transcript:"",
-result:null
-});
-showOCRPreview(
-pages[pages.length-1]
-);
-}
-}catch(error){
-console.error(error);
-alert(
-"Could not process PDF: "+
-file.name
-);
-}
-}
-/* =================================================
-IMAGE
-================================================= */
-else if(file.type.startsWith("image/")){
-try{
-const image =
-await fileToDataURL(file);
-status.innerHTML=`
-<div class="status">
-Running OCR on image
-${fileIndex+1}/${files.length}
-</div>
-`;
-const ocr =
-await Tesseract.recognize(
-image,
-"eng",
-{
-logger:info=>{
-if(info.status){
-const percent =
-info.progress
-?
-Math.round(info.progress*100)
-:
-"";
-status.innerHTML=`
-<div class="status">
-OCR:
-${info.status}
-${percent
-?
-" "+percent+"%"
-:
-""}
-</div>
-`;
-}
-}
-}
-);
-const extractedText =
-cleanOCR(
-ocr.data.text
-);
-pages.push({
-pageNumber:pageNumber++,
-image:image,
-text:extractedText,
-source:file.name,
-sourceType:"image",
-transcript:"",
-result:null
-});
-showOCRPreview(
-pages[pages.length-1]
-);
-}catch(error){
-console.error(error);
-alert(
-"Could not process image: "+
-file.name
-);
-}
-}
-else{
-alert(
-"Unsupported file: "+file.name
-);
-}
+  console.error("PDF text extraction failed",error);
+  alert("Could not read this PDF file: "+file.name);
 }
 /* =================================================
 SAVE CHAPTER
 ================================================= */
+}
 if(pages.length===0){
 status.innerHTML=`
 <div class="status">
@@ -1103,11 +928,11 @@ chapter.id
 },700);
 };
 /* =====================================================
-OCR PREVIEW
+PDF TEXT EXTRACTION PREVIEW
 ===================================================== */
-function showOCRPreview(page){
+function showPDFExtractionPreview(page){
 const preview =
-document.getElementById("ocrPreview");
+document.getElementById("pdfExtractionPreview");
 preview.innerHTML += `
 <div class="card">
 <h3>
@@ -1122,6 +947,7 @@ border-radius:8px;
 background:#eee;
 ">
 <p class="small">
+${page.extractionWarning?`<p class="small" style="color:#9a5b00"><strong>Check this page:</strong> ${escapeHTML(page.extractionWarning)}</p>`:""}
 <strong>
 Extracted text:
 </strong>
@@ -1188,7 +1014,7 @@ ${page.result&&page.result.auto?"Pictures only":status}
 </p>
 <details><summary class="small">Reading text</summary>
 <textarea style="width:100%;height:110px" oninput="editRef(${page.pageNumber},this.value)">${escapeHTML(page.text)}</textarea>
-<div class="small" id="segCount${page.pageNumber}">${(page.segments||[]).length} reading sentence(s)</div>
+<div class="small" id="segCount${page.pageNumber}">${(page.segments||[]).length} reading paragraph(s)</div>
 </details>
 </div>
 `;
@@ -1199,7 +1025,7 @@ container.appendChild(div);
 CONFIG
 ===================================================== */
 const MAX_STORAGE_MB = 4.5;            // configurable storage limit (localStorage is ~5 MB)
-const LONG_BREAK_MS  = 10*60*1000;     // 10 minutes of silence = long interruption
+const LONG_BREAK_MS = 5*60*1000; // five minutes of genuine silence
 const IMG_MAX_SIDE = 1400, IMG_QUALITY = .6;
 
 /* =====================================================
@@ -1207,26 +1033,10 @@ CLEAN READING TEXT -> SEGMENTS (sentences)
 Captions, page numbers, figure/table labels are dropped.
 ===================================================== */
 function buildSegments(text){
-  const raw = (text||"").match(/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g) || [];
-  const out = [];
-  raw.forEach(s=>{
-    s = s.trim();
-    if(!/[a-z]/i.test(s)) return;                                   // numbers / symbols only
-    if(/^(fig(ure)?|table|photo|source|image|illustration|diagram|page)\b/i.test(s)) return;
-    const n = tokenize(s).length;
-    if(n < 2 && !/[!?.]$/.test(s)) return;                          // lone header word
-    if(n > 30){                                                     // split very long sentences
-      let cur = "";
-      s.split(/(?<=[,;:])\s+/).forEach(part=>{
-        cur += (cur?" ":"") + part;
-        if(tokenize(cur).length >= 8){ out.push(cur); cur=""; }
-      });
-      if(cur){ if(out.length && tokenize(cur).length<4) out[out.length-1]+=" "+cur; else out.push(cur); }
-    } else out.push(s);
-  });
-  return out;
+  // One stable expected word sequence per PDF page; display the complete page at once.
+  const pageText=String(text||"").replace(/\r/g,"").trim();
+  return tokenize(pageText).length ? [pageText] : [];
 }
-
 window.editRef = function(n,val){
   const p = window.__pp && window.__pp[n];
   if(!p) return;
@@ -1234,7 +1044,7 @@ window.editRef = function(n,val){
   p.segments = buildSegments(p.text);
   saveBooks();
   const c = document.getElementById("segCount"+n);
-  if(c) c.textContent = p.segments.length+" reading sentence(s)";
+  if(c) c.textContent = p.segments.length+" reading paragraph(s)";
 };
 
 /* =====================================================
@@ -1256,27 +1066,22 @@ function shrinkImage(src){
 }
 function hashStr(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return h+":"+s.length; }
 async function prepareStorage(pages){
-  const seen = new Set(), keep = [];
+  // Never deduplicate pages: identical-looking pages can be intentional and page boundaries must remain stable.
   for(const p of pages){
-    p.image = await shrinkImage(p.image);
-    const h = hashStr(p.image);
-    if(seen.has(h)) continue;                 // duplicate image
-    seen.add(h);
-    p.segments = buildSegments(p.text);
-    p.transcript = "";                        // transcripts are never stored
-    keep.push(p);
+    p.image=await shrinkImage(p.image);
+    p.segments=buildSegments(p.text||"");
+    p.transcript="";
   }
-  pages.length = 0;
-  keep.forEach((p,i)=>{ p.pageNumber=i+1; pages.push(p); });
-  const used = JSON.stringify(books).length + JSON.stringify(pages).length;
-  return used <= MAX_STORAGE_MB*1024*1024;
+  const used=JSON.stringify(books).length+JSON.stringify(pages).length;
+  return used<=MAX_STORAGE_MB*1024*1024;
 }
 
 /* =====================================================
 READING SESSION
 ===================================================== */
-let F = [], prog = null, sessionActive = false;
+let F = [], prog = null, sessionActive = false, segmentStartedAt = Date.now();
 let bufWords = [], interimWords = [], ptr = 0;
+let recognitionSlots = [], committedSlotCount = 0, silenceSince = Date.now(), recoveryFailures = 0, recoveryNeedsTap = false;
 let restartTimer = null, idleTimer = null;
 const PKEY = ()=>"appearich_progress_"+currentChapterId;
 
@@ -1292,23 +1097,27 @@ function buildFlat(chapter){
 const firstIdxOfPage = pi=>F.findIndex(x=>x.p===pi);
 function resetBuffer(){ bufWords=[]; interimWords=[]; ptr=0; }
 function saveProgress(){ try{ localStorage.setItem(PKEY(),JSON.stringify(prog)); }catch(e){} }
-function touch(){ prog.lastActive = Date.now(); }
+function touch(){ if(prog) prog.lastActive=Date.now(); }
 
 window.startChapter = function(){
-  const ch = getCurrentChapter();
+  const ch=getCurrentChapter();
   if(!ch) return;
+  const badPages=ch.pages.filter(pg=>!tokenize(pg.text||"").length).map(pg=>pg.pageNumber);
+  if(badPages.length){
+    alert("Some pages have no selectable PDF text. Ask the parent to check page(s): "+badPages.join(", ")+" in the chapter preview. No text was guessed or extracted from images.");
+    return;
+  }
   buildFlat(ch);
-  if(!F.length){ alert("No reading text found in this chapter. Open the chapter and check the reading text of each page."); return; }
-  try{ prog = JSON.parse(localStorage.getItem(PKEY())); }catch(e){ prog = null; }
-  if(!prog || typeof prog.cursor!=="number") prog = {cursor:0,reached:0,seg:[],lastActive:0};
-  prog.reached = Math.min(prog.reached,F.length);
-  prog.cursor  = prog.reached>=F.length ? 0 : Math.min(prog.cursor,prog.reached);
+  if(!F.length){alert("No reading text was found. Ask the parent to check the PDF text extraction.");return;}
+  try{prog=JSON.parse(localStorage.getItem(PKEY()));}catch(e){prog=null;}
+  if(!prog||typeof prog.cursor!=="number") prog={cursor:0,reached:0,seg:[],lastActive:0};
+  prog.reached=Math.min(prog.reached,F.length);
+  prog.cursor=prog.reached>=F.length?0:Math.min(prog.cursor,prog.reached);
   resetBuffer();
   loadReaderPage();
   showSection("readerSection");
-  if(prog.reached>0 && Date.now()-(prog.lastActive||0) >= LONG_BREAK_MS) showWelcome();
+  if(prog.reached>0 && Date.now()-(prog.lastActive||0)>=LONG_BREAK_MS) showWelcome();
 };
-
 function loadReaderPage(){
   const ch = getCurrentChapter();
   const it = F[prog.cursor];
@@ -1317,7 +1126,7 @@ function loadReaderPage(){
   document.getElementById("readerChapterTitle").textContent = ch.title;
   document.getElementById("readerPageTitle").textContent = `Page ${pg.pageNumber} of ${ch.pages.length}`;
   document.getElementById("readerImage").src = pg.image;
-  renderSegments(it.p);
+segmentStartedAt=Date.now(); renderSegments(it.p);
   document.getElementById("backButton").disabled = F[0].p===it.p;
   document.getElementById("continueHereButton").classList.toggle("hidden", prog.cursor>=prog.reached);
   document.getElementById("pageResult").innerHTML = "";
@@ -1325,20 +1134,20 @@ function loadReaderPage(){
   updateChapterProgress();
 }
 
-function renderSegments(pi){
-  const box = document.getElementById("referenceText");
-  box.innerHTML = "";
-  F.forEach((x,i)=>{
-    if(x.p!==pi) return;
-    const st = i===prog.cursor ? "cur" : i<prog.reached ? "done" : i===prog.reached ? "next" : "lock";
-    const d = document.createElement("div");
-    d.className = "seg "+st;
-    d.textContent = (st==="cur"?"→ ":st==="done"?"✓ ":st==="lock"?"🔒 ":"• ")+x.text;
-    if(i<=prog.reached) d.onclick = ()=>jumpTo(i);   // never beyond what was reached
-    box.appendChild(d);
-    if(st==="cur") setTimeout(()=>d.scrollIntoView({block:"nearest"}),0);
-  });
-}
+function renderSegments(pi){ const box=document.getElementById("referenceText"); box.innerHTML=""; const items=F.filter(x=>x.p===pi); const full=document.createElement("div"); full.style.whiteSpace="pre-wrap"; full.style.fontSize="22px"; full.style.lineHeight="1.8"; full.style.padding="8px"; full.textContent=items.map(x=>x.text).join("\n\n"); box.appendChild(full); const note=document.createElement("div"); note.className="small"; note.style.marginTop="12px"; note.textContent="Read the whole page at your own pace. It will move on only when the reading is clear enough."; box.appendChild(note); }
+
+
+
+
+
+
+
+
+
+
+
+
+
 function jumpTo(i){
   if(i>prog.reached) return;
   prog.cursor = i; resetBuffer(); loadReaderPage(); saveProgress();
@@ -1357,113 +1166,147 @@ function updateChapterProgress(){
   document.getElementById("progressBar").style.width = percent+"%";
 }
 
-/* ---------- continuous microphone ---------- */
+/* ---------- speech recognition and silence recovery ---------- */
 function startListening(){
   if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){
-    alert("Speech recognition is not supported here. Please use Chrome or Edge.");
+    document.getElementById("readingStatus").textContent="This browser cannot listen for reading. Please ask an adult to open this in Chrome or Edge.";
     return false;
   }
-  sessionActive = true; touch(); resetBuffer();
+  sessionActive=true;
+  recoveryNeedsTap=false;
+  silenceSince=Date.now();
   launch();
   clearInterval(idleTimer);
-  idleTimer = setInterval(()=>{ saveProgress(); checkIdle(); },15000);
+  idleTimer=setInterval(()=>{saveProgress();checkIdle();},1000);
+  resetRecordingUI();
   return true;
 }
 function launch(){
   if(!sessionActive) return;
-  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
-  const r = new SR();
-  r.lang="en-US"; r.continuous=true; r.interimResults=true;
-  r.onstart = resetRecordingUI;
-  r.onresult = ev=>{
-    interimWords = [];
-    for(let i=ev.resultIndex;i<ev.results.length;i++){
-      const t = tokenize(ev.results[i][0].transcript);
-      if(ev.results[i].isFinal) bufWords.push(...t); else interimWords.push(...t);
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const r=new SR();
+  r.lang="en-US";r.continuous=true;r.interimResults=true;
+  recognitionSlots=[];committedSlotCount=0;
+  r.onstart=()=>{recoveryFailures=0;resetRecordingUI();};
+  r.onresult=ev=>{
+    recognitionSlots=Array.from(ev.results||[]).map(result=>({text:result[0]?.transcript||"",final:!!result.isFinal}));
+    // Commit only newly final, consecutive slots; interim revisions stay provisional.
+    while(committedSlotCount<recognitionSlots.length && recognitionSlots[committedSlotCount].final){
+      const words=tokenize(recognitionSlots[committedSlotCount].text);
+      if(words.length){bufWords.push(...words);silenceSince=Date.now();touch();}
+      committedSlotCount++;
     }
-    if(bufWords.length+interimWords.length) touch();
+    interimWords=[];
+    for(let i=committedSlotCount;i<recognitionSlots.length;i++){
+      if(!recognitionSlots[i].final) interimWords.push(...tokenize(recognitionSlots[i].text));
+    }
+    if(interimWords.length) silenceSince=Date.now();
     advance();
   };
-  r.onerror = e=>{
-    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ alert("Please allow microphone access."); stopSession(); }
+  r.onerror=e=>{
+    // 'no-speech' is silence, not a technical failure. Do not reset silenceSince on service restarts.
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+      sessionActive=false;recoveryNeedsTap=true;saveProgress();resetRecordingUI();
+      document.getElementById("readingStatus").textContent="Please ask an adult to allow microphone access, then tap Continue Reading.";
+      return;
+    }
+    if(e.error!=="no-speech" && e.error!=="aborted") recoveryFailures++;
   };
-  r.onend = ()=>{                                  // browser stopped it: restart silently
-    interimWords = [];
-    if(sessionActive){ clearTimeout(restartTimer); restartTimer = setTimeout(launch,300); }
+  r.onend=()=>{
+    // Preserve final words already committed; discard only provisional speech from the ended service.
+    interimWords=[];
+    if(!sessionActive) return;
+    if(recoveryFailures>=3){
+      sessionActive=false;recoveryNeedsTap=true;saveProgress();resetRecordingUI();
+      document.getElementById("readingStatus").textContent="Listening paused. Tap Continue Reading to try again. Your place is saved.";
+      return;
+    }
+    clearTimeout(restartTimer);restartTimer=setTimeout(launch,500);
   };
-  window._rec = r;
-  try{ r.start(); }catch(e){}
+  window._rec=r;
+  try{r.start();}catch(e){
+    recoveryFailures++;
+    clearTimeout(restartTimer);
+    if(sessionActive) restartTimer=setTimeout(launch,800);
+  }
 }
 function stopSession(){
-  sessionActive = false;
-  clearTimeout(restartTimer); clearInterval(idleTimer);
-  try{ window._rec && window._rec.abort(); }catch(e){}
-  window._rec = null;
+  sessionActive=false;
+  clearTimeout(restartTimer);clearInterval(idleTimer);
+  try{window._rec&&window._rec.abort();}catch(e){}
+  window._rec=null;
   if(prog) saveProgress();
   resetRecordingUI();
 }
-window.startRecording = function(){ if(!sessionActive && F.length){ startListening(); resetRecordingUI(); } };
-window.stopRecording = stopSession;
-
+window.startRecording=function(){if(!sessionActive&&F.length){startListening();}};
+window.stopRecording=stopSession;
 function resetRecordingUI(){
-  const s = document.getElementById("readingStatus");
-  document.getElementById("startButton").disabled = sessionActive;
-  document.getElementById("stopButton").disabled = !sessionActive;
-  s.className = sessionActive ? "status listening" : "status";
-  s.textContent = sessionActive ? "🎤 Listening... just read" : "Tap Start Reading";
+  const s=document.getElementById("readingStatus");
+  document.getElementById("startButton").disabled=sessionActive;
+  document.getElementById("stopButton").disabled=!sessionActive;
+  s.className=sessionActive?"status listening":"status";
+  if(sessionActive) s.textContent="🎤 Listening. Take your time.";
+  else if(!recoveryNeedsTap) s.textContent="Tap Start Reading";
 }
-
-/* ---------- long interruption ---------- */
 function checkIdle(){
-  if(sessionActive && prog && Date.now()-prog.lastActive >= LONG_BREAK_MS) showWelcome();
+  if(sessionActive && silenceSince && Date.now()-silenceSince>=LONG_BREAK_MS) showWelcome();
 }
-function showWelcome(){ stopSession(); document.getElementById("welcomeBack").classList.remove("hidden"); }
-window.welcomeContinue = function(){
+function showWelcome(){
+  stopSession();
+  document.getElementById("welcomeBack").querySelector("h1").textContent="Ready to continue?";
+  document.getElementById("welcomeBack").querySelector("p").textContent="Your place is saved. Tap Continue when you are ready.";
+  document.getElementById("welcomeBack").classList.remove("hidden");
+}
+window.welcomeContinue=function(){
   document.getElementById("welcomeBack").classList.add("hidden");
-  startListening(); resetRecordingUI();            // resumes at the saved cursor
+  startListening();
 };
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkIdle(); });
-window.addEventListener("beforeunload",()=>{ if(prog) saveProgress(); });
-
+document.addEventListener("visibilitychange",()=>{if(!document.hidden) checkIdle();});
+window.addEventListener("beforeunload",()=>{if(prog) saveProgress();});
 /* ---------- follow the child's reading ---------- */
 function advance(){
-  let moved = false;
-  for(let guard=0; guard<6; guard++){
-    const it = F[prog.cursor];
-    if(!it) break;
-    const words = bufWords.concat(interimWords).slice(ptr);
-    if(words.length < Math.ceil(it.ref.length*.5)) break;
-    const ops = alignWords(it.ref, words.slice(0,it.ref.length*2+6));
-    let last=-1, r=0;
-    ops.forEach((o,k)=>{
-      if(o.type!=="extra"){
-        if((o.type==="correct"||o.type==="changed") && r>=it.ref.length-2) last=k;
-        r++;
+  if(!prog||!F[prog.cursor]) return;
+  const it=F[prog.cursor];
+const words=bufWords.slice(ptr); // only finalized speech results can affect the score
+  if(!words.length) return;
+  // A paragraph is not finalized from a brief pause or interim transcript alone.
+  const minReadMs=Math.max(2500,it.ref.length*280);
+  if(Date.now()-segmentStartedAt<minReadMs) return;
+  if(words.length<Math.max(2,Math.ceil(it.ref.length*.65))) return;
+  const ops=alignWords(it.ref,words.slice(0,it.ref.length+8));
+  let last=-1, matched=0, refCount=0, trailingMatches=0;
+  ops.forEach((op,k)=>{
+    if(op.type!=="extra"){
+      refCount++;
+      if(op.type==="correct"||op.type==="changed"){
+        matched++;
+        if(refCount>=it.ref.length-1) trailingMatches++;
+        last=k;
       }
-    });
-    if(last<0) break;
-    const used = ops.slice(0,last+1);
-    const matched = used.filter(o=>o.type==="correct"||o.type==="changed").length;
-    if(matched < it.ref.length*.5) break;          // not really this sentence yet
-    const refUsed = used.filter(o=>o.type!=="extra").length;
-    const c = used.filter(o=>o.type==="correct").length;
-    const ch = used.filter(o=>o.type==="changed").length;
-    const e = used.filter(o=>o.type==="extra").length;
-    const m = used.filter(o=>o.type==="missing").length + (it.ref.length-refUsed);
-    const consumed = used.filter(o=>o.spoken).length;
-    const fresh = prog.cursor===prog.reached;      // rereading never changes saved scores
-    if(fresh){ prog.seg[prog.cursor]=[c,m,ch,e,it.ref.length]; prog.reached++; }
-    ptr += consumed;
-    if(ptr>150 && ptr<=bufWords.length){ bufWords.splice(0,ptr); ptr=0; }
-    const prevPage = it.p;
-    prog.cursor++;
-    moved = true;
-    if(prog.cursor>=F.length){ if(fresh) finalizePage(prevPage); touch(); saveProgress(); stopSession(); finishChapter(); return; }
-    if(fresh && F[prog.cursor].p!==prevPage) finalizePage(prevPage);   // page done -> next page opens by itself
-  }
-  if(moved){ touch(); saveProgress(); loadReaderPage(); }
+    }
+  });
+  // Require reliable alignment near the paragraph end. Do not label uncertain gaps as mistakes.
+  if(last<0||matched<Math.ceil(it.ref.length*.75)||trailingMatches<1) return;
+  const used=ops.slice(0,last+1);
+  const c=used.filter(o=>o.type==="correct").length;
+  const ch=used.filter(o=>o.type==="changed").length;
+  const e=used.filter(o=>o.type==="extra").length;
+  const refUsed=used.filter(o=>o.type!=="extra").length;
+  const m=used.filter(o=>o.type==="missing").length+Math.max(0,it.ref.length-refUsed);
+  const consumed=used.filter(o=>o.spoken).length;
+  if(!consumed) return;
+  const fresh=prog.cursor===prog.reached;
+  if(fresh){prog.seg[prog.cursor]=[c,m,ch,e,it.ref.length];prog.reached++;}
+  ptr+=consumed;
+  if(ptr>150&&ptr<=bufWords.length){bufWords.splice(0,ptr);ptr=0;}
+  const prevPage=it.p;
+  prog.cursor++;
+  segmentStartedAt=Date.now();
+  touch();saveProgress();
+  if(prog.cursor>=F.length){if(fresh)finalizePage(prevPage);stopSession();finishChapter();return;}
+  if(fresh&&F[prog.cursor].p!==prevPage) finalizePage(prevPage);
+  loadReaderPage();
 }
-
 function finalizePage(pi){
   const ch = getCurrentChapter(), pg = ch.pages[pi];
   let c=0,m=0,x=0,e=0,n=0;
@@ -1995,12 +1838,9 @@ reader.readAsDataURL(file);
 }
 );
 }
-function cleanOCR(text){
-return text
-.replace(/\r/g," ")
-.replace(/\n+/g," ")
-.replace(/\s+/g," ")
-.trim();
+function cleanExtractedText(text){
+  // Preserve page line breaks; never flatten paragraphs into one unstructured string.
+  return String(text||"").replace(/\r/g,"").split("\n").map(line=>line.replace(/[ \t]+/g," ").trim()).filter((line,i,all)=>line!==""||(i>0&&all[i-1]!=="")).join("\n").trim();
 }
 function escapeHTML(value){
 return String(value || "")

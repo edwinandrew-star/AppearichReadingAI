@@ -288,7 +288,7 @@ button:disabled{
 #readerSection .card{box-shadow:none;background:transparent;padding:8px 0;margin-bottom:8px}
 #readerSection .readerGrid{grid-template-columns:1fr 1.3fr;align-items:start}
 #readerSection .bookPage{background:white;border-radius:16px;padding:10px}
-#readerSection .bookPage img{width:100%;border-radius:10px}
+#readerSection .bookPage img{display:block;width:100%;height:auto;min-height:300px;max-height:78vh;object-fit:contain;border-radius:10px;background:#f2f2f2}
 #readerSection #readerChapterTitle{font-size:16px;color:#666;font-weight:normal;margin:6px 0}
 #readerSection #readingStatus{font-size:18px;padding:8px 0}
 #readerSection #startButton{font-size:24px;padding:18px 34px;border-radius:40px}
@@ -298,8 +298,12 @@ button:disabled{
 #readerSection #referenceText{background:white;border-radius:16px;padding:12px}
 #readerSection .seg{font-size:24px;line-height:1.6}
 #readerSection .seg.lock{opacity:.35}
+#readerSection .readWord{background:#dff5e5;color:#14532d;border-radius:4px}
+#readerSection .currentWord{background:#fff0a6;border-bottom:3px solid #e1b900;border-radius:4px}
+#readerSection .pendingWord{background:transparent}
+#readerSection .liveReadText{overflow-wrap:anywhere}
 #readerSection .progressOuter{height:8px}
-@media(max-width:750px){#readerSection .readerGrid{grid-template-columns:1fr}#readerSection .bookPage img{max-height:220px;object-fit:contain}}
+@media(max-width:750px){#readerSection .readerGrid{grid-template-columns:1fr}#readerSection .bookPage img{width:100%;height:auto;min-height:300px;max-height:78vh;object-fit:contain}}
 </style>
 </head>
 <body>
@@ -1125,8 +1129,11 @@ function loadReaderPage(){
   const pg = ch.pages[it.p];
   document.getElementById("readerChapterTitle").textContent = ch.title;
   document.getElementById("readerPageTitle").textContent = `Page ${pg.pageNumber} of ${ch.pages.length}`;
-  document.getElementById("readerImage").src = pg.image;
-segmentStartedAt=Date.now(); renderSegments(it.p);
+  const pageImage=document.getElementById("readerImage");
+  pageImage.alt=`Full PDF page ${pg.pageNumber}`;
+  pageImage.onerror=()=>{pageImage.alt="Page image unavailable. Please ask an adult to re-upload this page.";pageImage.style.minHeight="120px";};
+  pageImage.src = pg.image || "";
+  segmentStartedAt=Date.now(); renderSegments(it.p,bufWords.slice(ptr).concat(interimWords));
   document.getElementById("backButton").disabled = F[0].p===it.p;
   document.getElementById("continueHereButton").classList.toggle("hidden", prog.cursor>=prog.reached);
   document.getElementById("pageResult").innerHTML = "";
@@ -1134,7 +1141,51 @@ segmentStartedAt=Date.now(); renderSegments(it.p);
   updateChapterProgress();
 }
 
-function renderSegments(pi){ const box=document.getElementById("referenceText"); box.innerHTML=""; const items=F.filter(x=>x.p===pi); const full=document.createElement("div"); full.style.whiteSpace="pre-wrap"; full.style.fontSize="22px"; full.style.lineHeight="1.8"; full.style.padding="8px"; full.textContent=items.map(x=>x.text).join("\n\n"); box.appendChild(full); const note=document.createElement("div"); note.className="small"; note.style.marginTop="12px"; note.textContent="Read the whole page at your own pace. It will move on only when the reading is clear enough."; box.appendChild(note); }
+function renderSegments(pi, spokenWords=[]){
+  const box=document.getElementById("referenceText");
+  if(!box) return;
+  box.innerHTML="";
+  const chapter=getCurrentChapter();
+  const page=chapter&&chapter.pages[pi];
+  const text=String(page?.text||F.find(x=>x.p===pi)?.text||"");
+  const refWords=tokenize(text);
+  const heard=(spokenWords||[]).map(w=>String(w).toLowerCase());
+  // Estimate only a visual reading position; final scoring still uses final speech results.
+  let ri=0,hi=0,readThrough=0;
+  while(ri<refWords.length && hi<heard.length){
+    if(wordSimilarity(refWords[ri],heard[hi])>=0.70){ri++;hi++;readThrough=ri;continue;}
+    let found=-1;
+    for(let k=ri+1;k<Math.min(refWords.length,ri+4);k++){
+      if(wordSimilarity(refWords[k],heard[hi])>=0.78){found=k;break;}
+    }
+    if(found>=0){ri=found+1;hi++;readThrough=ri;}
+    else hi++;
+  }
+  const full=document.createElement("div");
+  full.className="liveReadText";
+  full.style.whiteSpace="pre-wrap";
+  full.style.fontSize="22px";
+  full.style.lineHeight="1.8";
+  full.style.padding="8px";
+  const wordPattern=/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu;
+  let last=0,idx=0,match;
+  while((match=wordPattern.exec(text))!==null){
+    if(match.index>last) full.appendChild(document.createTextNode(text.slice(last,match.index)));
+    const span=document.createElement("span");
+    span.textContent=match[0];
+    span.className=idx<readThrough?"readWord":idx===readThrough&&sessionActive?"currentWord":"pendingWord";
+    span.dataset.wordIndex=String(idx);
+    full.appendChild(span);
+    idx++;last=match.index+match[0].length;
+  }
+  if(last<text.length) full.appendChild(document.createTextNode(text.slice(last)));
+  box.appendChild(full);
+  const note=document.createElement("div");
+  note.className="small";
+  note.style.marginTop="12px";
+  note.textContent=sessionActive?"Listening while you read. The full page image is shown beside this guide.":"The full page is shown above. Start reading aloud to begin supervision.";
+  box.appendChild(note);
+}
 
 
 
@@ -1177,7 +1228,7 @@ function startListening(){
   silenceSince=Date.now();
   launch();
   clearInterval(idleTimer);
-  idleTimer=setInterval(()=>{saveProgress();checkIdle();},1000);
+  idleTimer=setInterval(()=>{saveProgress();checkIdle();if(sessionActive) advance();},1000);
   resetRecordingUI();
   return true;
 }
@@ -1201,6 +1252,12 @@ function launch(){
       if(!recognitionSlots[i].final) interimWords.push(...tokenize(recognitionSlots[i].text));
     }
     if(interimWords.length) silenceSince=Date.now();
+    if(prog&&F[prog.cursor]) renderSegments(F[prog.cursor].p,bufWords.slice(ptr).concat(interimWords));
+    const heard=bufWords.slice(ptr);
+    if(heard.length){
+      const status=document.getElementById("readingStatus");
+      if(status&&sessionActive) status.textContent="🎤 I can hear reading. Keep going at your own pace.";
+    }
     advance();
   };
   r.onerror=e=>{

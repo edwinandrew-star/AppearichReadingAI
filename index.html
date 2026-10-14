@@ -1155,83 +1155,41 @@ function loadReaderPage(){
 }
 
 function renderLiveTranscript(referenceText, spokenWords=[]){
+  // Keep the live transcript lightweight: no per-word DOM spans or live highlighting.
   const box=document.getElementById("liveTranscript");
   const status=document.getElementById("comparisonStatus");
   if(!box) return;
-  box.innerHTML="";
-  const heard=(spokenWords||[]).map(w=>String(w).toLowerCase()).filter(Boolean);
-  if(!heard.length){
-    box.textContent=sessionActive?"Listening… your words will appear here.":"Tap Start Reading. Recognized words will appear here as the child speaks.";
-    if(status) status.textContent=sessionActive?"Listening for the next words…":"Waiting for speech…";
-    return;
-  }
-  const reference=tokenize(referenceText||"");
-  const operations=alignWords(reference,heard);
-  const heardOps=operations.filter(op=>op.spoken);
-  let correct=0,changed=0,extra=0;
-  heardOps.forEach(op=>{
-    const span=document.createElement("span");
-    span.className="heardWord "+(op.type==="correct"?"correct":op.type==="changed"?"changed":"extra");
-    span.textContent=op.spoken+" ";
-    if(op.type==="changed") span.title="Textbook says: "+op.reference;
-    if(op.type==="correct") correct++;
-    else if(op.type==="changed") changed++;
-    else extra++;
-    box.appendChild(span);
-  });
-  if(status) status.textContent=`Live comparison: ${correct} likely correct · ${changed} possible mismatches · ${extra} extra words. Yellow words are uncertain; speech recognition can make mistakes.`;
+  const words=(spokenWords||[]).map(w=>String(w)).filter(Boolean);
+  box.textContent=words.length ? words.join(" ") : (sessionActive ? "Listening… recognized words will appear here." : "Tap Start Reading. Recognized words will appear here as the child speaks.");
+  if(status) status.textContent=sessionActive
+    ? "Live speech-to-text is running. The comparison will be reviewed when this page is finished."
+    : "Waiting for speech…";
 }
 
 function renderSegments(pi, spokenWords=[]){
+  // Render the reference page as plain text. Avoid word-by-word highlighting,
+  // repeated alignment, and large numbers of DOM nodes while the child reads.
   const box=document.getElementById("referenceText");
   if(!box) return;
-  box.innerHTML="";
+  box.textContent="";
   const chapter=getCurrentChapter();
   const page=chapter&&chapter.pages[pi];
   const text=String(page?.text||F.find(x=>x.p===pi)?.text||"");
-  const refWords=tokenize(text);
-  const heard=(spokenWords||[]).map(w=>String(w).toLowerCase());
-  // Estimate only a visual reading position; final scoring still uses final speech results.
-  let ri=0,hi=0,readThrough=0;
-  while(ri<refWords.length && hi<heard.length){
-    if(wordSimilarity(refWords[ri],heard[hi])>=0.70){ri++;hi++;readThrough=ri;continue;}
-    let found=-1;
-    for(let k=ri+1;k<Math.min(refWords.length,ri+4);k++){
-      if(wordSimilarity(refWords[k],heard[hi])>=0.78){found=k;break;}
-    }
-    if(found>=0){ri=found+1;hi++;readThrough=ri;}
-    else hi++;
-  }
   const full=document.createElement("div");
   full.className="liveReadText";
   full.style.whiteSpace="pre-wrap";
   full.style.fontSize="22px";
   full.style.lineHeight="1.8";
   full.style.padding="8px";
-  const wordPattern=/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu;
-  let last=0,idx=0,match;
-  while((match=wordPattern.exec(text))!==null){
-    if(match.index>last) full.appendChild(document.createTextNode(text.slice(last,match.index)));
-    const span=document.createElement("span");
-    span.textContent=match[0];
-    span.className=idx<readThrough?"readWord":idx===readThrough&&sessionActive?"currentWord":"pendingWord";
-    span.dataset.wordIndex=String(idx);
-    full.appendChild(span);
-    idx++;last=match.index+match[0].length;
-  }
-  if(last<text.length) full.appendChild(document.createTextNode(text.slice(last)));
+  full.textContent=text;
   box.appendChild(full);
   const note=document.createElement("div");
   note.className="small";
   note.style.marginTop="12px";
-  note.textContent=sessionActive?"Listening while you read. The full page image is shown beside this guide.":"The full page is shown above. Start reading aloud to begin supervision.";
+  note.textContent="Read the physical textbook page aloud. Your speech-to-text appears beside the reference. The app checks the page when you reach its end.";
   box.appendChild(note);
   renderLiveTranscript(text, spokenWords);
 }
-
-
-
-
 
 
 
@@ -1374,9 +1332,9 @@ function advance(){
   // Wait until the child has had enough time to read this page and speech has settled.
   const expected = it.ref;
   const elapsed = Date.now() - segmentStartedAt;
-  const minimumReadMs = Math.max(8000, expected.length * 180);
+  const minimumReadMs = Math.max(10000, expected.length * 220);
   const quietMs = Date.now() - silenceSince;
-  if(elapsed < minimumReadMs || quietMs < 2200) return;
+  if(elapsed < minimumReadMs || quietMs < 2500) return;
 
   // Align what was heard to the complete page. A page can only finish when the
   // recognized reading reaches the final words in order; matching an early part
@@ -1408,8 +1366,8 @@ function advance(){
   // Require meaningful coverage and evidence from the end of the page.
   // A child cannot jump forward merely by reading the first paragraph.
   const coverage = matched / expected.length;
-  const endReached = lastMatchedRef >= Math.max(0, expected.length - 3);
-  if(coverage < 0.60 || !endReached || consumed === 0) return;
+  const endReached = lastMatchedRef >= Math.max(0, expected.length - 2);
+  if(coverage < 0.70 || !endReached || consumed === 0) return;
 
   const fresh = prog.cursor === prog.reached;
   if(fresh){

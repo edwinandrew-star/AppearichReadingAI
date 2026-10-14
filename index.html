@@ -287,6 +287,16 @@ button:disabled{
 #readerSection h3,#readerSection .bookPage .small,#readerSection .card>p{display:none}
 #readerSection .card{box-shadow:none;background:transparent;padding:8px 0;margin-bottom:8px}
 #readerSection .readerGrid{grid-template-columns:1fr 1.3fr;align-items:start}
+#readerSection .compareGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+#readerSection .compareCard{min-width:0;background:white;border:1px solid #e8e8e8;border-radius:14px;padding:12px}
+#readerSection .compareCard h3{display:block;font-size:16px;margin:0 0 10px}
+#readerSection #referenceText{max-height:58vh;overflow:auto;font-size:18px}
+#readerSection #liveTranscript{display:block;min-height:180px;max-height:58vh;overflow:auto;background:#f7f7f7;color:#080808;font-size:20px;overflow-wrap:anywhere}
+#readerSection .heardWord{border-radius:4px;padding:1px 2px;margin-right:2px}
+#readerSection .heardWord.correct{background:#dff5e5;color:#14532d}
+#readerSection .heardWord.changed{background:#fff0a6;color:#795d00}
+#readerSection .heardWord.extra{background:#e4e4e4;color:#555}
+#readerSection .comparisonStatus{font-size:13px;color:#555;margin-top:8px;line-height:1.5}
 #readerSection .bookPage{background:white;border-radius:16px;padding:10px}
 #readerSection .bookPage img{display:block;width:100%;height:auto;min-height:300px;max-height:78vh;object-fit:contain;border-radius:10px;background:#f2f2f2}
 #readerSection #readerChapterTitle{font-size:16px;color:#666;font-weight:normal;margin:6px 0}
@@ -303,7 +313,7 @@ button:disabled{
 #readerSection .pendingWord{background:transparent}
 #readerSection .liveReadText{overflow-wrap:anywhere}
 #readerSection .progressOuter{height:8px}
-@media(max-width:750px){#readerSection .readerGrid{grid-template-columns:1fr}#readerSection .bookPage img{width:100%;height:auto;min-height:300px;max-height:78vh;object-fit:contain}}
+@media(max-width:750px){#readerSection .readerGrid{grid-template-columns:1fr}#readerSection .compareGrid{grid-template-columns:1fr}#readerSection #referenceText,#readerSection #liveTranscript{max-height:40vh}#readerSection .bookPage img{width:100%;height:auto;min-height:300px;max-height:78vh;object-fit:contain}}
 </style>
 </head>
 <body>
@@ -489,17 +499,15 @@ The phone acts as the AI supervisor.
 <button id="backButton" class="secondary" onclick="goBack()">← Back</button>
 <button id="continueHereButton" class="yellow hidden" onclick="continueHere()">Continue from here</button>
 </div>
-<div class="card">
-<h3>Read this</h3>
-<div id="referenceText"
-     class="reference">
+<div class="compareGrid">
+<div class="card compareCard">
+<h3>📖 Exact textbook text</h3>
+<div id="referenceText" class="reference"></div>
 </div>
-</div>
-<div class="card hidden">
-<h3>What AI Heard</h3>
-<div id="liveTranscript"
-     class="transcript">
-Nothing recorded yet.
+<div class="card compareCard">
+<h3>🎤 What the child says</h3>
+<div id="liveTranscript" class="transcript" aria-live="polite">Tap Start Reading. Recognized words will appear here as the child speaks.</div>
+<div id="comparisonStatus" class="comparisonStatus">Waiting for speech…</div>
 </div>
 </div>
 </div>
@@ -1133,12 +1141,45 @@ function loadReaderPage(){
   pageImage.alt=`Full PDF page ${pg.pageNumber}`;
   pageImage.onerror=()=>{pageImage.alt="Page image unavailable. Please ask an adult to re-upload this page.";pageImage.style.minHeight="120px";};
   pageImage.src = pg.image || "";
-  segmentStartedAt=Date.now(); renderSegments(it.p,bufWords.slice(ptr).concat(interimWords));
+  segmentStartedAt=Date.now();
+  const liveBox=document.getElementById("liveTranscript");
+  if(liveBox) liveBox.textContent="Start reading this page aloud. Your recognized words will appear here.";
+  const compareStatus=document.getElementById("comparisonStatus");
+  if(compareStatus) compareStatus.textContent="Waiting for speech…";
+  renderSegments(it.p,bufWords.slice(ptr).concat(interimWords));
   document.getElementById("backButton").disabled = F[0].p===it.p;
   document.getElementById("continueHereButton").classList.toggle("hidden", prog.cursor>=prog.reached);
   document.getElementById("pageResult").innerHTML = "";
   resetRecordingUI();
   updateChapterProgress();
+}
+
+function renderLiveTranscript(referenceText, spokenWords=[]){
+  const box=document.getElementById("liveTranscript");
+  const status=document.getElementById("comparisonStatus");
+  if(!box) return;
+  box.innerHTML="";
+  const heard=(spokenWords||[]).map(w=>String(w).toLowerCase()).filter(Boolean);
+  if(!heard.length){
+    box.textContent=sessionActive?"Listening… your words will appear here.":"Tap Start Reading. Recognized words will appear here as the child speaks.";
+    if(status) status.textContent=sessionActive?"Listening for the next words…":"Waiting for speech…";
+    return;
+  }
+  const reference=tokenize(referenceText||"");
+  const operations=alignWords(reference,heard);
+  const heardOps=operations.filter(op=>op.spoken);
+  let correct=0,changed=0,extra=0;
+  heardOps.forEach(op=>{
+    const span=document.createElement("span");
+    span.className="heardWord "+(op.type==="correct"?"correct":op.type==="changed"?"changed":"extra");
+    span.textContent=op.spoken+" ";
+    if(op.type==="changed") span.title="Textbook says: "+op.reference;
+    if(op.type==="correct") correct++;
+    else if(op.type==="changed") changed++;
+    else extra++;
+    box.appendChild(span);
+  });
+  if(status) status.textContent=`Live comparison: ${correct} likely correct · ${changed} possible mismatches · ${extra} extra words. Yellow words are uncertain; speech recognition can make mistakes.`;
 }
 
 function renderSegments(pi, spokenWords=[]){
@@ -1185,6 +1226,7 @@ function renderSegments(pi, spokenWords=[]){
   note.style.marginTop="12px";
   note.textContent=sessionActive?"Listening while you read. The full page image is shown beside this guide.":"The full page is shown above. Start reading aloud to begin supervision.";
   box.appendChild(note);
+  renderLiveTranscript(text, spokenWords);
 }
 
 
@@ -1322,46 +1364,88 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden) checkIdle
 window.addEventListener("beforeunload",()=>{if(prog) saveProgress();});
 /* ---------- follow the child's reading ---------- */
 function advance(){
-  if(!prog||!F[prog.cursor]) return;
-  const it=F[prog.cursor];
-const words=bufWords.slice(ptr); // only finalized speech results can affect the score
-  if(!words.length) return;
-  // A paragraph is not finalized from a brief pause or interim transcript alone.
-  const minReadMs=Math.max(2500,it.ref.length*280);
-  if(Date.now()-segmentStartedAt<minReadMs) return;
-  if(words.length<Math.max(2,Math.ceil(it.ref.length*.65))) return;
-  const ops=alignWords(it.ref,words.slice(0,it.ref.length+8));
-  let last=-1, matched=0, refCount=0, trailingMatches=0;
-  ops.forEach((op,k)=>{
-    if(op.type!=="extra"){
-      refCount++;
-      if(op.type==="correct"||op.type==="changed"){
-        matched++;
-        if(refCount>=it.ref.length-1) trailingMatches++;
-        last=k;
-      }
+  if(!sessionActive || !prog || !F[prog.cursor]) return;
+
+  const it = F[prog.cursor];
+  const words = bufWords.slice(ptr);
+  if(!words.length || !it.ref.length) return;
+
+  // Never turn pages based on interim speech or a short pause.
+  // Wait until the child has had enough time to read this page and speech has settled.
+  const expected = it.ref;
+  const elapsed = Date.now() - segmentStartedAt;
+  const minimumReadMs = Math.max(8000, expected.length * 180);
+  const quietMs = Date.now() - silenceSince;
+  if(elapsed < minimumReadMs || quietMs < 2200) return;
+
+  // Align what was heard to the complete page. A page can only finish when the
+  // recognized reading reaches the final words in order; matching an early part
+  // of the page is not enough to advance.
+  const spokenForPage = words.slice(0, expected.length + 12);
+  const ops = alignWords(expected, spokenForPage);
+  let refIndex = -1;
+  let matched = 0, correct = 0, changed = 0, extra = 0, missing = 0;
+  let lastMatchedRef = -1;
+  let consumed = 0;
+
+  for(const op of ops){
+    if(op.type === "extra"){
+      extra++;
+      if(op.spoken) consumed++;
+      continue;
     }
-  });
-  // Require reliable alignment near the paragraph end. Do not label uncertain gaps as mistakes.
-  if(last<0||matched<Math.ceil(it.ref.length*.75)||trailingMatches<1) return;
-  const used=ops.slice(0,last+1);
-  const c=used.filter(o=>o.type==="correct").length;
-  const ch=used.filter(o=>o.type==="changed").length;
-  const e=used.filter(o=>o.type==="extra").length;
-  const refUsed=used.filter(o=>o.type!=="extra").length;
-  const m=used.filter(o=>o.type==="missing").length+Math.max(0,it.ref.length-refUsed);
-  const consumed=used.filter(o=>o.spoken).length;
-  if(!consumed) return;
-  const fresh=prog.cursor===prog.reached;
-  if(fresh){prog.seg[prog.cursor]=[c,m,ch,e,it.ref.length];prog.reached++;}
-  ptr+=consumed;
-  if(ptr>150&&ptr<=bufWords.length){bufWords.splice(0,ptr);ptr=0;}
-  const prevPage=it.p;
+    refIndex++;
+    if(op.type === "correct"){
+      correct++; matched++; lastMatchedRef = refIndex;
+    } else if(op.type === "changed"){
+      changed++; matched++; lastMatchedRef = refIndex;
+    } else if(op.type === "missing"){
+      missing++;
+    }
+    if(op.spoken) consumed++;
+  }
+
+  // Require meaningful coverage and evidence from the end of the page.
+  // A child cannot jump forward merely by reading the first paragraph.
+  const coverage = matched / expected.length;
+  const endReached = lastMatchedRef >= Math.max(0, expected.length - 3);
+  if(coverage < 0.60 || !endReached || consumed === 0) return;
+
+  const fresh = prog.cursor === prog.reached;
+  if(fresh){
+    prog.seg[prog.cursor] = [correct, missing, changed, extra, expected.length];
+    prog.reached++;
+  }
+
+  ptr += consumed;
+  if(ptr > 150 && ptr <= bufWords.length){
+    bufWords.splice(0, ptr);
+    ptr = 0;
+  }
+
+  const previousPage = it.p;
+  // Keep the actual recognized speech for the chapter review, not just the score.
+  // Save the words that were aligned to this page before the buffer is advanced.
+  const chapterForTranscript = getCurrentChapter();
+  if(chapterForTranscript && chapterForTranscript.pages[previousPage]){
+    const savedPage = chapterForTranscript.pages[previousPage];
+    savedPage.transcript = words.join(" ");
+    savedPage.transcriptUpdatedAt = new Date().toISOString();
+  }
   prog.cursor++;
-  segmentStartedAt=Date.now();
-  touch();saveProgress();
-  if(prog.cursor>=F.length){if(fresh)finalizePage(prevPage);stopSession();finishChapter();return;}
-  if(fresh&&F[prog.cursor].p!==prevPage) finalizePage(prevPage);
+  segmentStartedAt = Date.now();
+  touch();
+  saveProgress();
+
+  if(fresh) finalizePage(previousPage);
+
+  if(prog.cursor >= F.length){
+    stopSession();
+    finishChapter();
+    return;
+  }
+
+  // Page turn happens only after the conservative completion checks above.
   loadReaderPage();
 }
 function finalizePage(pi){
@@ -1838,37 +1922,97 @@ showSection("reportSection");
 REPORT
 ===================================================== */
 function renderReport(chapter){
-const container =
-document.getElementById(
-"reportPagesList"
-);
-container.innerHTML="";
-chapter.pages.forEach(page=>{
-if(!page.result||page.result.auto)return;
-const div =
-document.createElement("div");
-div.className="stat";
-div.style.marginBottom="10px";
-div.innerHTML=`
-<strong>
-Page ${page.pageNumber}:
-${page.result.score}%
-</strong>
-<br>
-Correct:
-${page.result.correct}
-&nbsp; · &nbsp;
-Missing:
-${page.result.missing}
-&nbsp; · &nbsp;
-Changed:
-${page.result.changed}
-&nbsp; · &nbsp;
-Extra:
-${page.result.extra}
-`;
-container.appendChild(div);
-});
+  const container = document.getElementById("reportPagesList");
+  container.innerHTML = "";
+  chapter.pages.forEach(page=>{
+    if(!page.result || page.result.auto) return;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.marginBottom = "14px";
+
+    const title = document.createElement("h3");
+    title.textContent = `Page ${page.pageNumber} · ${page.result.score}% accuracy`;
+    card.appendChild(title);
+
+    const stats = document.createElement("p");
+    stats.className = "small";
+    stats.textContent = `Correct: ${page.result.correct} · Missing/skipped: ${page.result.missing} · Changed: ${page.result.changed} · Extra/repeated: ${page.result.extra}`;
+    card.appendChild(stats);
+
+    const columns = document.createElement("div");
+    columns.style.display = "grid";
+    columns.style.gridTemplateColumns = "repeat(auto-fit,minmax(240px,1fr))";
+    columns.style.gap = "12px";
+
+    const refPanel = document.createElement("div");
+    refPanel.style.background = "#f5f5f5";
+    refPanel.style.color = "#111";
+    refPanel.style.padding = "12px";
+    refPanel.style.borderRadius = "10px";
+    const refHeading = document.createElement("strong");
+    refHeading.textContent = "Exact textbook text";
+    refPanel.appendChild(refHeading);
+    const refBody = document.createElement("p");
+    refBody.style.whiteSpace = "pre-wrap";
+    refBody.textContent = page.text || "No reference text was saved for this page.";
+    refPanel.appendChild(refBody);
+
+    const heardPanel = document.createElement("div");
+    heardPanel.style.background = "#f5f5f5";
+    heardPanel.style.color = "#111";
+    heardPanel.style.padding = "12px";
+    heardPanel.style.borderRadius = "10px";
+    const heardHeading = document.createElement("strong");
+    heardHeading.textContent = "What the child said (speech-to-text)";
+    heardPanel.appendChild(heardHeading);
+    const heardBody = document.createElement("p");
+    heardBody.style.whiteSpace = "pre-wrap";
+    heardBody.textContent = page.transcript || "No recognized speech transcript was saved for this page.";
+    heardPanel.appendChild(heardBody);
+
+    // Explain likely issues using the same word alignment used by the app.
+    const issueBox = document.createElement("div");
+    issueBox.style.marginTop = "10px";
+    const issueHeading = document.createElement("strong");
+    issueHeading.textContent = "Words to review";
+    issueBox.appendChild(issueHeading);
+    const issues = document.createElement("ul");
+    const referenceWords = tokenize(page.text || "");
+    const spokenWords = tokenize(page.transcript || "");
+    const operations = alignWords(referenceWords, spokenWords);
+    let issueCount = 0;
+    operations.forEach(op=>{
+      if(op.type === "missing"){
+        const li = document.createElement("li");
+        li.textContent = `Possibly skipped: “${op.reference}”`;
+        issues.appendChild(li); issueCount++;
+      } else if(op.type === "changed"){
+        const li = document.createElement("li");
+        li.textContent = `Possible misread: textbook “${op.reference}”, recognized “${op.spoken}”`;
+        issues.appendChild(li); issueCount++;
+      } else if(op.type === "extra"){
+        const li = document.createElement("li");
+        li.textContent = `Extra or repeated word: “${op.spoken}”`;
+        issues.appendChild(li); issueCount++;
+      }
+    });
+    if(!issueCount){
+      const li = document.createElement("li");
+      li.textContent = "No differences detected, or there is not enough recognized speech to compare.";
+      issues.appendChild(li);
+    }
+    issueBox.appendChild(issues);
+    columns.appendChild(refPanel);
+    columns.appendChild(heardPanel);
+    card.appendChild(columns);
+    card.appendChild(issueBox);
+    container.appendChild(card);
+  });
+  if(!container.children.length){
+    const message = document.createElement("p");
+    message.textContent = "No completed page results are available yet. Finish reading the chapter to see the review.";
+    container.appendChild(message);
+  }
 }
 /* =====================================================
 HELPERS

@@ -871,7 +871,7 @@ let shouldCompareAfterStop = false;
 /* ---- Added: reading-session constants and state ---- */
 
 const INACTIVITY_MS = 30*60*1000;      /* 30 continuous minutes */
-const COMPLETION_CONFIRM_MS = 2500;    /* confirm page end before advancing */
+const COMPLETION_CONFIRM_MS = 2000;    /* confirm page end before advancing */
 const LITE_KEY = "appearich_reading_progress";
 const ACTIVE_KEY = "appearich_active_session";
 
@@ -1544,6 +1544,20 @@ if(t===before)break;
 
 }
 
+/* A short leftover fragment with no sentence ending after the last
+   finished sentence (stray label, footer, caption) is not reading
+   text and would stop the page from ever completing. */
+
+const tailFrag=
+t.match(/^([\s\S]*[.!?"”’'])\s+([^.!?]{1,45})$/);
+
+if(tailFrag &&
+   tailFrag[2].trim().split(/\s+/).length<=5){
+
+t=tailFrag[1].trim();
+
+}
+
 return t;
 
 }
@@ -1682,7 +1696,11 @@ function filterPageLines(pl,titles,repeated){
 
 const n=pl.lines.length;
 
-return pl.lines.filter((l,idx)=>{
+const hs=pl.lines.map(l=>l.h).sort((a,b)=>a-b);
+
+const medianH=hs.length?hs[Math.floor(hs.length/2)]:0;
+
+const kept=pl.lines.filter((l,idx)=>{
 
 const zone=
 l.y>pl.H*0.92 || l.y<pl.H*0.08;
@@ -1697,9 +1715,40 @@ return false;
 if(zone && repeated && repeated.has(signature(l.text)))
 return false;
 
+/* small print in the bottom margin = footer */
+
+if(l.y<pl.H*0.08 && medianH && l.h<medianH*0.8)
+return false;
+
 return true;
 
 });
+
+/* trailing short lines without a sentence ending */
+
+while(kept.length>1){
+
+const last=kept[kept.length-1].text.trim();
+
+const before=kept[kept.length-2].text.trim();
+
+if(
+last.split(/\s+/).length<=5 &&
+!/[.!?"”’']$/.test(last) &&
+/[.!?"”’']$/.test(before)
+){
+
+kept.pop();
+
+}else{
+
+break;
+
+}
+
+}
+
+return kept;
 
 }
 
@@ -3698,8 +3747,11 @@ matched:matched,
 
 complete:
 N>0 &&
-got>=need &&
-matched>=Math.ceil(N*0.5)
+matched>=Math.ceil(N*0.5) &&
+(
+got>=need ||
+(N>=25 && lastMatched>=N-4)
+)
 
 };
 

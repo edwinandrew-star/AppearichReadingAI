@@ -337,6 +337,10 @@ button:disabled{
         padding:15px;
     }
 }
+
+#inactiveOverlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(245,245,242,.35);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:24px}
+#inactiveOverlay.hidden{display:none!important}
+#inactiveOverlay button{font-size:20px;padding:18px 28px;box-shadow:0 5px 24px rgba(0,0,0,.18)}
 </style>
 </head>
 
@@ -347,6 +351,9 @@ button:disabled{
     <div class="brand">Appearich</div>
 </header>
 
+<div id="inactiveOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Continue reading">
+<button class="yellow" onclick="resumeAfterInactivity()">Tap to Continue Reading</button>
+</div>
 <div class="container">
 
 <!-- =====================================================
@@ -783,6 +790,11 @@ let isRecording = false;
 let finalTranscript = "";
 
 let shouldCompareAfterStop = false;
+let inactivityTimer = null, completionTimer = null, recognitionRestartTimer = null;
+let lastSpeechAt = Date.now(), sessionActive = false, userStoppedRecognition = false;
+let lastRecognitionError = "";
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+const COMPLETION_CONFIRM_MS = 2200;
 
 
 /* =====================================================
@@ -790,12 +802,15 @@ STORAGE
 ===================================================== */
 
 function saveBooks(){
-
-localStorage.setItem(
-"appearich_reading_books",
-JSON.stringify(books)
-);
-
+  try {
+    localStorage.setItem("appearich_reading_books", JSON.stringify(books));
+    return true;
+  } catch(error) {
+    console.error("Could not save reading data:", error);
+    const status = document.getElementById("readingStatus");
+    if(status) status.textContent = "Storage is full or unavailable. Recent progress may not survive closing this tab.";
+    return false;
+  }
 }
 
 
@@ -1238,14 +1253,8 @@ let extractedText="";
 
 try{
 
-const textContent =
-await pdfPage.getTextContent();
-
-extractedText =
-textContent.items
-.map(item=>item.str)
-.join(" ")
-.trim();
+const textContent = await pdfPage.getTextContent();
+extractedText = extractPdfReadingText(textContent, pdfPage);
 
 }catch(error){
 
@@ -1743,6 +1752,23 @@ ${status}
 
 `;
 
+if(page.completed || page.result){
+  div.style.cursor="pointer";
+  div.title="Review completed page";
+  div.addEventListener("click",()=>{
+    const chapterNow=getCurrentChapter();
+    const targetIndex=chapterNow.pages.findIndex(p=>p.pageNumber===page.pageNumber);
+    if(targetIndex<0)return;
+    currentPageIndex=targetIndex;
+    sessionActive=false;
+    userStoppedRecognition=true;
+    clearTimeout(inactivityTimer);
+    if(recognition){try{recognition.stop();}catch(e){}}
+    loadReaderPage();
+    showSection("readerSection");
+    setReadingStatus("Reviewing a completed page. Previously saved results are preserved.");
+  });
+}
 container.appendChild(div);
 
 });
@@ -1754,47 +1780,20 @@ container.appendChild(div);
 START CHAPTER
 ===================================================== */
 
-window.startChapter =
-function(){
-
-const chapter =
-getCurrentChapter();
-
-if(!chapter)return;
-
-
-/*
-Find first unfinished page.
-*/
-
-let resume=0;
-
-for(let i=0;
-    i<chapter.pages.length;
-    i++){
-
-if(!chapter.pages[i].result){
-
-resume=i;
-
-break;
-
-}
-
-}
-
-currentPageIndex=resume;
-
-loadReaderPage();
-
-showSection("readerSection");
-
+window.startChapter = function(){
+  const chapter = getCurrentChapter();
+  if(!chapter) return;
+  let resume = Number.isInteger(chapter.currentPosition) ? chapter.currentPosition : 0;
+  const firstUnfinished = chapter.pages.findIndex(p=>!p.completed && !p.result);
+  if(firstUnfinished !== -1 && (chapter.pages[resume]?.completed || chapter.pages[resume]?.result)) resume = firstUnfinished;
+  currentPageIndex = Math.max(0, Math.min(resume, chapter.pages.length - 1));
+  sessionActive = true;
+  userStoppedRecognition = false;
+  loadReaderPage();
+  showSection("readerSection");
+  startInactivityMonitor();
+  startRecording();
 };
-
-
-/* =====================================================
-LOAD READER PAGE
-===================================================== */
 
 function loadReaderPage(){
 
@@ -1844,9 +1843,10 @@ document.getElementById(
 "pageResult"
 ).innerHTML="";
 
+finalTranscript = page.transcript || "";
 resetRecordingUI();
-
 updateChapterProgress();
+if(sessionActive) startInactivityMonitor();
 
 }
 
@@ -1896,456 +1896,186 @@ SPEECH RECOGNITION
 ===================================================== */
 
 function createRecognition(){
-
-const SpeechRecognition =
-window.SpeechRecognition ||
-window.webkitSpeechRecognition;
-
-if(!SpeechRecognition){
-
-alert(
-"Speech recognition is not supported here. Please use Chrome or Edge."
-);
-
-return null;
-
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    setReadingStatus("Speech recognition is not supported here. Please use a supported version of Chrome or Edge.");
+    return null;
+  }
+  const r = new SpeechRecognition();
+  r.lang = "en-US";
+  r.continuous = true;
+  r.interimResults = true;
+  r.onstart = function(){
+    isRecording = true;
+    lastRecognitionError = "";
+    document.getElementById("readingStatus").className = "status listening";
+    document.getElementById("readingStatus").textContent = "🎤 AI is listening...";
+    document.getElementById("startButton").disabled = true;
+    document.getElementById("stopButton").disabled = false;
+  };
+  r.onresult = function(event){
+    let interim = "";
+    const newFinal = [];
+    for(let i=event.resultIndex; i<event.results.length; i++){
+      const result = event.results[i], phrase = (result[0]?.transcript || "").trim();
+      if(!phrase) continue;
+      if(result.isFinal) newFinal.push(phrase);
+      else interim += (interim ? " " : "") + phrase;
+    }
+    if(newFinal.length || interim.trim()){
+      lastSpeechAt = Date.now();
+      hideInactivityOverlay();
+      startInactivityMonitor();
+    }
+    if(newFinal.length){
+      const added = newFinal.join(" ").trim();
+      finalTranscript = (finalTranscript + " " + added).trim();
+      const page = getCurrentChapter()?.pages[currentPageIndex];
+      if(page){
+        page.transcript = finalTranscript;
+        page.spokenSegments = Array.isArray(page.spokenSegments) ? page.spokenSegments : [];
+        page.spokenSegments.push({text:added, at:new Date().toISOString()});
+        saveBooks();
+      }
+    }
+    const display = (finalTranscript + " " + interim).trim();
+    document.getElementById("liveTranscript").textContent = display || "Listening...";
+    updateReadingPosition(display);
+    checkForPageCompletion();
+  };
+  r.onerror = function(event){
+    lastRecognitionError = event.error || "unknown";
+    console.warn("Speech error:", event.error);
+    isRecording = false;
+    if(event.error === "not-allowed" || event.error === "service-not-allowed"){
+      sessionActive = false;
+      setReadingStatus("Microphone permission is blocked. Allow microphone access, then tap Start Reading.");
+      resetRecordingUI();
+    } else setReadingStatus("Listening interrupted. Reconnecting when possible...");
+  };
+  r.onend = function(){
+    isRecording = false;
+    if(shouldCompareAfterStop){ shouldCompareAfterStop = false; compareCurrentPage(); return; }
+    resetRecordingUI();
+    if(sessionActive && !userStoppedRecognition && document.getElementById("inactiveOverlay").classList.contains("hidden")){
+      clearTimeout(recognitionRestartTimer);
+      recognitionRestartTimer = setTimeout(()=>{
+        if(sessionActive && !userStoppedRecognition && !isRecording){
+          recognition = createRecognition();
+          try { recognition?.start(); } catch(e){ console.warn("Recognition restart:", e); }
+        }
+      }, 800);
+    }
+  };
+  return r;
 }
-
-const r =
-new SpeechRecognition();
-
-r.lang="en-US";
-
-r.continuous=true;
-
-r.interimResults=true;
-
-
-r.onstart=function(){
-
-isRecording=true;
-
-document.getElementById(
-"readingStatus"
-).className=
-"status listening";
-
-document.getElementById(
-"readingStatus"
-).textContent=
-"🎤 AI is listening...";
-
-document.getElementById(
-"startButton"
-).disabled=true;
-
-document.getElementById(
-"stopButton"
-).disabled=false;
-
+function setReadingStatus(message){
+  const el=document.getElementById("readingStatus");
+  if(el){el.className="status";el.textContent=message;}
+}
+function startInactivityMonitor(){
+  clearTimeout(inactivityTimer);
+  if(!sessionActive) return;
+  const remaining=INACTIVITY_LIMIT_MS-(Date.now()-lastSpeechAt);
+  if(remaining<=0){showInactivityOverlay();return;}
+  inactivityTimer=setTimeout(showInactivityOverlay,remaining);
+}
+function showInactivityOverlay(){
+  if(!sessionActive)return;
+  document.getElementById("inactiveOverlay").classList.remove("hidden");
+  setReadingStatus("Paused after 30 minutes without detected speech. Tap to continue.");
+}
+function hideInactivityOverlay(){
+  document.getElementById("inactiveOverlay").classList.add("hidden");
+}
+window.resumeAfterInactivity=function(){
+  hideInactivityOverlay(); lastSpeechAt=Date.now(); userStoppedRecognition=false;
+  startInactivityMonitor();
+  if(sessionActive && !isRecording){
+    recognition=createRecognition();
+    try{recognition?.start();}catch(e){setReadingStatus("Tap Start Reading to restore microphone listening.");}
+  }
 };
-
-
-r.onresult=function(event){
-
-let interim="";
-
-for(
-let i=event.resultIndex;
-i<event.results.length;
-i++
-){
-
-const text =
-event.results[i][0].transcript;
-
-if(
-event.results[i].isFinal
-){
-
-finalTranscript +=
-" "+text;
-
-}else{
-
-interim += text;
-
+function longestOrderedCoverage(reference,spoken){
+  let count=0,cursor=0;
+  for(const word of reference){
+    for(let j=cursor;j<spoken.length;j++){
+      if(word===spoken[j] || wordSimilarity(word,spoken[j])>=.82){count++;cursor=j+1;break;}
+    }
+  }
+  return count;
 }
-
+function checkForPageCompletion(){
+  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
+  if(!sessionActive||!page||page.completed||page.result)return;
+  const reference=tokenize(page.text),spoken=tokenize(finalTranscript);
+  if(reference.length<5||spoken.length<5)return;
+  const coverage=longestOrderedCoverage(reference,spoken);
+  const tail=reference.slice(-Math.min(6,reference.length));
+  const recent=spoken.slice(-Math.max(20,tail.length*4));
+  const tailSeen=tail.every(w=>recent.some(x=>x===w||wordSimilarity(w,x)>=.82));
+  if(coverage>=Math.max(5,Math.ceil(reference.length*.88))&&tailSeen){
+    clearTimeout(completionTimer);
+    completionTimer=setTimeout(()=>{
+      const latest=getCurrentChapter()?.pages[currentPageIndex];
+      if(latest&&!latest.completed&&!latest.result&&longestOrderedCoverage(tokenize(latest.text),tokenize(finalTranscript))>=Math.max(5,Math.ceil(tokenize(latest.text).length*.88))) completeCurrentPageAutomatically();
+    },COMPLETION_CONFIRM_MS);
+  }
 }
-
-const display =
-(
-finalTranscript+
-" "+
-interim
-).trim();
-
-document.getElementById(
-"liveTranscript"
-).textContent=
-display ||
-"Listening...";
-
-
-/*
-Track where the student is
-while reading.
-*/
-
-updateReadingPosition(display);
-
+function completeCurrentPageAutomatically(){
+  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
+  if(!chapter||!page||page.completed||page.result)return;
+  const reference=tokenize(page.text),spoken=tokenize(finalTranscript);
+  if(!reference.length||!spoken.length)return;
+  const operations=alignWords(reference,spoken),result=calculateResult(operations,reference,spoken);
+  result.uncertain=true; page.transcript=finalTranscript.trim(); page.result=result; page.completed=true;
+  chapter.currentPosition=currentPageIndex; saveBooks(); showPageResult(page,result,operations);
+  setTimeout(()=>{
+    if(!sessionActive)return;
+    if(currentPageIndex<chapter.pages.length-1){
+      currentPageIndex++;chapter.currentPosition=currentPageIndex;finalTranscript=chapter.pages[currentPageIndex].transcript||"";
+      saveBooks();loadReaderPage();if(!isRecording)startRecording();
+    }else{sessionActive=false;clearTimeout(inactivityTimer);finishChapter();}
+  },1800);
+}
+window.startRecording=function(){
+  if(isRecording)return;
+  const page=getCurrentChapter()?.pages[currentPageIndex];if(!page)return;
+  sessionActive=true;userStoppedRecognition=false;finalTranscript=page.transcript||"";
+  document.getElementById("liveTranscript").textContent=finalTranscript||"Listening...";
+  recognition=createRecognition();if(!recognition)return;
+  try{recognition.start();}catch(error){console.warn(error);setReadingStatus("Microphone could not start. Tap Start Reading to retry.");}
 };
-
-
-r.onerror=function(event){
-
-console.log(
-"Speech error:",
-event.error
-);
-
-isRecording=false;
-
-if(
-event.error==="not-allowed"
-){
-
-alert(
-"Please allow microphone access."
-);
-
-}
-
-resetRecordingUI();
-
+window.stopRecording=function(){
+  userStoppedRecognition=true;
+  if(recognition){
+    shouldCompareAfterStop=true;setReadingStatus("Checking reading...");
+    document.getElementById("stopButton").disabled=true;
+    try{recognition.stop();}catch(error){shouldCompareAfterStop=false;compareCurrentPage();}
+  }else compareCurrentPage();
 };
-
-
-r.onend=function(){
-
-isRecording=false;
-
-if(shouldCompareAfterStop){
-
-shouldCompareAfterStop=false;
-
-setTimeout(
-compareCurrentPage,
-300
-);
-
-}else{
-
-resetRecordingUI();
-
-}
-
-};
-
-return r;
-
-}
-
-
-/* =====================================================
-START RECORDING
-===================================================== */
-
-window.startRecording =
-function(){
-
-if(isRecording)return;
-
-finalTranscript="";
-
-const chapter =
-getCurrentChapter();
-
-const page =
-chapter.pages[currentPageIndex];
-
-page.transcript="";
-
-page.result=null;
-
-document.getElementById(
-"pageResult"
-).innerHTML="";
-
-document.getElementById(
-"liveTranscript"
-).textContent=
-"Listening...";
-
-recognition =
-createRecognition();
-
-if(!recognition)return;
-
-shouldCompareAfterStop=false;
-
-try{
-
-recognition.start();
-
-}catch(error){
-
-console.log(error);
-
-}
-
-};
-
-
-/* =====================================================
-STOP RECORDING
-===================================================== */
-
-window.stopRecording =
-function(){
-
-if(!recognition){
-
-compareCurrentPage();
-
-return;
-
-}
-
-shouldCompareAfterStop=true;
-
-document.getElementById(
-"readingStatus"
-).className="status";
-
-document.getElementById(
-"readingStatus"
-).textContent=
-"Checking reading...";
-
-document.getElementById(
-"stopButton"
-).disabled=true;
-
-try{
-
-recognition.stop();
-
-}catch(error){
-
-compareCurrentPage();
-
-}
-
-};
-
-
-/* =====================================================
-RESET RECORDING
-===================================================== */
-
 function resetRecordingUI(){
-
-document.getElementById(
-"startButton"
-).disabled=false;
-
-document.getElementById(
-"stopButton"
-).disabled=true;
-
-document.getElementById(
-"readingStatus"
-).className="status";
-
-document.getElementById(
-"readingStatus"
-).textContent=
-"Ready";
-
+  document.getElementById("startButton").disabled=false;
+  document.getElementById("stopButton").disabled=true;
+  if(document.getElementById("inactiveOverlay")?.classList.contains("hidden") && !isRecording && !lastRecognitionError)setReadingStatus("Ready");
 }
-
-
-/* =====================================================
-READING POSITION
-===================================================== */
 
 function updateReadingPosition(spoken){
-
-if(!spoken)return;
-
-const chapter =
-getCurrentChapter();
-
-const spokenWords =
-tokenize(spoken);
-
-if(spokenWords.length<5)
-return;
-
-
-/*
-Look at the current page and
-the next few pages.
-
-This helps detect when the
-student has moved forward.
-*/
-
-let bestPage =
-currentPageIndex;
-
-let bestScore=0;
-
-for(
-let i=currentPageIndex;
-i<Math.min(
-chapter.pages.length,
-currentPageIndex+4
-);
-i++
-){
-
-const reference =
-tokenize(
-chapter.pages[i].text
-);
-
-if(reference.length===0)
-continue;
-
-const score =
-findSequenceMatch(
-reference,
-spokenWords
-);
-
-if(score>bestScore){
-
-bestScore=score;
-
-bestPage=i;
-
+  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
+  if(!chapter||!page)return;
+  chapter.currentPosition=currentPageIndex;
+  page.transcript=finalTranscript;
+  saveBooks();
 }
-
+function findSequenceMatch(reference,spoken){
+  if(!reference.length||!spoken.length)return 0;
+  let matched=0,cursor=0;
+  for(const word of reference){
+    const found=spoken.indexOf(word,cursor);
+    if(found>=0){matched++;cursor=found+1;}
+  }
+  return matched/Math.max(1,reference.length);
 }
-
-
-/*
-Only move forward when
-confidence is reasonably high.
-*/
-
-if(
-bestPage>currentPageIndex &&
-bestScore>=0.35
-){
-
-currentPageIndex=bestPage;
-
-const page =
-chapter.pages[currentPageIndex];
-
-document.getElementById(
-"readerPageTitle"
-).textContent=
-`Page ${page.pageNumber} of ${chapter.pages.length}`;
-
-document.getElementById(
-"readerImage"
-).src=
-page.image;
-
-document.getElementById(
-"referenceText"
-).textContent=
-page.text;
-
-updateChapterProgress();
-
-}
-
-}
-
-
-/*
-Find approximate sequence overlap.
-*/
-
-function findSequenceMatch(
-reference,
-spoken
-){
-
-if(
-!reference.length ||
-!spoken.length
-)return 0;
-
-let best=0;
-
-
-/*
-Use the last part of speech because
-it represents the most recently read
-words.
-*/
-
-const recent =
-spoken.slice(
-Math.max(0,spoken.length-60)
-);
-
-for(
-let i=0;
-i<reference.length;
-i++
-){
-
-let matches=0;
-
-for(
-let j=0;
-j<recent.length;
-j++
-){
-
-if(
-reference[i+j] &&
-reference[i+j]===recent[j]
-){
-
-matches++;
-
-}else{
-
-if(j>10)break;
-
-}
-
-}
-
-const score =
-matches /
-Math.min(
-recent.length,
-40
-);
-
-if(score>best)
-best=score;
-
-}
-
-return best;
-
-}
-
-
-/* =====================================================
-COMPARE PAGE
-===================================================== */
 
 function compareCurrentPage(){
 
@@ -2394,11 +2124,23 @@ return;
 
 }
 
-const reference =
-tokenize(page.text);
-
-const spokenWords =
-tokenize(spoken);
+const reference = tokenize(page.text);
+const spokenWords = tokenize(spoken);
+const coverage = longestOrderedCoverage(reference, spokenWords);
+if(reference.length >= 5 && coverage < Math.max(5, Math.ceil(reference.length * 0.65))){
+  page.transcript = spoken;
+  saveBooks();
+  document.getElementById("pageResult").innerHTML = `
+    <div class="resultBox">
+      <h3>Reading not yet confirmed</h3>
+      <p>The system has not recognized enough of this page's reading passage to complete it fairly. Continue reading from where you stopped.</p>
+      <button class="yellow" onclick="startRecording()">Continue Reading</button>
+    </div>`;
+  userStoppedRecognition = true;
+  sessionActive = true;
+  resetRecordingUI();
+  return;
+}
 
 const operations =
 alignWords(
@@ -2414,7 +2156,8 @@ spokenWords
 );
 
 page.result=result;
-
+page.completed = coverage >= Math.max(5, Math.ceil(reference.length * 0.65));
+chapter.currentPosition=currentPageIndex;
 saveBooks();
 
 showPageResult(
@@ -2997,44 +2740,27 @@ Continue to Page ${page.pageNumber+1} →
 NEXT PAGE
 ===================================================== */
 
-window.nextPage =
-function(){
-
-const chapter =
-getCurrentChapter();
-
-if(
-currentPageIndex >=
-chapter.pages.length-1
-){
-
-finishChapter();
-
-return;
-
-}
-
-currentPageIndex++;
-
-chapter.currentPosition=
-currentPageIndex;
-
-saveBooks();
-
-loadReaderPage();
-
+window.nextPage = function(){
+  const chapter=getCurrentChapter();
+  if(!chapter || currentPageIndex>=chapter.pages.length-1)return;
+  if(!chapter.pages[currentPageIndex]?.completed)return;
+  currentPageIndex++;
+  chapter.currentPosition=currentPageIndex;
+  finalTranscript=chapter.pages[currentPageIndex].transcript||"";
+  saveBooks();loadReaderPage();
+  if(sessionActive&&!isRecording)startRecording();
 };
-
-
-/* =====================================================
-FINISH CHAPTER
-===================================================== */
 
 window.finishChapter =
 function(){
 
-const chapter =
-getCurrentChapter();
+const chapter = getCurrentChapter();
+if(!chapter || chapter.reviewGenerated) return;
+if(!chapter.pages.every(p=>p.completed || p.result)){
+  setReadingStatus("Finish the remaining reading pages before generating the chapter review.");
+  return;
+}
+chapter.reviewGenerated = true;
 
 const results =
 chapter.pages.filter(
@@ -3229,6 +2955,37 @@ reader.readAsDataURL(file);
 }
 
 
+function extractPdfReadingText(textContent, pdfPage){
+  const items=(textContent.items||[]).filter(item=>item.str&&item.str.trim()&&item.transform);
+  if(!items.length)return "";
+  const lines=[];
+  for(const item of items){
+    const y=Math.round(item.transform[5]/3)*3;
+    let line=lines.find(x=>Math.abs(x.y-y)<=3);
+    if(!line){line={y,x:[]};lines.push(line);}
+    line.x.push({x:item.transform[4],text:item.str.trim()});
+  }
+  lines.sort((a,b)=>b.y-a.y);
+  lines.forEach(line=>line.x.sort((a,b)=>a.x-b.x));
+  const height=pdfPage.view?.[3]||Math.max(...lines.map(l=>l.y),1);
+  const normalized=lines.map(line=>({y:line.y,text:line.x.map(x=>x.text).join(" ").replace(/\s+/g," ").trim()})).filter(line=>line.text);
+  const kept=normalized.filter(line=>{
+    const t=line.text, edge=line.y>height*.92||line.y<height*.07;
+    if(/^([Pp]age\s*)?\d{1,4}(\s*(of|\/)\s*\d{1,4})?$/.test(t))return false;
+    if(edge && /^(page|chapter|unit|lesson)\s+\d+([.: -].*)?$/i.test(t))return false;
+    if(edge && t.length<70 && /^(copyright|©|all rights reserved|www\.|https?:|printed by|published by)\b/i.test(t))return false;
+    return true;
+  });
+  while(kept.length>1){
+    const first=kept[0].text;
+    const heading=first.length<65&&!/[.!?;:]$/.test(first)&&first.split(/\s+/).length<=9&&
+      /^(english|mathematics|science|social studies|standard [1-7]|class [1-7]|student'?s book|pupil'?s book|textbook|chapter\s+\d+)\b/i.test(first);
+    if(!heading)break;
+    kept.shift();
+  }
+  return cleanOCR(kept.map(line=>line.text).join(" "));
+}
+
 function cleanOCR(text){
 
 return text
@@ -3284,6 +3041,16 @@ sizes[i];
 INITIALIZE
 ===================================================== */
 
+window.addEventListener("pagehide",()=>saveBooks());
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" && sessionActive){
+    startInactivityMonitor();
+    if(!isRecording&&!userStoppedRecognition&&document.getElementById("inactiveOverlay").classList.contains("hidden")){
+      recognition=createRecognition();
+      try{recognition?.start();}catch(e){console.warn("Resume after tab visibility:",e);}
+    }
+  }
+});
 renderBooks();
 
 </script>

@@ -312,6 +312,13 @@ button:disabled{
     color:#555;
 }
 
+/* Added: uncertain recognition (not counted against the child) */
+.word.uncertain{
+    background:#e6edfa;
+    color:#274a8c;
+    border:1px dashed #8aa3d6;
+}
+
 .center{
     text-align:center;
 }
@@ -321,6 +328,35 @@ button:disabled{
     border-radius:10px;
     padding:12px;
     margin-top:10px;
+}
+
+/* Added: 30-minute inactivity overlay (blurs the existing screen) */
+#inactivityOverlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:1000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(245,245,242,.45);
+    -webkit-backdrop-filter:blur(10px);
+    backdrop-filter:blur(10px);
+    cursor:pointer;
+}
+
+#inactivityOverlay .overlayMsg{
+    background:#f3d000;
+    color:#080808;
+    font-size:28px;
+    font-weight:bold;
+    text-align:center;
+    padding:24px 34px;
+    border-radius:20px;
+    box-shadow:0 8px 30px rgba(0,0,0,.18);
 }
 
 @media(max-width:750px){
@@ -337,10 +373,6 @@ button:disabled{
         padding:15px;
     }
 }
-
-#inactiveOverlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(245,245,242,.35);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:24px}
-#inactiveOverlay.hidden{display:none!important}
-#inactiveOverlay button{font-size:20px;padding:18px 28px;box-shadow:0 5px 24px rgba(0,0,0,.18)}
 </style>
 </head>
 
@@ -351,9 +383,6 @@ button:disabled{
     <div class="brand">Appearich</div>
 </header>
 
-<div id="inactiveOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Continue reading">
-<button class="yellow" onclick="resumeAfterInactivity()">Tap to Continue Reading</button>
-</div>
 <div class="container">
 
 <!-- =====================================================
@@ -601,6 +630,22 @@ Chapter progress:
 Page 1
 </h3>
 
+<div>
+
+<button id="prevPageBtn"
+        class="secondary"
+        onclick="viewPrevPage()">
+← Previous
+</button>
+
+<button id="nextPageBtn"
+        class="secondary"
+        onclick="viewNextPage()">
+Next →
+</button>
+
+</div>
+
 <img id="readerImage">
 
 <p class="small">
@@ -723,7 +768,30 @@ Changed
 Extra
 </div>
 
+<div class="stat">
+<strong id="reportUncertain">0</strong>
+Uncertain
 </div>
+
+<div class="stat">
+<strong id="reportRepeated">0</strong>
+Repeated
+</div>
+
+<div class="stat">
+<strong id="reportFluency">—</strong>
+Words / min
+</div>
+
+</div>
+
+<p class="small">
+Uncertain = words the microphone may not have recognised correctly.
+They are not counted against the score. Words / min is only an estimate
+from the time speech was heard.
+</p>
+
+<div id="reportDifficult"></div>
 
 </div>
 
@@ -756,6 +824,12 @@ Back to Book
 </div>
 
 
+<!-- Inactivity overlay: shown only after 30 minutes without speech -->
+<div id="inactivityOverlay" class="hidden" onclick="resumeFromOverlay()">
+<div class="overlayMsg">Tap to Continue Reading</div>
+</div>
+
+
 <script type="module">
 
 /* =====================================================
@@ -781,36 +855,267 @@ localStorage.getItem("appearich_reading_books") || "[]"
 let currentBookId = null;
 let currentChapterId = null;
 
+/* currentPageIndex = the page being READ (first unfinished page).
+   viewPageIndex    = the page being DISPLAYED (may be an earlier,
+                      completed page while the child reviews). */
 let currentPageIndex = 0;
+let viewPageIndex = 0;
 
 let recognition = null;
 
 let isRecording = false;
 
-let finalTranscript = "";
-
 let shouldCompareAfterStop = false;
-let inactivityTimer = null, completionTimer = null, recognitionRestartTimer = null;
-let lastSpeechAt = Date.now(), sessionActive = false, userStoppedRecognition = false;
-let lastRecognitionError = "";
-const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
-const COMPLETION_CONFIRM_MS = 2200;
+
+
+/* ---- Added: reading-session constants and state ---- */
+
+const INACTIVITY_MS = 30*60*1000;      /* 30 continuous minutes */
+const COMPLETION_CONFIRM_MS = 2500;    /* confirm page end before advancing */
+const LITE_KEY = "appearich_reading_progress";
+const ACTIVE_KEY = "appearich_active_session";
+
+let sessionActive = false;             /* mic should be listening */
+let suspendedForInactivity = false;
+let pausedByUser = false;
+let restartTimer = null;
+let hardErrors = 0;
+let lastSpeechAt = 0;
+let lastFinalNorm = "";
+let lastFinalAt = 0;
+let completionTimer = null;
+let inactivityInterval = null;
+let micProblem = "";
+let storageNotice = "";
+let statusFlash = "";
+let idleNote = "";
 
 
 /* =====================================================
 STORAGE
 ===================================================== */
 
+/* Returns true on success. Handles quota errors instead of throwing. */
 function saveBooks(){
-  try {
-    localStorage.setItem("appearich_reading_books", JSON.stringify(books));
-    return true;
-  } catch(error) {
-    console.error("Could not save reading data:", error);
-    const status = document.getElementById("readingStatus");
-    if(status) status.textContent = "Storage is full or unavailable. Recent progress may not survive closing this tab.";
-    return false;
-  }
+
+try{
+
+localStorage.setItem(
+"appearich_reading_books",
+JSON.stringify(books)
+);
+
+return true;
+
+}catch(error){
+
+console.error("Storage write failed",error);
+
+return false;
+
+}
+
+}
+
+
+/* Compact progress store (no images) so results survive when the
+   full book store is too large or a write fails. */
+function saveLite(chapter){
+
+const build=()=>{
+
+const all =
+JSON.parse(localStorage.getItem(LITE_KEY)||"{}");
+
+all[chapter.id]={
+
+savedAt:chapter.savedAt,
+
+currentPosition:chapter.currentPosition||0,
+
+reviewGenerated:!!chapter.reviewGenerated,
+
+review:chapter.review||null,
+
+pages:chapter.pages.map(p=>({
+
+pageNumber:p.pageNumber,
+
+transcript:p.transcript||"",
+
+result:p.result||null,
+
+progress:p.progress||null,
+
+speechMs:p.speechMs||0,
+
+lowConf:p.lowConf||[],
+
+gaps:p.gaps||[]
+
+}))
+
+};
+
+return all;
+
+};
+
+try{
+
+localStorage.setItem(
+LITE_KEY,
+JSON.stringify(build())
+);
+
+return true;
+
+}catch(error){
+
+/* Quota: drop other chapters' compact copies and retry once. */
+
+try{
+
+const all=build();
+
+Object.keys(all).forEach(id=>{
+if(id!==chapter.id)delete all[id];
+});
+
+localStorage.setItem(
+LITE_KEY,
+JSON.stringify(all)
+);
+
+return true;
+
+}catch(error2){
+
+storageNotice=
+"Progress could not be saved on this device (storage is full).";
+
+return false;
+
+}
+
+}
+
+}
+
+
+function clearLite(chapterId){
+
+try{
+
+const all =
+JSON.parse(localStorage.getItem(LITE_KEY)||"{}");
+
+if(all[chapterId]){
+
+delete all[chapterId];
+
+localStorage.setItem(
+LITE_KEY,
+JSON.stringify(all)
+);
+
+}
+
+}catch(error){}
+
+}
+
+
+/* full=true  -> write the whole book store (used at page completion,
+                 pause and exit).
+   full=false -> write compact progress only (used while reading so the
+                 big image data is not re-serialised on every result). */
+function persistChapter(chapter,full){
+
+if(!chapter)return;
+
+chapter.savedAt=Date.now();
+
+if(full){
+
+if(saveBooks()){
+
+clearLite(chapter.id);
+
+storageNotice="";
+
+}else{
+
+const ok=saveLite(chapter);
+
+if(ok){
+
+storageNotice=
+"Browser storage is full, so progress is saved in compact form.";
+
+}
+
+}
+
+}else{
+
+saveLite(chapter);
+
+}
+
+}
+
+
+function mergeLiteProgress(){
+
+let lite={};
+
+try{
+
+lite=JSON.parse(
+localStorage.getItem(LITE_KEY)||"{}"
+);
+
+}catch(error){
+
+lite={};
+
+}
+
+books.forEach(book=>{
+
+book.chapters.forEach(ch=>{
+
+const l=lite[ch.id];
+
+if(!l || l.savedAt<=(ch.savedAt||0))return;
+
+l.pages.forEach(lp=>{
+
+const p=ch.pages.find(
+x=>x.pageNumber===lp.pageNumber
+);
+
+if(!p)return;
+
+p.transcript=lp.transcript;
+p.result=lp.result;
+p.progress=lp.progress;
+p.speechMs=lp.speechMs;
+p.lowConf=lp.lowConf;
+p.gaps=lp.gaps;
+
+});
+
+ch.currentPosition=l.currentPosition;
+ch.reviewGenerated=l.reviewGenerated;
+ch.review=l.review;
+ch.savedAt=l.savedAt;
+
+});
+
+});
+
 }
 
 
@@ -819,6 +1124,17 @@ SECTION NAVIGATION
 ===================================================== */
 
 window.showSection = function(id){
+
+const wasReader =
+!document.getElementById("readerSection")
+.classList.contains("hidden");
+
+/* Leaving the reader ends the listening session (progress is saved). */
+if(wasReader && id!=="readerSection"){
+
+endSession();
+
+}
 
 document.querySelectorAll("section")
 .forEach(s=>s.classList.add("hidden"));
@@ -1077,6 +1393,8 @@ book.chapters.filter(c=>c.id!==id);
 
 saveBooks();
 
+clearLite(id);
+
 renderChapters();
 
 };
@@ -1121,6 +1439,313 @@ ${formatBytes(file.size)}
 });
 
 });
+
+
+/* =====================================================
+READING-TEXT FILTERING (book names, page labels, headers,
+footers)
+===================================================== */
+
+const PAGE_LABEL_RE = /^(?:page|pg\.?|p\.)\s*\d{1,4}(?:\s*(?:of|\/)\s*\d{1,4})?$/i;
+
+function escapeRegex(s){
+
+return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+
+}
+
+
+function normForMatch(s){
+
+return String(s||"")
+.toLowerCase()
+.replace(/[^\p{L}\p{N}]+/gu," ")
+.trim();
+
+}
+
+
+/* True for a whole line that is a page label, a bare page number,
+   or the book title (optionally with a label). */
+function isNonReadingLine(line,titles){
+
+const t=String(line||"").trim();
+
+if(!t)return true;
+
+if(PAGE_LABEL_RE.test(t))return true;
+
+if(/^[-–—•\s]*\d{1,4}[-–—•\s]*$/.test(t))return true;
+
+const n=normForMatch(t);
+
+for(const title of (titles||[])){
+
+const nt=normForMatch(title);
+
+if(nt.length>=3 &&
+   (n===nt || (n.includes(nt) && n.length<=nt.length+15)))
+return true;
+
+}
+
+return false;
+
+}
+
+
+/* Removes a page label / book title only at the very start or end of
+   a flat text string. Sentences in the middle are never touched. */
+function cleanExpectedText(text,titles){
+
+let t=String(text||"").replace(/\s+/g," ").trim();
+
+const labelStart=
+/^(?:page|pg\.?)\s*\d{1,4}(?:\s*(?:of|\/)\s*\d{1,4})?(?=\s|$)\s*[-–—:|.]?\s*/i;
+
+const labelEnd=
+/([.!?"”’']|^)\s*[-–—:|]?\s*(?:page|pg\.?)\s*\d{1,4}(?:\s*(?:of|\/)\s*\d{1,4})?\s*$/i;
+
+const numEnd=
+/([.!?"”’'])\s*[-–—]?\s*\d{1,3}\s*[-–—]?\s*$/;
+
+const patterns=(titles||[])
+.map(x=>normForMatch(x))
+.filter(x=>x.length>=3)
+.map(x=>x.split(" ").map(escapeRegex).join("[\\s\\W_]+"));
+
+for(let k=0;k<5;k++){
+
+const before=t;
+
+t=t.replace(labelStart,"");
+
+t=t.replace(labelEnd,"$1");
+
+t=t.replace(numEnd,"$1");
+
+patterns.forEach(tp=>{
+
+t=t.replace(
+new RegExp("^"+tp+"(?![\\p{L}\\p{N}])[\\s\\-–—:|.,]*","iu"),
+""
+);
+
+t=t.replace(
+new RegExp("\\s*[\\-–—:|,]*\\s*(?<![\\p{L}\\p{N}])"+tp+"\\s*$","iu"),
+""
+);
+
+});
+
+t=t.trim();
+
+if(t===before)break;
+
+}
+
+return t;
+
+}
+
+
+function signature(text){
+
+return normForMatch(text).replace(/\d+/g,"#");
+
+}
+
+
+/* Reads PDF text with positions, so lines can be rebuilt in reading
+   order and header/footer zones can be recognised. Rotated text
+   (typically diagram labels) is ignored. */
+async function extractPdfLines(pdfPage){
+
+const H=pdfPage.getViewport({scale:1}).height;
+
+const tc=await pdfPage.getTextContent();
+
+const items=[];
+
+tc.items.forEach(it=>{
+
+if(typeof it.str!=="string")return;
+
+const s=it.str.trim();
+
+if(!s)return;
+
+const t=it.transform;
+
+const size=Math.hypot(t[0],t[1])||it.height||10;
+
+if(Math.abs(t[1])>size*0.3)return;
+
+items.push({s:s,x:t[4],y:t[5],h:size});
+
+});
+
+items.sort((a,b)=>(b.y-a.y)||(a.x-b.x));
+
+const lines=[];
+
+items.forEach(it=>{
+
+const last=lines[lines.length-1];
+
+if(
+last &&
+Math.abs(last.y-it.y)<=Math.max(2,Math.min(last.h,it.h)*0.5)
+){
+
+last.items.push(it);
+
+}else{
+
+lines.push({y:it.y,h:it.h,items:[it]});
+
+}
+
+});
+
+lines.forEach(l=>{
+
+l.items.sort((a,b)=>a.x-b.x);
+
+l.text=l.items
+.map(i=>i.s)
+.join(" ")
+.replace(/\s+/g," ")
+.trim();
+
+});
+
+return{
+
+H:H,
+
+rawCount:tc.items.length,
+
+lines:lines.map(l=>({text:l.text,y:l.y,h:l.h}))
+
+};
+
+}
+
+
+/* Header/footer lines that repeat on many pages of one PDF. */
+function findRepeatedMargins(pageLinesArr){
+
+const counts=new Map();
+
+pageLinesArr.forEach(pl=>{
+
+const seen=new Set();
+
+pl.lines.forEach(l=>{
+
+if(l.y>pl.H*0.92 || l.y<pl.H*0.08){
+
+const sg=signature(l.text);
+
+if(sg && !seen.has(sg)){
+
+seen.add(sg);
+
+counts.set(sg,(counts.get(sg)||0)+1);
+
+}
+
+}
+
+});
+
+});
+
+const minCount=
+Math.max(2,Math.ceil(pageLinesArr.length*0.5));
+
+const repeated=new Set();
+
+counts.forEach((c,sg)=>{
+
+if(c>=minCount)repeated.add(sg);
+
+});
+
+return repeated;
+
+}
+
+
+function filterPageLines(pl,titles,repeated){
+
+const n=pl.lines.length;
+
+return pl.lines.filter((l,idx)=>{
+
+const zone=
+l.y>pl.H*0.92 || l.y<pl.H*0.08;
+
+const boundary=
+idx<2 || idx>=n-2;
+
+if((zone||boundary) &&
+   isNonReadingLine(l.text,titles))
+return false;
+
+if(zone && repeated && repeated.has(signature(l.text)))
+return false;
+
+return true;
+
+});
+
+}
+
+
+/* OCR output -> reading text. Drops low-confidence lines (usually
+   illustrations) and label/title lines at the page boundaries. */
+function ocrToText(data,titles){
+
+let lines;
+
+if(Array.isArray(data.lines) && data.lines.length){
+
+lines=data.lines
+.filter(l=>
+(l.confidence===undefined || l.confidence>=55) &&
+/\p{L}{2}/u.test(l.text||"")
+)
+.map(l=>String(l.text).trim());
+
+}else{
+
+lines=String(data.text||"").split(/\n+/);
+
+}
+
+lines=lines.filter(Boolean);
+
+let n=lines.length;
+
+lines=lines.filter((l,i)=>
+!((i<2||i>=n-2)&&isNonReadingLine(l,titles))
+);
+
+let out=
+cleanExpectedText(cleanOCR(lines.join(" ")),titles);
+
+if(!out && data.text){
+
+out=
+cleanExpectedText(cleanOCR(data.text),titles);
+
+}
+
+return out;
+
+}
 
 
 /* =====================================================
@@ -1172,6 +1797,12 @@ const pages=[];
 
 let pageNumber=1;
 
+const bookForTitles =
+books.find(b=>b.id===currentBookId);
+
+const titles =
+bookForTitles ? [bookForTitles.title] : [];
+
 
 /*
 Process every selected file.
@@ -1217,6 +1848,10 @@ await pdfjsLib.getDocument({
 data:await file.arrayBuffer()
 }).promise;
 
+/* pages of this PDF (text-layer pages are cleaned after the
+   whole PDF is read, so repeated headers/footers are visible) */
+const filePages=[];
+const fileLines=[];
 
 for(
 let pdfPageNumber=1;
@@ -1246,15 +1881,17 @@ await pdf.getPage(pdfPageNumber);
 
 
 /*
-First try extracting actual PDF text.
+First try extracting actual PDF text
+(position-aware, reading order).
 */
 
 let extractedText="";
 
+let pl=null;
+
 try{
 
-const textContent = await pdfPage.getTextContent();
-extractedText = extractPdfReadingText(textContent, pdfPage);
+pl=await extractPdfLines(pdfPage);
 
 }catch(error){
 
@@ -1264,6 +1901,9 @@ error
 );
 
 }
+
+const hasTextLayer =
+!!(pl && pl.lines.length);
 
 
 /*
@@ -1300,10 +1940,11 @@ canvas.toDataURL("image/jpeg",.82);
 
 /*
 If PDF has no selectable text,
-use OCR.
+use OCR. (Never OCR a PDF page that
+already has a text layer.)
 */
 
-if(!extractedText){
+if(!hasTextLayer){
 
 status.innerHTML=`
 
@@ -1366,8 +2007,9 @@ ${percent
 );
 
 extractedText =
-cleanOCR(
-ocr.data.text
+ocrToText(
+ocr.data,
+titles
 );
 
 }catch(error){
@@ -1388,13 +2030,13 @@ extractedText="";
 Save page.
 */
 
-pages.push({
+const pageObj={
 
 pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanOCR(extractedText),
+text:extractedText,
 
 source:file.name,
 
@@ -1406,13 +2048,49 @@ transcript:"",
 
 result:null
 
-});
+};
 
-showOCRPreview(
-pages[pages.length-1]
+pages.push(pageObj);
+
+filePages.push(pageObj);
+
+fileLines.push(hasTextLayer?pl:null);
+
+}
+
+/*
+Clean text-layer pages now that every page of
+this PDF has been read.
+*/
+
+const layerLines =
+fileLines.filter(Boolean);
+
+const repeated =
+findRepeatedMargins(layerLines);
+
+filePages.forEach((pg,k)=>{
+
+const pl=fileLines[k];
+
+if(pl){
+
+const kept =
+filterPageLines(pl,titles,repeated);
+
+pg.text =
+cleanExpectedText(
+cleanOCR(
+kept.map(l=>l.text).join(" ")
+),
+titles
 );
 
 }
+
+showOCRPreview(pg);
+
+});
 
 }catch(error){
 
@@ -1491,8 +2169,9 @@ ${percent
 );
 
 const extractedText =
-cleanOCR(
-ocr.data.text
+ocrToText(
+ocr.data,
+titles
 );
 
 pages.push({
@@ -1576,13 +2255,37 @@ currentPosition:0,
 
 completed:false,
 
-lastScore:null
+lastScore:null,
+
+reviewGenerated:false
 
 };
 
 book.chapters.push(chapter);
 
-saveBooks();
+if(!saveBooks()){
+
+/* Do not pretend the chapter was stored. */
+
+book.chapters.pop();
+
+status.innerHTML=`
+
+<div class="status">
+
+⚠️ The browser has no room left to store this chapter.
+Delete a book or chapter you no longer need, or upload
+fewer pages, then try again.
+
+</div>
+
+`;
+
+button.disabled=false;
+
+return;
+
+}
 
 status.innerHTML=`
 
@@ -1672,6 +2375,127 @@ ${page.text.length>600?"...":""}
 
 
 /* =====================================================
+EXPECTED TEXT (cleaned, cached) AND PAGE STATE HELPERS
+===================================================== */
+
+const expectedCache = new WeakMap();
+
+/* Applies the same boundary filtering to text saved earlier. */
+function getExpected(page){
+
+let c=expectedCache.get(page);
+
+if(!c || c.src!==page.text){
+
+const book=
+books.find(b=>b.id===currentBookId);
+
+const titles=
+book?[book.title]:[];
+
+const text=
+cleanExpectedText(page.text,titles);
+
+c={
+src:page.text,
+text:text,
+words:tokenize(text)
+};
+
+expectedCache.set(page,c);
+
+}
+
+return c;
+
+}
+
+
+function isPageDone(page){
+
+return !!(page && page.result);
+
+}
+
+
+/* Index of the first unfinished page = furthest unlocked page.
+   Pages after it are locked. */
+function unlockedIndex(chapter){
+
+const idx=
+chapter.pages.findIndex(p=>!isPageDone(p));
+
+return idx===-1
+?
+chapter.pages.length-1
+:
+idx;
+
+}
+
+
+function sentenceIndexForWord(text,wordIdx){
+
+const sentences=
+text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+
+let count=0;
+
+for(let s=0;s<sentences.length;s++){
+
+count+=tokenize(sentences[s]).length;
+
+if(wordIdx<count)return s;
+
+}
+
+return Math.max(0,sentences.length-1);
+
+}
+
+
+/* Pages with no reading text cannot be "read", so they are
+   passed automatically. Returns true when no unread page is left. */
+function skipEmptyPages(chapter){
+
+while(currentPageIndex<chapter.pages.length){
+
+const p=chapter.pages[currentPageIndex];
+
+if(isPageDone(p)){
+
+if(currentPageIndex>=chapter.pages.length-1)break;
+
+currentPageIndex++;
+
+continue;
+
+}
+
+if(getExpected(p).words.length>0)return false;
+
+p.result={
+
+score:0,correct:0,missing:0,changed:0,extra:0,
+uncertain:0,repeated:0,referenceWords:0,spokenWords:0,
+speechMs:0,difficult:[],uncertainWords:[],
+noText:true,completed:true,
+timestamp:new Date().toISOString()
+
+};
+
+if(currentPageIndex>=chapter.pages.length-1)break;
+
+currentPageIndex++;
+
+}
+
+return chapter.pages.every(isPageDone);
+
+}
+
+
+/* =====================================================
 OPEN CHAPTER
 ===================================================== */
 
@@ -1718,14 +2542,26 @@ document.getElementById("chapterPages");
 
 container.innerHTML="";
 
-chapter.pages.forEach(page=>{
+const unlocked=unlockedIndex(chapter);
+
+chapter.pages.forEach((page,idx)=>{
 
 let status="Not read";
+
+const locked = idx>unlocked;
 
 if(page.result){
 
 status =
+page.result.noText
+?
+"No reading text"
+:
 `${page.result.score}% accuracy`;
+
+}else if(locked){
+
+status="🔒 Locked";
 
 }
 
@@ -1733,6 +2569,18 @@ const div =
 document.createElement("div");
 
 div.className="pageCard";
+
+div.style.cursor=
+locked?"not-allowed":"pointer";
+
+div.style.opacity=
+locked?".55":"1";
+
+div.onclick=function(){
+
+if(!locked)openReaderPage(idx);
+
+};
 
 div.innerHTML=`
 
@@ -1752,23 +2600,6 @@ ${status}
 
 `;
 
-if(page.completed || page.result){
-  div.style.cursor="pointer";
-  div.title="Review completed page";
-  div.addEventListener("click",()=>{
-    const chapterNow=getCurrentChapter();
-    const targetIndex=chapterNow.pages.findIndex(p=>p.pageNumber===page.pageNumber);
-    if(targetIndex<0)return;
-    currentPageIndex=targetIndex;
-    sessionActive=false;
-    userStoppedRecognition=true;
-    clearTimeout(inactivityTimer);
-    if(recognition){try{recognition.stop();}catch(e){}}
-    loadReaderPage();
-    showSection("readerSection");
-    setReadingStatus("Reviewing a completed page. Previously saved results are preserved.");
-  });
-}
 container.appendChild(div);
 
 });
@@ -1780,20 +2611,133 @@ container.appendChild(div);
 START CHAPTER
 ===================================================== */
 
-window.startChapter = function(){
-  const chapter = getCurrentChapter();
-  if(!chapter) return;
-  let resume = Number.isInteger(chapter.currentPosition) ? chapter.currentPosition : 0;
-  const firstUnfinished = chapter.pages.findIndex(p=>!p.completed && !p.result);
-  if(firstUnfinished !== -1 && (chapter.pages[resume]?.completed || chapter.pages[resume]?.result)) resume = firstUnfinished;
-  currentPageIndex = Math.max(0, Math.min(resume, chapter.pages.length - 1));
-  sessionActive = true;
-  userStoppedRecognition = false;
-  loadReaderPage();
-  showSection("readerSection");
-  startInactivityMonitor();
-  startRecording();
+function markActive(){
+
+try{
+
+localStorage.setItem(
+ACTIVE_KEY,
+JSON.stringify({
+bookId:currentBookId,
+chapterId:currentChapterId
+})
+);
+
+}catch(error){}
+
+}
+
+
+window.startChapter =
+function(){
+
+const chapter =
+getCurrentChapter();
+
+if(!chapter)return;
+
+
+/* A finished chapter shows its stored review (never a new one). */
+
+if(chapter.pages.every(isPageDone)){
+
+finishChapter();
+
+return;
+
+}
+
+
+/*
+Find first unfinished page.
+*/
+
+let resume=0;
+
+for(let i=0;
+    i<chapter.pages.length;
+    i++){
+
+if(!chapter.pages[i].result){
+
+resume=i;
+
+break;
+
+}
+
+}
+
+currentPageIndex=resume;
+
+if(skipEmptyPages(chapter)){
+
+persistChapter(chapter,true);
+
+finishChapter();
+
+return;
+
+}
+
+viewPageIndex=currentPageIndex;
+
+idleNote="";
+
+markActive();
+
+loadReaderPage();
+
+showSection("readerSection");
+
+/* Reading starts listening automatically (this runs inside the
+   tap on "Start / Continue Reading", which satisfies the
+   browser's user-gesture rule). */
+
+startRecording();
+
 };
+
+
+/* Open a page from the chapter list: completed pages are reviewed,
+   the current page starts reading, later pages are locked. */
+window.openReaderPage =
+function(i){
+
+const chapter=getCurrentChapter();
+
+if(!chapter)return;
+
+const unlocked=unlockedIndex(chapter);
+
+if(i>unlocked)return;
+
+if(!chapter.pages.every(isPageDone) && i===unlocked){
+
+startChapter();
+
+return;
+
+}
+
+currentPageIndex=unlocked;
+
+viewPageIndex=i;
+
+idleNote="";
+
+markActive();
+
+loadReaderPage();
+
+showSection("readerSection");
+
+};
+
+
+/* =====================================================
+LOAD READER PAGE
+===================================================== */
 
 function loadReaderPage(){
 
@@ -1803,7 +2747,7 @@ getCurrentChapter();
 if(!chapter)return;
 
 const page =
-chapter.pages[currentPageIndex];
+chapter.pages[viewPageIndex];
 
 if(!page){
 
@@ -1831,24 +2775,85 @@ page.image;
 document.getElementById(
 "referenceText"
 ).textContent=
-page.text || "No text detected.";
+getExpected(page).text || "No text detected.";
 
 document.getElementById(
 "liveTranscript"
 ).textContent=
 page.transcript ||
-"Nothing recorded yet.";
+(sessionActive?"Listening...":"Nothing recorded yet.");
 
 document.getElementById(
 "pageResult"
 ).innerHTML="";
 
-finalTranscript = page.transcript || "";
-resetRecordingUI();
-updateChapterProgress();
-if(sessionActive) startInactivityMonitor();
+if(isPageDone(page)){
+
+showCompletedPage(page);
 
 }
+
+document.getElementById(
+"prevPageBtn"
+).disabled=viewPageIndex<=0;
+
+document.getElementById(
+"nextPageBtn"
+).disabled=viewPageIndex>=currentPageIndex;
+
+resetRecordingUI();
+
+updateChapterProgress();
+
+}
+
+
+/* Backward navigation (completed pages only) and the way back to
+   the page being read. Forward navigation past the current page
+   is not possible. */
+
+window.viewPrevPage =
+function(){
+
+if(viewPageIndex<=0)return;
+
+viewPageIndex--;
+
+loadReaderPage();
+
+};
+
+
+window.viewNextPage =
+function(){
+
+if(viewPageIndex>=currentPageIndex)return;
+
+viewPageIndex++;
+
+loadReaderPage();
+
+};
+
+
+/* Kept for compatibility: only moves to the next page that is
+   already unlocked. */
+window.nextPage =
+function(){
+
+viewNextPage();
+
+};
+
+
+window.backToReadingPage =
+function(){
+
+viewPageIndex=currentPageIndex;
+
+loadReaderPage();
+
+};
 
 
 /* =====================================================
@@ -1892,205 +2897,1098 @@ percent+"%";
 
 
 /* =====================================================
+STATUS DISPLAY
+===================================================== */
+
+function refreshStatusUI(){
+
+const el=
+document.getElementById("readingStatus");
+
+let text="Ready";
+
+let cls="status";
+
+if(statusFlash){
+
+text=statusFlash;
+
+}else if(micProblem){
+
+text=micProblem;
+
+}else if(sessionActive && suspendedForInactivity){
+
+text="Paused — tap the screen to continue reading.";
+
+}else if(sessionActive && isRecording){
+
+text="🎤 AI is listening...";
+
+cls="status listening";
+
+if(viewPageIndex!==currentPageIndex){
+
+text+=" (reviewing an earlier page — reading here is not recorded)";
+
+}
+
+}else if(sessionActive){
+
+text="🎤 Reconnecting the microphone... your place is saved.";
+
+}else if(pausedByUser){
+
+text="Paused — your place is saved. Tap Start Reading to continue.";
+
+}else if(idleNote){
+
+text=idleNote;
+
+}
+
+if(storageNotice)text+=" ⚠️ "+storageNotice;
+
+el.className=cls;
+
+el.textContent=text;
+
+document.getElementById(
+"startButton"
+).disabled=sessionActive;
+
+document.getElementById(
+"stopButton"
+).disabled=!sessionActive;
+
+}
+
+
+function flash(msg,ms){
+
+statusFlash=msg;
+
+refreshStatusUI();
+
+setTimeout(()=>{
+
+statusFlash="";
+
+refreshStatusUI();
+
+},ms||3000);
+
+}
+
+
+/* =====================================================
 SPEECH RECOGNITION
 ===================================================== */
 
 function createRecognition(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition){
-    setReadingStatus("Speech recognition is not supported here. Please use a supported version of Chrome or Edge.");
-    return null;
-  }
-  const r = new SpeechRecognition();
-  r.lang = "en-US";
-  r.continuous = true;
-  r.interimResults = true;
-  r.onstart = function(){
-    isRecording = true;
-    lastRecognitionError = "";
-    document.getElementById("readingStatus").className = "status listening";
-    document.getElementById("readingStatus").textContent = "🎤 AI is listening...";
-    document.getElementById("startButton").disabled = true;
-    document.getElementById("stopButton").disabled = false;
-  };
-  r.onresult = function(event){
-    let interim = "";
-    const newFinal = [];
-    for(let i=event.resultIndex; i<event.results.length; i++){
-      const result = event.results[i], phrase = (result[0]?.transcript || "").trim();
-      if(!phrase) continue;
-      if(result.isFinal) newFinal.push(phrase);
-      else interim += (interim ? " " : "") + phrase;
-    }
-    if(newFinal.length || interim.trim()){
-      lastSpeechAt = Date.now();
-      hideInactivityOverlay();
-      startInactivityMonitor();
-    }
-    if(newFinal.length){
-      const added = newFinal.join(" ").trim();
-      finalTranscript = (finalTranscript + " " + added).trim();
-      const page = getCurrentChapter()?.pages[currentPageIndex];
-      if(page){
-        page.transcript = finalTranscript;
-        page.spokenSegments = Array.isArray(page.spokenSegments) ? page.spokenSegments : [];
-        page.spokenSegments.push({text:added, at:new Date().toISOString()});
-        saveBooks();
-      }
-    }
-    const display = (finalTranscript + " " + interim).trim();
-    document.getElementById("liveTranscript").textContent = display || "Listening...";
-    updateReadingPosition(display);
-    checkForPageCompletion();
-  };
-  r.onerror = function(event){
-    lastRecognitionError = event.error || "unknown";
-    console.warn("Speech error:", event.error);
-    isRecording = false;
-    if(event.error === "not-allowed" || event.error === "service-not-allowed"){
-      sessionActive = false;
-      setReadingStatus("Microphone permission is blocked. Allow microphone access, then tap Start Reading.");
-      resetRecordingUI();
-    } else setReadingStatus("Listening interrupted. Reconnecting when possible...");
-  };
-  r.onend = function(){
-    isRecording = false;
-    if(shouldCompareAfterStop){ shouldCompareAfterStop = false; compareCurrentPage(); return; }
-    resetRecordingUI();
-    if(sessionActive && !userStoppedRecognition && document.getElementById("inactiveOverlay").classList.contains("hidden")){
-      clearTimeout(recognitionRestartTimer);
-      recognitionRestartTimer = setTimeout(()=>{
-        if(sessionActive && !userStoppedRecognition && !isRecording){
-          recognition = createRecognition();
-          try { recognition?.start(); } catch(e){ console.warn("Recognition restart:", e); }
-        }
-      }, 800);
-    }
-  };
-  return r;
-}
-function setReadingStatus(message){
-  const el=document.getElementById("readingStatus");
-  if(el){el.className="status";el.textContent=message;}
-}
-function startInactivityMonitor(){
-  clearTimeout(inactivityTimer);
-  if(!sessionActive) return;
-  const remaining=INACTIVITY_LIMIT_MS-(Date.now()-lastSpeechAt);
-  if(remaining<=0){showInactivityOverlay();return;}
-  inactivityTimer=setTimeout(showInactivityOverlay,remaining);
-}
-function showInactivityOverlay(){
-  if(!sessionActive)return;
-  document.getElementById("inactiveOverlay").classList.remove("hidden");
-  setReadingStatus("Paused after 30 minutes without detected speech. Tap to continue.");
-}
-function hideInactivityOverlay(){
-  document.getElementById("inactiveOverlay").classList.add("hidden");
-}
-window.resumeAfterInactivity=function(){
-  hideInactivityOverlay(); lastSpeechAt=Date.now(); userStoppedRecognition=false;
-  startInactivityMonitor();
-  if(sessionActive && !isRecording){
-    recognition=createRecognition();
-    try{recognition?.start();}catch(e){setReadingStatus("Tap Start Reading to restore microphone listening.");}
-  }
-};
-function longestOrderedCoverage(reference,spoken){
-  let count=0,cursor=0;
-  for(const word of reference){
-    for(let j=cursor;j<spoken.length;j++){
-      if(word===spoken[j] || wordSimilarity(word,spoken[j])>=.82){count++;cursor=j+1;break;}
-    }
-  }
-  return count;
-}
-function checkForPageCompletion(){
-  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
-  if(!sessionActive||!page||page.completed||page.result)return;
-  const reference=tokenize(page.text),spoken=tokenize(finalTranscript);
-  if(reference.length<5||spoken.length<5)return;
-  const coverage=longestOrderedCoverage(reference,spoken);
-  const tail=reference.slice(-Math.min(6,reference.length));
-  const recent=spoken.slice(-Math.max(20,tail.length*4));
-  const tailSeen=tail.every(w=>recent.some(x=>x===w||wordSimilarity(w,x)>=.82));
-  if(coverage>=Math.max(5,Math.ceil(reference.length*.88))&&tailSeen){
-    clearTimeout(completionTimer);
-    completionTimer=setTimeout(()=>{
-      const latest=getCurrentChapter()?.pages[currentPageIndex];
-      if(latest&&!latest.completed&&!latest.result&&longestOrderedCoverage(tokenize(latest.text),tokenize(finalTranscript))>=Math.max(5,Math.ceil(tokenize(latest.text).length*.88))) completeCurrentPageAutomatically();
-    },COMPLETION_CONFIRM_MS);
-  }
-}
-function completeCurrentPageAutomatically(){
-  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
-  if(!chapter||!page||page.completed||page.result)return;
-  const reference=tokenize(page.text),spoken=tokenize(finalTranscript);
-  if(!reference.length||!spoken.length)return;
-  const operations=alignWords(reference,spoken),result=calculateResult(operations,reference,spoken);
-  result.uncertain=true; page.transcript=finalTranscript.trim(); page.result=result; page.completed=true;
-  chapter.currentPosition=currentPageIndex; saveBooks(); showPageResult(page,result,operations);
-  setTimeout(()=>{
-    if(!sessionActive)return;
-    if(currentPageIndex<chapter.pages.length-1){
-      currentPageIndex++;chapter.currentPosition=currentPageIndex;finalTranscript=chapter.pages[currentPageIndex].transcript||"";
-      saveBooks();loadReaderPage();if(!isRecording)startRecording();
-    }else{sessionActive=false;clearTimeout(inactivityTimer);finishChapter();}
-  },1800);
-}
-window.startRecording=function(){
-  if(isRecording)return;
-  const page=getCurrentChapter()?.pages[currentPageIndex];if(!page)return;
-  sessionActive=true;userStoppedRecognition=false;finalTranscript=page.transcript||"";
-  document.getElementById("liveTranscript").textContent=finalTranscript||"Listening...";
-  recognition=createRecognition();if(!recognition)return;
-  try{recognition.start();}catch(error){console.warn(error);setReadingStatus("Microphone could not start. Tap Start Reading to retry.");}
-};
-window.stopRecording=function(){
-  userStoppedRecognition=true;
-  if(recognition){
-    shouldCompareAfterStop=true;setReadingStatus("Checking reading...");
-    document.getElementById("stopButton").disabled=true;
-    try{recognition.stop();}catch(error){shouldCompareAfterStop=false;compareCurrentPage();}
-  }else compareCurrentPage();
-};
-function resetRecordingUI(){
-  document.getElementById("startButton").disabled=false;
-  document.getElementById("stopButton").disabled=true;
-  if(document.getElementById("inactiveOverlay")?.classList.contains("hidden") && !isRecording && !lastRecognitionError)setReadingStatus("Ready");
+
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+
+alert(
+"Speech recognition is not supported here. Please use Chrome or Edge."
+);
+
+return null;
+
 }
 
-function updateReadingPosition(spoken){
-  const chapter=getCurrentChapter(),page=chapter?.pages[currentPageIndex];
-  if(!chapter||!page)return;
-  chapter.currentPosition=currentPageIndex;
-  page.transcript=finalTranscript;
-  saveBooks();
+const r =
+new SpeechRecognition();
+
+r.lang="en-US";
+
+r.continuous=true;
+
+r.interimResults=true;
+
+
+r.onstart=function(){
+
+isRecording=true;
+
+micProblem="";
+
+refreshStatusUI();
+
+};
+
+
+r.onspeechstart=function(){
+
+lastSpeechAt=Date.now();
+
+};
+
+
+r.onresult=function(event){
+
+hardErrors=0;
+
+micProblem="";
+
+const chapter=getCurrentChapter();
+
+const page=
+chapter?chapter.pages[currentPageIndex]:null;
+
+/* Words are recorded only for the page being read. While the
+   child reviews an earlier page, speech still counts as activity
+   but is not added to any page. */
+
+const canRecord =
+!!(page) &&
+!isPageDone(page) &&
+viewPageIndex===currentPageIndex;
+
+const nowT=Date.now();
+
+if(canRecord &&
+   lastSpeechAt &&
+   nowT-lastSpeechAt<5000){
+
+page.speechMs=
+(page.speechMs||0)+(nowT-lastSpeechAt);
+
 }
-function findSequenceMatch(reference,spoken){
-  if(!reference.length||!spoken.length)return 0;
-  let matched=0,cursor=0;
-  for(const word of reference){
-    const found=spoken.indexOf(word,cursor);
-    if(found>=0){matched++;cursor=found+1;}
-  }
-  return matched/Math.max(1,reference.length);
+
+lastSpeechAt=nowT;
+
+let interim="";
+
+let gotFinal=false;
+
+for(
+let i=event.resultIndex;
+i<event.results.length;
+i++
+){
+
+const alt=event.results[i][0];
+
+const text=alt.transcript;
+
+if(
+event.results[i].isFinal
+){
+
+if(canRecord &&
+   acceptFinal(page,text,alt.confidence)){
+
+gotFinal=true;
+
 }
+
+}else{
+
+interim += text;
+
+}
+
+}
+
+if(!canRecord)return;
+
+const display =
+(
+(page.transcript||"")+
+" "+
+interim
+).trim();
+
+document.getElementById(
+"liveTranscript"
+).textContent=
+display ||
+"Listening...";
+
+
+/*
+Track where the student is
+while reading.
+*/
+
+updateReadingPosition(gotFinal);
+
+};
+
+
+r.onerror=function(event){
+
+console.log(
+"Speech error:",
+event.error
+);
+
+const e=event.error;
+
+if(e==="no-speech" || e==="aborted")return;
+
+recordGap();
+
+if(
+e==="not-allowed" ||
+e==="service-not-allowed"
+){
+
+isRecording=false;
+
+sessionActive=false;
+
+micProblem=
+"⚠️ The microphone is not listening. Allow microphone access in your browser settings, then tap Start Reading.";
+
+alert(
+"Please allow microphone access."
+);
+
+saveCurrentLite();
+
+refreshStatusUI();
+
+return;
+
+}
+
+if(e==="audio-capture"){
+
+isRecording=false;
+
+sessionActive=false;
+
+micProblem=
+"⚠️ No microphone was found, or another app is using it. Fix this, then tap Start Reading.";
+
+saveCurrentLite();
+
+refreshStatusUI();
+
+return;
+
+}
+
+hardErrors++;
+
+if(e==="network"){
+
+micProblem=
+"⚠️ The connection to the speech service was lost. Your place is saved — trying again...";
+
+}
+
+if(hardErrors>8){
+
+sessionActive=false;
+
+micProblem=
+"⚠️ The microphone stopped listening. Your place is saved. Tap Start Reading to continue.";
+
+}
+
+saveCurrentLite();
+
+refreshStatusUI();
+
+};
+
+
+r.onend=function(){
+
+isRecording=false;
+
+if(shouldCompareAfterStop){
+
+shouldCompareAfterStop=false;
+
+setTimeout(
+compareCurrentPage,
+300
+);
+
+return;
+
+}
+
+if(sessionActive && !suspendedForInactivity){
+
+/* The recognizer stopped by itself (browsers end it after a
+   while or a silence). Restart without losing the position. */
+
+recordGap();
+
+scheduleRestart();
+
+}
+
+refreshStatusUI();
+
+};
+
+return r;
+
+}
+
+
+/* A final phrase is added to the page record unless it is an
+   immediate duplicate delivery of the previous one. */
+function acceptFinal(page,text,confidence){
+
+const t=String(text||"").trim();
+
+if(!t)return false;
+
+const norm=normalizeText(t);
+
+const now=Date.now();
+
+if(norm && norm===lastFinalNorm && now-lastFinalAt<1500){
+
+return false;
+
+}
+
+lastFinalNorm=norm;
+
+lastFinalAt=now;
+
+page.transcript=
+((page.transcript||"")+" "+t).trim();
+
+if(confidence>0 && confidence<0.6){
+
+page.lowConf=
+(page.lowConf||[])
+.concat(tokenize(t))
+.slice(-300);
+
+}
+
+return true;
+
+}
+
+
+/* Remember where recognition was interrupted, so words that
+   cannot be heard around that point are not called "omitted". */
+function recordGap(){
+
+const chapter=getCurrentChapter();
+
+const page=
+chapter?chapter.pages[currentPageIndex]:null;
+
+if(!page || isPageDone(page))return;
+
+const n=tokenize(page.transcript||"").length;
+
+page.gaps=page.gaps||[];
+
+if(page.gaps[page.gaps.length-1]!==n){
+
+page.gaps.push(n);
+
+if(page.gaps.length>100)page.gaps.shift();
+
+}
+
+}
+
+
+function scheduleRestart(){
+
+clearTimeout(restartTimer);
+
+const delay=
+hardErrors
+?
+Math.min(400*Math.pow(2,hardErrors),8000)
+:
+250;
+
+restartTimer=setTimeout(()=>{
+
+if(!sessionActive || suspendedForInactivity)return;
+
+if(isRecording)return;
+
+try{
+
+if(!recognition)recognition=createRecognition();
+
+if(recognition)recognition.start();
+
+}catch(error){
+
+console.log("Restart failed",error);
+
+try{
+
+recognition=createRecognition();
+
+if(recognition)recognition.start();
+
+}catch(error2){
+
+hardErrors++;
+
+if(hardErrors>8){
+
+sessionActive=false;
+
+micProblem=
+"⚠️ The microphone stopped listening. Your place is saved. Tap Start Reading to continue.";
+
+refreshStatusUI();
+
+}else{
+
+scheduleRestart();
+
+}
+
+}
+
+}
+
+},delay);
+
+}
+
+
+/* =====================================================
+START RECORDING (starts / resumes the listening session)
+===================================================== */
+
+window.startRecording =
+function(){
+
+if(sessionActive && isRecording)return;
+
+const chapter =
+getCurrentChapter();
+
+if(!chapter)return;
+
+if(viewPageIndex!==currentPageIndex){
+
+viewPageIndex=currentPageIndex;
+
+loadReaderPage();
+
+}
+
+const page =
+chapter.pages[currentPageIndex];
+
+if(!page || isPageDone(page))return;
+
+/* Existing progress is kept: a resume continues from the saved
+   position, it does not clear the page. */
+
+document.getElementById(
+"pageResult"
+).innerHTML="";
+
+document.getElementById(
+"liveTranscript"
+).textContent=
+page.transcript || "Listening...";
+
+pausedByUser=false;
+
+suspendedForInactivity=false;
+
+hideOverlay();
+
+micProblem="";
+
+hardErrors=0;
+
+lastSpeechAt=Date.now();
+
+shouldCompareAfterStop=false;
+
+if(!recognition)
+recognition=createRecognition();
+
+if(!recognition)return;
+
+sessionActive=true;
+
+startInactivityWatch();
+
+try{
+
+recognition.start();
+
+}catch(error){
+
+/* already running */
+
+console.log(error);
+
+}
+
+refreshStatusUI();
+
+};
+
+
+/* =====================================================
+STOP RECORDING (pause + check progress)
+===================================================== */
+
+window.stopRecording =
+function(){
+
+sessionActive=false;
+
+pausedByUser=true;
+
+clearTimeout(restartTimer);
+
+cancelCompletion();
+
+stopInactivityWatch();
+
+if(!recognition || !isRecording){
+
+shouldCompareAfterStop=false;
+
+compareCurrentPage();
+
+return;
+
+}
+
+shouldCompareAfterStop=true;
+
+document.getElementById(
+"readingStatus"
+).className="status";
+
+document.getElementById(
+"readingStatus"
+).textContent=
+"Checking reading...";
+
+document.getElementById(
+"stopButton"
+).disabled=true;
+
+try{
+
+recognition.stop();
+
+}catch(error){
+
+shouldCompareAfterStop=false;
+
+compareCurrentPage();
+
+}
+
+};
+
+
+/* =====================================================
+RESET RECORDING
+===================================================== */
+
+function resetRecordingUI(){
+
+refreshStatusUI();
+
+}
+
+
+/* =====================================================
+INACTIVITY (30 continuous minutes without speech)
+===================================================== */
+
+function startInactivityWatch(){
+
+if(inactivityInterval)return;
+
+inactivityInterval=
+setInterval(checkInactivity,10000);
+
+}
+
+
+function stopInactivityWatch(){
+
+clearInterval(inactivityInterval);
+
+inactivityInterval=null;
+
+}
+
+
+/* Uses wall-clock time, so a suspended phone or tab is measured
+   correctly when it wakes up. */
+function checkInactivity(){
+
+if(!sessionActive || suspendedForInactivity)return;
+
+if(Date.now()-lastSpeechAt>=INACTIVITY_MS){
+
+showInactivityOverlay();
+
+}
+
+}
+
+
+function showInactivityOverlay(){
+
+suspendedForInactivity=true;
+
+cancelCompletion();
+
+clearTimeout(restartTimer);
+
+const chapter=getCurrentChapter();
+
+persistChapter(chapter,true);
+
+try{
+
+if(recognition)recognition.stop();
+
+}catch(error){}
+
+document.getElementById(
+"inactivityOverlay"
+).classList.remove("hidden");
+
+refreshStatusUI();
+
+}
+
+
+function hideOverlay(){
+
+document.getElementById(
+"inactivityOverlay"
+).classList.add("hidden");
+
+}
+
+
+/* Tap on the overlay: same page, same word, nothing recounted. */
+window.resumeFromOverlay =
+function(){
+
+hideOverlay();
+
+suspendedForInactivity=false;
+
+lastSpeechAt=Date.now();
+
+hardErrors=0;
+
+micProblem="";
+
+if(sessionActive){
+
+try{
+
+if(!recognition)recognition=createRecognition();
+
+if(recognition)recognition.start();
+
+}catch(error){
+
+scheduleRestart();
+
+}
+
+}
+
+refreshStatusUI();
+
+};
+
+
+/* =====================================================
+READING POSITION AND AUTOMATIC PAGE COMPLETION
+===================================================== */
+
+function cancelCompletion(){
+
+clearTimeout(completionTimer);
+
+completionTimer=null;
+
+}
+
+
+function armCompletion(){
+
+clearTimeout(completionTimer);
+
+completionTimer=setTimeout(()=>{
+
+completionTimer=null;
+
+completePage(currentPageIndex,false);
+
+},COMPLETION_CONFIRM_MS);
+
+}
+
+
+/* Reads the raw alignment: how far the child has got, and whether
+   the end of the passage has really been reached. */
+function analyseOps(ops,N){
+
+let matched=0;
+let lastMatched=-1;
+let refIdx=0;
+const flags=[];
+
+ops.forEach(o=>{
+
+if(o.type!=="extra"){
+
+const heard=o.type!=="missing";
+
+if(heard){
+
+matched++;
+
+lastMatched=refIdx;
+
+}
+
+flags[refIdx]=heard;
+
+refIdx++;
+
+}
+
+});
+
+const tail=Math.min(3,N);
+
+const need=tail>=3?2:tail;
+
+let got=0;
+
+for(let k=N-tail;k<N;k++){
+
+if(flags[k])got++;
+
+}
+
+return{
+
+pos:lastMatched+1,
+
+matched:matched,
+
+complete:
+N>0 &&
+got>=need &&
+matched>=Math.ceil(N*0.5)
+
+};
+
+}
+
+
+/* Called on final speech results (not on every interim result, to
+   keep recognition responsive). */
+function updateReadingPosition(isFinal){
+
+const chapter=getCurrentChapter();
+
+if(!chapter)return;
+
+const page=chapter.pages[currentPageIndex];
+
+if(!page || isPageDone(page))return;
+
+if(viewPageIndex!==currentPageIndex)return;
+
+if(!isFinal){
+
+/* still speaking: keep a pending confirmation waiting */
+
+if(completionTimer)armCompletion();
+
+return;
+
+}
+
+const exp=getExpected(page);
+
+if(!exp.words.length)return;
+
+const sp=tokenize(page.transcript||"");
+
+const ops=alignWords(exp.words,sp);
+
+const st=analyseOps(ops,exp.words.length);
+
+page.progress={
+
+pos:st.pos,
+
+sentence:
+sentenceIndexForWord(
+exp.text,
+Math.max(0,st.pos-1)
+),
+
+updatedAt:Date.now()
+
+};
+
+/* saved as the child reads (compact copy) */
+
+persistChapter(chapter,false);
+
+if(st.complete){
+
+armCompletion();
+
+}else{
+
+cancelCompletion();
+
+}
+
+}
+
+
+/* Marks a page complete, saves, and advances automatically. */
+function completePage(idx,forced){
+
+const chapter=getCurrentChapter();
+
+if(!chapter)return;
+
+const page=chapter.pages[idx];
+
+if(!page || isPageDone(page))return;
+
+if(idx!==currentPageIndex)return;
+
+const exp=getExpected(page);
+
+const sp=tokenize(page.transcript||"");
+
+const rawOps=alignWords(exp.words,sp);
+
+const st=analyseOps(rawOps,exp.words.length);
+
+if(!forced && !st.complete)return;
+
+cancelCompletion();
+
+/* Words spoken after the end of this page (the start of the next
+   page, in the same recognition result) go to the next page. */
+
+let lastRefOp=-1;
+let rc=0;
+
+rawOps.forEach((o,k)=>{
+
+if(o.type!=="extra"){
+
+rc++;
+
+if(rc===exp.words.length)lastRefOp=k;
+
+}
+
+});
+
+const overflowCount=
+lastRefOp>=0
+?
+rawOps.slice(lastRefOp+1)
+.filter(o=>o.type==="extra").length
+:
+0;
+
+const used=sp.slice(0,sp.length-overflowCount);
+
+let overflowText="";
+
+if(overflowCount>0){
+
+const orig=
+String(page.transcript||"")
+.split(/\s+/).filter(Boolean);
+
+if(tokenize(orig.join(" ")).length===sp.length){
+
+overflowText=
+orig.slice(orig.length-overflowCount).join(" ");
+
+page.transcript=
+orig.slice(0,orig.length-overflowCount).join(" ");
+
+}else{
+
+overflowText=
+sp.slice(sp.length-overflowCount).join(" ");
+
+page.transcript=used.join(" ");
+
+}
+
+}
+
+const ops=
+classifyOps(
+rawOps.slice(0,lastRefOp+1),
+page
+);
+
+page.result=
+calculateResult(
+ops,
+exp.words,
+used,
+page
+);
+
+page.completed=true;
+
+/* Save the completed page before moving on. */
+
+persistChapter(chapter,true);
+
+if(idx>=chapter.pages.length-1){
+
+finishChapter();
+
+return;
+
+}
+
+const wasViewing=
+viewPageIndex===idx;
+
+currentPageIndex=idx+1;
+
+const next=chapter.pages[currentPageIndex];
+
+if(overflowText){
+
+next.transcript=
+((next.transcript||"")+" "+overflowText).trim();
+
+}
+
+const nextNum=next.pageNumber;
+
+const finished=skipEmptyPages(chapter);
+
+chapter.currentPosition=currentPageIndex;
+
+persistChapter(chapter,false);
+
+if(finished){
+
+persistChapter(chapter,true);
+
+finishChapter();
+
+return;
+
+}
+
+if(wasViewing)viewPageIndex=currentPageIndex;
+
+loadReaderPage();
+
+flash(
+"✓ Page "+page.pageNumber+" completed — moving to page "+
+chapter.pages[currentPageIndex].pageNumber,
+3500
+);
+
+}
+
+
+/* Fallback if the last words were never recognised: allowed only
+   after most of the page has been read. */
+window.forceFinishPage =
+function(){
+
+const chapter=getCurrentChapter();
+
+if(!chapter)return;
+
+const page=chapter.pages[currentPageIndex];
+
+if(!page || isPageDone(page))return;
+
+const exp=getExpected(page);
+
+const sp=tokenize(page.transcript||"");
+
+const st=
+analyseOps(alignWords(exp.words,sp),exp.words.length);
+
+if(st.pos<exp.words.length*0.7)return;
+
+if(!confirm(
+"Finish this page now? Words that were not heard will not count as read."
+))return;
+
+completePage(currentPageIndex,true);
+
+if(!isPageDone(page))return;
+
+startRecording();
+
+};
+
+
+/* =====================================================
+COMPARE PAGE (Stop & Check)
+===================================================== */
 
 function compareCurrentPage(){
 
 const chapter =
 getCurrentChapter();
 
+if(!chapter)return;
+
 const page =
 chapter.pages[currentPageIndex];
 
 if(!page)return;
 
-const spoken =
-finalTranscript.trim();
+if(isPageDone(page)){
 
-page.transcript=spoken;
+resetRecordingUI();
+
+return;
+
+}
+
+cancelCompletion();
+
+persistChapter(chapter,true);
+
+const spoken =
+(page.transcript||"").trim();
 
 if(!spoken){
 
@@ -2124,49 +4022,206 @@ return;
 
 }
 
-const reference = tokenize(page.text);
-const spokenWords = tokenize(spoken);
-const coverage = longestOrderedCoverage(reference, spokenWords);
-if(reference.length >= 5 && coverage < Math.max(5, Math.ceil(reference.length * 0.65))){
-  page.transcript = spoken;
-  saveBooks();
-  document.getElementById("pageResult").innerHTML = `
-    <div class="resultBox">
-      <h3>Reading not yet confirmed</h3>
-      <p>The system has not recognized enough of this page's reading passage to complete it fairly. Continue reading from where you stopped.</p>
-      <button class="yellow" onclick="startRecording()">Continue Reading</button>
-    </div>`;
-  userStoppedRecognition = true;
-  sessionActive = true;
-  resetRecordingUI();
-  return;
+const exp=getExpected(page);
+
+const spokenWords =
+tokenize(spoken);
+
+const rawOps =
+alignWords(
+exp.words,
+spokenWords
+);
+
+const st=
+analyseOps(rawOps,exp.words.length);
+
+/* The end of the passage was reached: finish and advance. */
+
+if(st.complete){
+
+completePage(currentPageIndex,false);
+
+return;
+
 }
 
-const operations =
-alignWords(
-reference,
-spokenWords
-);
+/* Otherwise this is only a progress check. Nothing is marked as
+   complete and the position is kept for resuming. */
 
-const result =
-calculateResult(
-operations,
-reference,
-spokenWords
-);
+const percent=
+exp.words.length
+?
+Math.round(st.pos/exp.words.length*100)
+:
+0;
 
-page.result=result;
-page.completed = coverage >= Math.max(5, Math.ceil(reference.length * 0.65));
-chapter.currentPosition=currentPageIndex;
-saveBooks();
+const canFinish=
+st.pos>=exp.words.length*0.7;
 
-showPageResult(
-page,
-result,
-operations
-);
+document.getElementById(
+"pageResult"
+).innerHTML=`
+
+<div class="resultBox">
+
+<h3>
+Reading paused
+</h3>
+
+<p>
+You have read about ${percent}% of this page
+(${st.pos} of ${exp.words.length} words).
+Your place is saved. This page is not finished yet,
+so no result has been recorded for it.
+</p>
+
+<button class="yellow"
+onclick="startRecording()">
+Continue Reading
+</button>
+
+${
+canFinish
+?
+`
+<button class="secondary"
+onclick="forceFinishPage()">
+Finish this page
+</button>
+`
+:
+""
+}
+
+</div>
+
+`;
 
 resetRecordingUI();
+
+}
+
+
+/* =====================================================
+CLASSIFY OPERATIONS (fair assessment)
+===================================================== */
+
+/* Splits raw alignment results into confirmed mistakes and
+   uncertain / repeated words:
+   - near-matches and low-confidence words   -> uncertain
+   - a short single word dropped between two heard words, or a
+     short gap right where recognition was interrupted -> uncertain
+   - extra words that repeat earlier words   -> repeated        */
+function classifyOps(ops,page){
+
+const low=new Set((page&&page.lowConf)||[]);
+
+const gaps=new Set((page&&page.gaps)||[]);
+
+const out=ops.map(o=>Object.assign({},o));
+
+out.forEach(o=>{
+
+if(
+o.type==="changed" &&
+(
+wordSimilarity(o.reference,o.spoken)>=0.7 ||
+low.has(o.spoken)
+)
+){
+
+o.type="uncertain";
+
+}
+
+});
+
+let j=0;
+
+out.forEach(o=>{
+
+o.sj=j;
+
+if(o.type!=="missing")j++;
+
+});
+
+let k=0;
+
+while(k<out.length){
+
+if(out[k].type!=="missing"){
+
+k++;
+
+continue;
+
+}
+
+let e=k;
+
+while(e<out.length && out[e].type==="missing")e++;
+
+const len=e-k;
+
+const prev=out[k-1];
+
+const next=out[e];
+
+const heardAround=
+!!(prev && next && prev.spoken && next.spoken);
+
+const atGap=gaps.has(out[k].sj);
+
+const shortIsolated=
+len===1 &&
+heardAround &&
+out[k].reference.length<=3;
+
+if(shortIsolated || (atGap && len<=8)){
+
+for(let m=k;m<e;m++)out[m].type="uncertain";
+
+}
+
+k=e;
+
+}
+
+const recentRefs=[];
+
+out.forEach((o,idx)=>{
+
+if(o.type==="extra"){
+
+const prevSpoken=
+out[idx-1] && out[idx-1].spoken;
+
+const nextSpoken=
+out[idx+1] && out[idx+1].spoken;
+
+if(o.spoken===prevSpoken ||
+   o.spoken===nextSpoken ||
+   recentRefs.includes(o.spoken)){
+
+o.type="repeated";
+
+}
+
+}
+
+if(o.reference){
+
+recentRefs.push(o.reference);
+
+if(recentRefs.length>10)recentRefs.shift();
+
+}
+
+});
+
+return out;
 
 }
 
@@ -2178,37 +4233,70 @@ CALCULATE RESULT
 function calculateResult(
 operations,
 reference,
-spoken
+spoken,
+page
 ){
 
 let correct=0;
 let missing=0;
 let changed=0;
 let extra=0;
+let uncertain=0;
+let repeated=0;
+
+const difficult=new Set();
+const uncertainWords=new Set();
 
 operations.forEach(op=>{
 
 if(op.type==="correct")
 correct++;
 
-if(op.type==="missing")
+if(op.type==="missing"){
+
 missing++;
 
-if(op.type==="changed")
+difficult.add(op.reference);
+
+}
+
+if(op.type==="changed"){
+
 changed++;
+
+difficult.add(op.reference);
+
+}
 
 if(op.type==="extra")
 extra++;
+
+if(op.type==="uncertain"){
+
+uncertain++;
+
+uncertainWords.add(op.reference);
+
+}
+
+if(op.type==="repeated")
+repeated++;
 
 });
 
 let score=0;
 
-if(reference.length){
+/* Uncertain words are left out of the score (neither right nor
+   wrong) so recognition problems do not penalise the child. */
+
+const scored=
+Math.max(0,reference.length-uncertain);
+
+if(scored){
 
 score=Math.round(
 correct /
-reference.length *
+scored *
 100
 );
 
@@ -2231,11 +4319,23 @@ changed:changed,
 
 extra:extra,
 
+uncertain:uncertain,
+
+repeated:repeated,
+
 referenceWords:
 reference.length,
 
 spokenWords:
 spoken.length,
+
+speechMs:
+(page&&page.speechMs)||0,
+
+difficult:Array.from(difficult).slice(0,15),
+
+uncertainWords:
+Array.from(uncertainWords).slice(0,15),
 
 completed:true,
 
@@ -2275,20 +4375,38 @@ return normalized.split(" ");
 }
 
 
+const simCache = new Map();
+
 function wordSimilarity(a,b){
 
 if(a===b)
 return 1;
 
-const distance =
-levenshtein(a,b);
+const maxLen=
+Math.max(a.length,b.length);
 
-return 1 -
-distance /
-Math.max(
-a.length,
-b.length
-);
+if(!maxLen)return 1;
+
+/* quick upper bound: very different lengths cannot be similar */
+
+const bound=
+1-Math.abs(a.length-b.length)/maxLen;
+
+if(bound<0.7)return bound;
+
+const key=a+"|"+b;
+
+let v=simCache.get(key);
+
+if(v!==undefined)return v;
+
+v=1 - levenshtein(a,b)/maxLen;
+
+if(simCache.size>150000)simCache.clear();
+
+simCache.set(key,v);
+
+return v;
 
 }
 
@@ -2355,7 +4473,7 @@ return matrix[a.length][b.length];
 ALIGNMENT
 ===================================================== */
 
-function alignWords(reference,spoken){
+function buildDP(reference,spoken){
 
 const n=reference.length;
 const m=spoken.length;
@@ -2400,6 +4518,18 @@ dp[i-1][j-1]+substitution
 }
 
 }
+
+return dp;
+
+}
+
+
+function alignWords(reference,spoken){
+
+const n=reference.length;
+const m=spoken.length;
+
+const dp=buildDP(reference,spoken);
 
 const operations=[];
 
@@ -2569,6 +4699,53 @@ return operations;
 PAGE RESULT
 ===================================================== */
 
+/* Shows the stored result of a completed page without recounting
+   anything (used when revisiting a page). */
+function showCompletedPage(page){
+
+if(page.result.noText){
+
+document.getElementById(
+"pageResult"
+).innerHTML=`
+
+<div class="resultBox">
+
+<h3>
+Page ${page.pageNumber}
+</h3>
+
+<p>
+This page has no reading text, so it was passed automatically.
+</p>
+
+</div>
+
+`;
+
+return;
+
+}
+
+const exp=getExpected(page);
+
+const sp=tokenize(page.transcript||"");
+
+const ops=
+classifyOps(
+alignWords(exp.words,sp),
+page
+);
+
+showPageResult(
+page,
+page.result,
+ops
+);
+
+}
+
+
 function showPageResult(
 page,
 result,
@@ -2629,7 +4806,29 @@ ${escapeHTML(op.spoken)}
 
 }
 
-if(op.type==="extra"){
+if(op.type==="uncertain"){
+
+wordsHTML+=`
+
+<span class="word uncertain">
+
+${escapeHTML(op.spoken || op.reference)}
+
+${
+op.spoken && op.spoken!==op.reference
+?
+`<small>(${escapeHTML(op.reference)})</small>`
+:
+""
+}
+
+</span>
+
+`;
+
+}
+
+if(op.type==="extra" || op.type==="repeated"){
 
 wordsHTML+=`
 
@@ -2647,9 +4846,10 @@ wordsHTML+=`
 const chapter =
 getCurrentChapter();
 
-const isLast =
-currentPageIndex===
-chapter.pages.length-1;
+const showBack =
+chapter &&
+viewPageIndex!==currentPageIndex &&
+!chapter.pages.every(isPageDone);
 
 document.getElementById(
 "pageResult"
@@ -2699,6 +4899,20 @@ ${result.extra}
 Extra
 </div>
 
+<div class="stat">
+<strong>
+${result.uncertain||0}
+</strong>
+Uncertain
+</div>
+
+<div class="stat">
+<strong>
+${result.repeated||0}
+</strong>
+Repeated
+</div>
+
 </div>
 
 <h3>
@@ -2712,21 +4926,16 @@ ${wordsHTML}
 <br>
 
 ${
-isLast
+showBack
 ?
 `
 <button class="yellow"
-onclick="finishChapter()">
-Finish Chapter
+onclick="backToReadingPage()">
+Back to the page I am reading →
 </button>
 `
 :
-`
-<button class="yellow"
-onclick="nextPage()">
-Continue to Page ${page.pageNumber+1} →
-</button>
-`
+""
 }
 
 </div>
@@ -2737,30 +4946,10 @@ Continue to Page ${page.pageNumber+1} →
 
 
 /* =====================================================
-NEXT PAGE
+FINISH CHAPTER (one review per chapter, generated once)
 ===================================================== */
 
-window.nextPage = function(){
-  const chapter=getCurrentChapter();
-  if(!chapter || currentPageIndex>=chapter.pages.length-1)return;
-  if(!chapter.pages[currentPageIndex]?.completed)return;
-  currentPageIndex++;
-  chapter.currentPosition=currentPageIndex;
-  finalTranscript=chapter.pages[currentPageIndex].transcript||"";
-  saveBooks();loadReaderPage();
-  if(sessionActive&&!isRecording)startRecording();
-};
-
-window.finishChapter =
-function(){
-
-const chapter = getCurrentChapter();
-if(!chapter || chapter.reviewGenerated) return;
-if(!chapter.pages.every(p=>p.completed || p.result)){
-  setReadingStatus("Finish the remaining reading pages before generating the chapter review.");
-  return;
-}
-chapter.reviewGenerated = true;
+function buildChapterReview(chapter){
 
 const results =
 chapter.pages.filter(
@@ -2773,7 +4962,13 @@ let correct=0;
 let missing=0;
 let changed=0;
 let extra=0;
+let uncertain=0;
+let repeated=0;
 let referenceWords=0;
+let speechMs=0;
+
+const difficult=new Set();
+const uncertainWords=new Set();
 
 results.forEach(result=>{
 
@@ -2785,30 +4980,103 @@ changed+=result.changed;
 
 extra+=result.extra;
 
+uncertain+=(result.uncertain||0);
+
+repeated+=(result.repeated||0);
+
 referenceWords+=
 result.referenceWords;
 
+speechMs+=(result.speechMs||0);
+
+(result.difficult||[]).forEach(w=>difficult.add(w));
+
+(result.uncertainWords||[]).forEach(w=>uncertainWords.add(w));
+
 });
 
+const scored=
+Math.max(0,referenceWords-uncertain);
+
 const score =
-referenceWords
+scored
 ?
 Math.round(
 correct /
-referenceWords *
+scored *
 100
 )
 :
 0;
 
-chapter.completed =
-results.length===
-chapter.pages.length;
+const heard=correct+changed+uncertain;
 
-chapter.lastScore=
-score;
+/* Only an estimate: shown when enough speech time was measured. */
 
-saveBooks();
+const wpm=
+(speechMs>=20000 && heard>=20)
+?
+Math.round(heard/(speechMs/60000))
+:
+null;
+
+return{
+
+score:score,
+correct:correct,
+missing:missing,
+changed:changed,
+extra:extra,
+uncertain:uncertain,
+repeated:repeated,
+referenceWords:referenceWords,
+wpm:wpm,
+difficult:Array.from(difficult).slice(0,25),
+uncertainWords:Array.from(uncertainWords).slice(0,25),
+pagesDone:results.length,
+generatedAt:new Date().toISOString()
+
+};
+
+}
+
+
+window.finishChapter =
+function(){
+
+const chapter =
+getCurrentChapter();
+
+if(!chapter)return;
+
+/* A chapter is reviewed only when every page is complete. */
+
+if(!chapter.pages.every(isPageDone))return;
+
+if(!chapter.reviewGenerated || !chapter.review){
+
+const review=buildChapterReview(chapter);
+
+chapter.review=review;
+
+chapter.reviewGenerated=true;
+
+chapter.completed=true;
+
+chapter.lastScore=review.score;
+
+persistChapter(chapter,true);
+
+}
+
+showChapterReport(chapter);
+
+};
+
+
+function showChapterReport(chapter){
+
+const rev=chapter.review;
 
 document.getElementById(
 "reportChapterName"
@@ -2818,40 +5086,79 @@ chapter.title;
 document.getElementById(
 "overallScore"
 ).textContent=
-score+"%";
+rev.score+"%";
 
 document.getElementById(
 "reportPages"
 ).textContent=
-results.length+
+rev.pagesDone+
 "/"+
 chapter.pages.length;
 
 document.getElementById(
 "reportCorrect"
 ).textContent=
-correct;
+rev.correct;
 
 document.getElementById(
 "reportMissing"
 ).textContent=
-missing;
+rev.missing;
 
 document.getElementById(
 "reportChanged"
 ).textContent=
-changed;
+rev.changed;
 
 document.getElementById(
 "reportExtra"
 ).textContent=
-extra;
+rev.extra;
+
+document.getElementById(
+"reportUncertain"
+).textContent=
+rev.uncertain||0;
+
+document.getElementById(
+"reportRepeated"
+).textContent=
+rev.repeated||0;
+
+document.getElementById(
+"reportFluency"
+).textContent=
+rev.wpm?("~"+rev.wpm):"—";
+
+let extraInfo="";
+
+if(rev.difficult && rev.difficult.length){
+
+extraInfo+=
+`<p><strong>Words to practise:</strong> ${
+rev.difficult.map(escapeHTML).join(", ")
+}</p>`;
+
+}
+
+if(rev.uncertainWords && rev.uncertainWords.length){
+
+extraInfo+=
+`<p><strong>Not sure (microphone may have missed these):</strong> ${
+rev.uncertainWords.map(escapeHTML).join(", ")
+}</p>`;
+
+}
+
+document.getElementById(
+"reportDifficult"
+).innerHTML=extraInfo;
 
 renderReport(chapter);
 
 showSection("reportSection");
 
-};
+}
 
 
 /* =====================================================
@@ -2878,6 +5185,23 @@ document.createElement("div");
 div.className="stat";
 
 div.style.marginBottom="10px";
+
+if(page.result.noText){
+
+div.innerHTML=`
+
+<strong>
+Page ${page.pageNumber}:
+no reading text
+</strong>
+
+`;
+
+container.appendChild(div);
+
+return;
+
+}
 
 div.innerHTML=`
 
@@ -2906,11 +5230,203 @@ ${page.result.changed}
 Extra:
 ${page.result.extra}
 
+&nbsp; · &nbsp;
+
+Uncertain:
+${page.result.uncertain||0}
+
+&nbsp; · &nbsp;
+
+Repeated:
+${page.result.repeated||0}
+
 `;
 
 container.appendChild(div);
 
 });
+
+}
+
+
+/* =====================================================
+SESSION END, RECOVERY AND INTERRUPTIONS
+===================================================== */
+
+function saveCurrentLite(){
+
+const chapter=getCurrentChapter();
+
+if(chapter)persistChapter(chapter,false);
+
+}
+
+
+/* Called when the reader is left. Progress is saved first. */
+function endSession(){
+
+sessionActive=false;
+
+suspendedForInactivity=false;
+
+shouldCompareAfterStop=false;
+
+clearTimeout(restartTimer);
+
+cancelCompletion();
+
+stopInactivityWatch();
+
+hideOverlay();
+
+if(recognition){
+
+try{
+
+recognition.stop();
+
+}catch(error){}
+
+}
+
+const chapter=getCurrentChapter();
+
+if(chapter)persistChapter(chapter,true);
+
+try{
+
+localStorage.removeItem(ACTIVE_KEY);
+
+}catch(error){}
+
+}
+
+
+function inReader(){
+
+return !document.getElementById("readerSection")
+.classList.contains("hidden");
+
+}
+
+
+document.addEventListener("visibilitychange",()=>{
+
+if(document.hidden){
+
+saveCurrentLite();
+
+return;
+
+}
+
+if(!inReader())return;
+
+checkInactivity();
+
+/* Browsers stop the microphone when the tab is hidden, so it is
+   restarted when the child comes back. */
+
+if(sessionActive && !suspendedForInactivity && !isRecording){
+
+hardErrors=0;
+
+scheduleRestart();
+
+}
+
+});
+
+
+window.addEventListener("online",()=>{
+
+if(inReader() && sessionActive && !suspendedForInactivity && !isRecording){
+
+hardErrors=0;
+
+micProblem="";
+
+scheduleRestart();
+
+}
+
+});
+
+
+window.addEventListener("offline",()=>{
+
+if(inReader() && sessionActive){
+
+micProblem=
+"⚠️ No internet connection. Your place is saved. Listening will continue when the connection returns.";
+
+refreshStatusUI();
+
+}
+
+});
+
+
+window.addEventListener("pagehide",saveCurrentLite);
+
+window.addEventListener("beforeunload",saveCurrentLite);
+
+
+/* After a refresh or reopened tab: back to the saved page,
+   waiting for the child to tap Start Reading (browsers need a tap
+   before the microphone can start again). */
+function restoreActiveSession(){
+
+try{
+
+const s=JSON.parse(
+localStorage.getItem(ACTIVE_KEY)||"null"
+);
+
+if(!s)return;
+
+const book=
+books.find(b=>b.id===s.bookId);
+
+const chapter=
+book?.chapters.find(c=>c.id===s.chapterId);
+
+if(!chapter || chapter.pages.every(isPageDone)){
+
+localStorage.removeItem(ACTIVE_KEY);
+
+return;
+
+}
+
+currentBookId=s.bookId;
+
+currentChapterId=s.chapterId;
+
+currentPageIndex=unlockedIndex(chapter);
+
+if(skipEmptyPages(chapter)){
+
+finishChapter();
+
+return;
+
+}
+
+viewPageIndex=currentPageIndex;
+
+idleNote=
+"Your reading session was restored. Tap Start Reading to continue from where you stopped.";
+
+loadReaderPage();
+
+showSection("readerSection");
+
+}catch(error){
+
+console.log("Restore failed",error);
+
+}
 
 }
 
@@ -2955,40 +5471,9 @@ reader.readAsDataURL(file);
 }
 
 
-function extractPdfReadingText(textContent, pdfPage){
-  const items=(textContent.items||[]).filter(item=>item.str&&item.str.trim()&&item.transform);
-  if(!items.length)return "";
-  const lines=[];
-  for(const item of items){
-    const y=Math.round(item.transform[5]/3)*3;
-    let line=lines.find(x=>Math.abs(x.y-y)<=3);
-    if(!line){line={y,x:[]};lines.push(line);}
-    line.x.push({x:item.transform[4],text:item.str.trim()});
-  }
-  lines.sort((a,b)=>b.y-a.y);
-  lines.forEach(line=>line.x.sort((a,b)=>a.x-b.x));
-  const height=pdfPage.view?.[3]||Math.max(...lines.map(l=>l.y),1);
-  const normalized=lines.map(line=>({y:line.y,text:line.x.map(x=>x.text).join(" ").replace(/\s+/g," ").trim()})).filter(line=>line.text);
-  const kept=normalized.filter(line=>{
-    const t=line.text, edge=line.y>height*.92||line.y<height*.07;
-    if(/^([Pp]age\s*)?\d{1,4}(\s*(of|\/)\s*\d{1,4})?$/.test(t))return false;
-    if(edge && /^(page|chapter|unit|lesson)\s+\d+([.: -].*)?$/i.test(t))return false;
-    if(edge && t.length<70 && /^(copyright|©|all rights reserved|www\.|https?:|printed by|published by)\b/i.test(t))return false;
-    return true;
-  });
-  while(kept.length>1){
-    const first=kept[0].text;
-    const heading=first.length<65&&!/[.!?;:]$/.test(first)&&first.split(/\s+/).length<=9&&
-      /^(english|mathematics|science|social studies|standard [1-7]|class [1-7]|student'?s book|pupil'?s book|textbook|chapter\s+\d+)\b/i.test(first);
-    if(!heading)break;
-    kept.shift();
-  }
-  return cleanOCR(kept.map(line=>line.text).join(" "));
-}
-
 function cleanOCR(text){
 
-return text
+return String(text||"")
 .replace(/\r/g," ")
 .replace(/\n+/g," ")
 .replace(/\s+/g," ")
@@ -3041,17 +5526,11 @@ sizes[i];
 INITIALIZE
 ===================================================== */
 
-window.addEventListener("pagehide",()=>saveBooks());
-document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible" && sessionActive){
-    startInactivityMonitor();
-    if(!isRecording&&!userStoppedRecognition&&document.getElementById("inactiveOverlay").classList.contains("hidden")){
-      recognition=createRecognition();
-      try{recognition?.start();}catch(e){console.warn("Resume after tab visibility:",e);}
-    }
-  }
-});
+mergeLiteProgress();
+
 renderBooks();
+
+restoreActiveSession();
 
 </script>
 

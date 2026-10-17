@@ -434,12 +434,19 @@ BOOK
 <h2 id="bookTitleDisplay"></h2>
 
 <button class="yellow" onclick="startContinuousBookReading()">Read Entire Book</button>
+<button class="secondary" onclick="openParentAssessment()">View Parent Assessment</button>
 
 <button class="yellow"
         onclick="showSection('createChapterSection')">
 + Add Chapter
 </button>
 
+</div>
+
+<div class="card" id="parentAssessmentCard">
+<h2>Parent Assessment</h2>
+<p class="small">Tap to review the child's saved reading position, progress, and assessment based on the speech recorded so far.</p>
+<div id="parentAssessmentPanel" aria-live="polite"><p class="small">No assessment opened yet.</p></div>
 </div>
 
 <div class="card">
@@ -3512,9 +3519,30 @@ window.startContinuousBookReading=function(){
  resetInactivityTimer();
  setTimeout(()=>{if(continuousBookMode)startRecognitionWithoutClearing();},180);
 };
+function lastMatchedReferenceIndex(reference,spoken){
+ const ref=Array.isArray(reference)?reference:tokenize(reference||"");
+ const heard=Array.isArray(spoken)?spoken:tokenize(spoken||"");
+ let last=-1;
+ for(const word of heard){
+  for(let j=last+1;j<ref.length;j++){
+   if(ref[j]===word){last=j;break;}
+  }
+ }
+ return last;
+}
 function saveContinuousState(){
  const book=books.find(b=>b.id===currentBookId);if(!book)return;
- book.continuousSession={pageIndex:continuousPageIndex,updatedAt:new Date().toISOString(),active:!!sessionHasStarted};
+ const active=continuousPages[continuousPageIndex];
+ if(active&&active.page)active.page.transcript=finalTranscript||active.page.transcript||"";
+ const savedPage=active?active.page:null;
+ const lastWordIndex=savedPage?lastMatchedReferenceIndex(tokenize(savedPage.text||""),tokenize(savedPage.transcript||"")):-1;
+ book.continuousSession={
+  pageIndex:continuousPageIndex,
+  lastPageIndex:continuousPageIndex,
+  lastWordIndex,
+  updatedAt:new Date().toISOString(),
+  active:!!sessionHasStarted
+ };
  try{saveBooks();}catch(e){console.error("Continuous progress save failed",e);const status=document.getElementById("readingStatus");if(status)status.textContent="Progress could not be saved. Device storage may be full; free storage before continuing.";}
 }
 function continuousPageCoverage(item,spoken){
@@ -3582,23 +3610,74 @@ window.startRecording=function(){
  document.getElementById("liveTranscript").textContent=finalTranscript||"Listening...";
  resetInactivityTimer();startRecognitionWithoutClearing();
 };
+function calculateSavedBookAssessment(book,saveResult=true){
+ const list=buildContinuousPageList(book);
+ let correct=0,referenceWords=0,missing=0,changed=0,extra=0,assessed=0,wordsInBook=0,wordsReached=0;
+ let lastLocation=null;
+ const pageStats=[];
+ list.forEach((item,index)=>{
+  const ref=tokenize(item.page.text||"");
+  const spoken=tokenize(item.page.transcript||"");
+  wordsInBook+=ref.length;
+  const last=lastMatchedReferenceIndex(ref,spoken);
+  const attempted=last>=0?last+1:0;
+  wordsReached+=attempted;
+  if(spoken.length||item.page.result){
+   if(last>=0){lastLocation={item,index,word:ref[last],wordIndex:last};}
+   if(ref.length&&spoken.length&&last>=0){
+    // Assess only the portion up to the last matched reference word. Text after
+    // that point is unread/unknown, not automatically a mistake.
+    const attemptedReference=ref.slice(0,last+1);
+    const result=calculateResult(alignWords(attemptedReference,spoken),attemptedReference,spoken);
+    if(saveResult)item.page.result={...result,onDemand:true,timestamp:new Date().toISOString(),assessedThroughWord:last};
+    correct+=result.correct||0;referenceWords+=result.referenceWords||0;missing+=result.missing||0;changed+=result.changed||0;extra+=result.extra||0;assessed++;
+    pageStats.push({item,index,result,spokenCount:spoken.length,referenceCount:attemptedReference.length,last});
+   }
+  }
+ });
+ const score=referenceWords?Math.round(correct/referenceWords*100):0;
+ const progress=wordsInBook?Math.min(100,Math.round(wordsReached/wordsInBook*100)):0;
+ return {list,correct,referenceWords,missing,changed,extra,assessed,wordsInBook,wordsReached,lastLocation,score,progress,pageStats};
+}
+function formatSavedLocation(loc){
+ if(!loc)return "No confirmed spoken word has been matched yet.";
+ const item=loc.item;
+ const chapterName=item.chapter.title||`Chapter ${item.chapterIndex+1}`;
+ const pageName=item.page.pageNumber||item.pageIndex+1;
+ return `${escapeHTML(chapterName)}, page ${escapeHTML(String(pageName))} — last matched word: <strong>${escapeHTML(loc.word)}</strong>`;
+}
 window.evaluateContinuousBook=function(scope){
  if(!continuousBookMode){alert("Open Read Entire Book first to evaluate book-level progress.");return;}
  const host=document.getElementById("onDemandEvaluation");
- const eligible=continuousPages.filter(x=>String(x.page.transcript||"").trim().length>0||x.page.result);
- const totalBook=continuousPages.length;
- if(!eligible.length){host.innerHTML='<p class="small">No recognized reading is saved yet. Start reading before evaluating.</p>';return;}
- let correct=0,referenceWords=0,missing=0,changed=0,extra=0,assessed=0;
- eligible.forEach(item=>{
-  const ref=tokenize(item.page.text||""),spoken=tokenize(item.page.transcript||"");
-  if(!ref.length||!spoken.length)return;
-  const result=calculateResult(alignWords(ref,spoken),ref,spoken);
-  item.page.result={...result,onDemand:true,timestamp:new Date().toISOString()};
-  correct+=result.correct;referenceWords+=result.referenceWords;missing+=result.missing;changed+=result.changed;extra+=result.extra;assessed++;
- });
+ const book=books.find(b=>b.id===currentBookId);
+ if(!book){host.innerHTML='<p class="small">The selected book could not be found.</p>';return;}
+ const report=calculateSavedBookAssessment(book,true);
+ if(!report.assessed){host.innerHTML='<p class="small">No recognized reading is saved yet. Start reading before evaluating.</p>';return;}
  saveContinuousState();
- const score=referenceWords?Math.round(correct/referenceWords*100):0;
- host.innerHTML=`<div class="resultBox"><h3>${scope==='progress'?'Reading Progress So Far':'Whole-Book Evaluation'}</h3><p><strong>Accuracy: ${score}%</strong></p><p>Passages evaluated: ${assessed} of ${totalBook}. Only passages with recognized speech were scored; unread passages were not counted as mistakes.</p><p>Correct words: ${correct} · Missing: ${missing} · Changed: ${changed} · Extra: ${extra}</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
+ const title=scope==='progress'?'Reading Progress So Far':'Whole-Book Evaluation';
+ host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Last saved position:</strong> ${formatSavedLocation(report.lastLocation)}</p><p><strong>Book progress:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Passages with speech data evaluated: ${report.assessed} of ${report.list.length}. Unread passages are not counted as mistakes.</p><p>Correct words: ${report.correct} · Missing: ${report.missing} · Changed: ${report.changed} · Extra: ${report.extra}</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
+};
+window.openParentAssessment=function(){
+ const book=books.find(b=>b.id===currentBookId);
+ const host=document.getElementById("parentAssessmentPanel");
+ if(!book||!host){return;}
+ const report=calculateSavedBookAssessment(book,true);
+ const saved=book.continuousSession||{};
+ const updated=saved.updatedAt?new Date(saved.updatedAt).toLocaleString():"No saved reading session yet";
+ if(!report.assessed){
+  host.innerHTML=`<div class="resultBox"><h3>Reading assessment</h3><p>No recognized reading has been saved for this book yet. The child needs to start reading before an assessment can be generated.</p><p><strong>Last saved session:</strong> ${escapeHTML(updated)}</p></div>`;
+  return;
+ }
+ const location=formatSavedLocation(report.lastLocation);
+ const details=report.pageStats.slice(-5).reverse().map(stat=>{
+  const it=stat.item;const chapter=escapeHTML(it.chapter.title||`Chapter ${it.chapterIndex+1}`);const page=escapeHTML(String(it.page.pageNumber||it.pageIndex+1));
+  return `<li><strong>${chapter}, page ${page}:</strong> ${stat.result.score}% accuracy; ${stat.result.correct||0} correct, ${stat.result.missing||0} missing, ${stat.result.changed||0} changed, ${stat.result.extra||0} extra.</li>`;
+ }).join("");
+ const snapshot={createdAt:new Date().toISOString(),lastPosition:report.lastLocation?{chapter:report.lastLocation.item.chapter.title||`Chapter ${report.lastLocation.item.chapterIndex+1}`,page:report.lastLocation.item.page.pageNumber||report.lastLocation.item.pageIndex+1,word:report.lastLocation.word}:null,progress:report.progress,accuracy:report.score,correct:report.correct,missing:report.missing,changed:report.changed,extra:report.extra,assessedPassages:report.assessed,totalPassages:report.list.length};
+ if(!Array.isArray(book.parentAssessmentHistory))book.parentAssessmentHistory=[];
+ book.parentAssessmentHistory.unshift(snapshot);book.parentAssessmentHistory=book.parentAssessmentHistory.slice(0,20);
+ saveBooks();
+ host.innerHTML=`<div class="resultBox"><h3>Child's Reading Assessment</h3><p><strong>Last saved session:</strong> ${escapeHTML(updated)}</p><p><strong>Where the child ended:</strong> ${location}</p><p><strong>Progress through book:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0"><div><strong>${report.score}%</strong><br><span class="small">Reading accuracy</span></div><div><strong>${report.correct}</strong><br><span class="small">Correct words</span></div><div><strong>${report.assessed}/${report.list.length}</strong><br><span class="small">Passages assessed</span></div></div><p><strong>Assessment totals:</strong> Missing ${report.missing} · Changed/misread ${report.changed} · Extra/repeated ${report.extra}.</p><p class="small">These results use saved speech-recognition text. Recognition errors can affect the score; unclear speech should be checked with the child rather than treated as certain evidence.</p><h4>Recent passage results</h4><ul>${details||'<li>No passage-level results available.</li>'}</ul><button class="secondary" onclick="startContinuousBookReading()">Resume Reading</button></div>`;
 };
 const originalContinuousResume=window.resumeReadingSession;
 window.resumeReadingSession=function(){

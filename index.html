@@ -3450,13 +3450,16 @@ function setContinuousActive(index){
 }
 function renderContinuousBookText(){
  const host=document.getElementById("referenceText");
- host.style.maxHeight="62vh";
- host.style.overflowY="auto";
+ host.style.maxHeight="none";
+ host.style.height="150px";
+ host.style.overflowX="auto";
+ host.style.overflowY="hidden";
+ host.style.whiteSpace="nowrap";
  host.style.padding="12px";
  host.style.scrollBehavior="smooth";
  // Render the entire book as one continuous text flow. Page/chapter labels are
  // navigation metadata only; only .continuousWord spans participate in grading.
- let flow="<p class=\"continuousBookFlow\" style=\"margin:0;line-height:2.0;white-space:normal;overflow-wrap:anywhere\">";
+ let flow="<p class=\"continuousBookFlow\" style=\"display:block;width:max-content;max-width:none;margin:0;line-height:2.0;white-space:nowrap;overflow-wrap:normal\">";
  continuousPages.forEach((item,i)=>{
   const title=escapeHTML(item.chapter.title||`Chapter ${item.chapterIndex+1}`);
   const pageLabel=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
@@ -3484,12 +3487,15 @@ function scrollContinuousTargetIntoView(target,smooth=true){
  // confirmed word visible even when the book is a single long paragraph.
  const hostRect=host.getBoundingClientRect();
  const targetRect=target.getBoundingClientRect();
- const top=targetRect.top-hostRect.top+host.scrollTop;
- const bottom=top+targetRect.height;
- const visibleTop=host.scrollTop+8;
- const visibleBottom=host.scrollTop+host.clientHeight-8;
- if(top<visibleTop||bottom>visibleBottom){
-  host.scrollTo({top:Math.max(0,top-host.clientHeight*0.35),behavior:smooth?"smooth":"auto"});
+ // The book is deliberately one long horizontal paragraph. Move the reference
+ // pane left/right to keep the current page marker or confirmed word in view.
+ const left=targetRect.left-hostRect.left+host.scrollLeft;
+ const right=left+targetRect.width;
+ const visibleLeft=host.scrollLeft+16;
+ const visibleRight=host.scrollLeft+host.clientWidth-24;
+ if(left<visibleLeft||right>visibleRight){
+  const nextLeft=Math.max(0,left-host.clientWidth*0.35);
+  host.scrollTo({left:nextLeft,behavior:smooth?"smooth":"auto"});
  }
 }
 window.startContinuousBookReading=function(){

@@ -3450,16 +3450,47 @@ function setContinuousActive(index){
 }
 function renderContinuousBookText(){
  const host=document.getElementById("referenceText");
- host.style.maxHeight="62vh";host.style.overflowY="auto";host.style.padding="12px";
- host.innerHTML=continuousPages.map((item,i)=>{
+ host.style.maxHeight="62vh";
+ host.style.overflowY="auto";
+ host.style.padding="12px";
+ host.style.scrollBehavior="smooth";
+ // Render the entire book as one continuous text flow. Page/chapter labels are
+ // navigation metadata only; only .continuousWord spans participate in grading.
+ let flow="<p class=\"continuousBookFlow\" style=\"margin:0;line-height:2.0;white-space:normal;overflow-wrap:anywhere\">";
+ continuousPages.forEach((item,i)=>{
   const title=escapeHTML(item.chapter.title||`Chapter ${item.chapterIndex+1}`);
   const pageLabel=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
-  const words=String(item.page.text||"").split(/(\s+)/).map(part=>/^\s+$/.test(part)?escapeHTML(part):`<span class="continuousWord">${escapeHTML(part)}</span>`).join("");
-  const done=item.page.result?`<span class="small"> · Evaluated ${item.page.result.score}%</span>`:"";
-  return `<article class="continuousPassage" data-continuous-index="${i}" style="padding:12px 8px;border-bottom:1px solid #ddd;${i===continuousPageIndex?'background:#fffbe0;border-left:4px solid #f3d000;':''}"><div class="small" style="font-weight:700;margin-bottom:6px">${escapeHTML(pageLabel)} — ${title}${done}</div><div class="continuousPassageText" style="line-height:1.9">${words||'<span class="small">No reading text extracted for this page.</span>'}</div></article>`;
- }).join("");
- const active=host.querySelector(`[data-continuous-index="${continuousPageIndex}"]`);
- if(active)active.scrollIntoView({block:"nearest",behavior:"smooth"});
+  const done=item.page.result?` · Evaluated ${item.page.result.score}%`:"";
+  flow+=`<span class=\"continuousMarker\" data-continuous-index=\"${i}\" style=\"display:inline-block;margin:0 5px 0 0;padding:2px 5px;font-size:.78em;font-weight:700;color:#555;background:#f2f2f2;border-radius:3px\">${escapeHTML(pageLabel)} — ${title}${escapeHTML(done)}</span> `;
+  const raw=String(item.page.text||"");
+  const parts=raw.split(/(\s+)/);
+  let wordIndex=0;
+  flow+=parts.map(part=>{
+   if(/^\s+$/.test(part))return escapeHTML(part);
+   if(!part)return "";
+   return `<span class=\"continuousWord\" data-page-index=\"${i}\" data-word-index=\"${wordIndex++}\">${escapeHTML(part)}</span>`;
+  }).join("");
+  flow+=" ";
+ });
+ flow+="</p>";
+ host.innerHTML=flow;
+ const current=host.querySelector(`.continuousMarker[data-continuous-index=\"${continuousPageIndex}\"]`);
+ if(current)scrollContinuousTargetIntoView(current,false);
+}
+function scrollContinuousTargetIntoView(target,smooth=true){
+ const host=document.getElementById("referenceText");
+ if(!host||!target)return;
+ // Scroll the reading pane itself (not the whole page) to keep the child's
+ // confirmed word visible even when the book is a single long paragraph.
+ const hostRect=host.getBoundingClientRect();
+ const targetRect=target.getBoundingClientRect();
+ const top=targetRect.top-hostRect.top+host.scrollTop;
+ const bottom=top+targetRect.height;
+ const visibleTop=host.scrollTop+8;
+ const visibleBottom=host.scrollTop+host.clientHeight-8;
+ if(top<visibleTop||bottom>visibleBottom){
+  host.scrollTo({top:Math.max(0,top-host.clientHeight*0.35),behavior:smooth?"smooth":"auto"});
+ }
 }
 window.startContinuousBookReading=function(){
  const book=books.find(b=>b.id===currentBookId);if(!book)return;
@@ -3489,15 +3520,21 @@ function continuousPageCoverage(item,spoken){
 }
 function scrollToConfirmedWord(item,spoken){
  const host=document.getElementById("referenceText");
- const active=host.querySelector(`[data-continuous-index="${continuousPageIndex}"]`);
- if(!active)return;
- const heard=tokenize(spoken||"");const ref=tokenize(item.page.text||"");
- let last=-1,matched=0;
- for(const word of heard){for(let j=last+1;j<ref.length;j++){if(ref[j]===word){last=j;matched++;break;}}}
- const spans=active.querySelectorAll(".continuousWord");
- spans.forEach((span,i)=>{span.style.background="";span.style.borderRadius="";});
- // Highlight only the confirmed prefix position; do not treat scrolling itself as completion.
- if(last>=0){let wi=0;for(let i=0;i<spans.length;i++){if(spans[i].textContent.trim()){if(wi===last){spans[i].style.background="#d9f2df";spans[i].style.borderRadius="3px";spans[i].scrollIntoView({block:"nearest",behavior:"smooth"});break;}wi++;}}}
+ if(!host)return;
+ const heard=tokenize(spoken||"");
+ const ref=tokenize(item.page.text||"");
+ let last=-1;
+ for(const word of heard){
+  for(let j=last+1;j<ref.length;j++){
+   if(ref[j]===word){last=j;break;}
+  }
+ }
+ const spans=host.querySelectorAll(`.continuousWord[data-page-index=\"${continuousPageIndex}\"]`);
+ spans.forEach(span=>{span.style.background="";span.style.borderRadius="";});
+ if(last>=0){
+  const target=host.querySelector(`.continuousWord[data-page-index=\"${continuousPageIndex}\"][data-word-index=\"${last}\"]`);
+  if(target){target.style.background="#d9f2df";target.style.borderRadius="3px";scrollContinuousTargetIntoView(target,true);}
+ }
 }
 updateReadingPosition=function(spoken){
  if(!continuousBookMode){if(baseUpdateReadingPosition)baseUpdateReadingPosition(spoken);return;}

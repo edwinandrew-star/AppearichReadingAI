@@ -307,7 +307,6 @@ button:disabled{
     color:#795d00;
 }
 
-.live-word{display:inline;border-radius:3px;padding:1px 2px;transition:background-color .08s}.live-word.correct{background:#d8f5df;color:#12652d}.live-word.current{background:#ffe680;color:#5b4800}.live-word.misread{background:#ffdcdc;color:#9d1c1c}.live-word.unread{background:transparent;color:inherit}
 .word.extra{
     background:#e4e4e4;
     color:#555;
@@ -3468,21 +3467,16 @@ function renderContinuousBookText(){
  host.style.padding="12px";
  host.style.scrollBehavior="smooth";
  // Render the entire book as one continuous text flow. Page/chapter labels are
- // navigation metadata only; only .continuousWord spans participate in grading.
+ // navigation metadata only; text is displayed sentence by sentence without word highlighting.
  let flow="<p class=\"continuousBookFlow\" style=\"display:block;width:max-content;max-width:none;margin:0;line-height:2.0;white-space:nowrap;overflow-wrap:normal\">";
  continuousPages.forEach((item,i)=>{
   const title=escapeHTML(item.chapter.title||`Chapter ${item.chapterIndex+1}`);
   const pageLabel=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
   const done=item.page.result?` · Evaluated ${item.page.result.score}%`:"";
   flow+=`<span class=\"continuousMarker\" data-continuous-index=\"${i}\" style=\"display:inline-block;margin:0 5px 0 0;padding:2px 5px;font-size:.78em;font-weight:700;color:#555;background:#f2f2f2;border-radius:3px\">${escapeHTML(pageLabel)} — ${title}${escapeHTML(done)}</span> `;
-  const raw=String(item.page.text||"");
-  const parts=raw.split(/(\s+)/);
-  let wordIndex=0;
-  flow+=parts.map(part=>{
-   if(/^\s+$/.test(part))return escapeHTML(part);
-   if(!part)return "";
-   return `<span class=\"continuousWord\" data-page-index=\"${i}\" data-word-index=\"${wordIndex++}\">${escapeHTML(part)}</span>`;
-  }).join("");
+  const raw=String(item.page.text||"").trim();
+  const sentences=splitReadingSentences(raw);
+  flow+=sentences.map((sentence,sentenceIndex)=>`<span class="continuousSentence" data-page-index="${i}" data-sentence-index="${sentenceIndex}" style="display:inline">${escapeHTML(sentence)} </span>`).join("");
   flow+=" ";
  });
  flow+="</p>";
@@ -3548,30 +3542,46 @@ function saveContinuousState(){
  };
  try{saveBooks();}catch(e){console.error("Continuous progress save failed",e);const status=document.getElementById("readingStatus");if(status)status.textContent="Progress could not be saved. Device storage may be full; free storage before continuing.";}
 }
-function continuousPageCoverage(item,spoken){
- const ref=tokenize(item.page.text||""),heard=tokenize(spoken||"");
- if(!ref.length||!heard.length)return 0;
- let matched=0,last=-1;
- for(const word of heard){for(let j=last+1;j<ref.length;j++){if(ref[j]===word){matched++;last=j;break;}}}
- return {ratio:matched/ref.length,lastRatio:(last+1)/ref.length,ref,heard,matched};
+function splitReadingSentences(text){
+ const clean=String(text||"").replace(/\s+/g," ").trim();
+ if(!clean)return [];
+ // Keep normal sentence punctuation with each sentence. If the textbook has no
+ // punctuation, treat the whole passage as one sentence rather than guessing.
+ return clean.match(/[^.!?]+(?:[.!?]+[”’"')\]]*)?|[.!?]+/g)?.map(x=>x.trim()).filter(Boolean)||[clean];
 }
-function scrollToConfirmedWord(item,spoken){
- const host=document.getElementById("referenceText");
- if(!host)return;
+function sentenceSequenceProgress(item,spoken){
+ const sentences=splitReadingSentences(item?.page?.text||"");
  const heard=tokenize(spoken||"");
- const ref=tokenize(item.page.text||"");
- let last=-1;
- for(const word of heard){
-  for(let j=last+1;j<ref.length;j++){
-   if(ref[j]===word){last=j;break;}
+ let heardCursor=0, completed=0, lastSentence=-1, lastMatchedWord=-1;
+ const sentenceDetails=[];
+ const norm=w=>(w||"").toLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");
+ for(let si=0;si<sentences.length;si++){
+  const expected=tokenize(sentences[si]);
+  if(!expected.length){completed++;sentenceDetails.push({sentenceIndex:si,complete:true});continue;}
+  let matched=0, cursor=heardCursor, lastHeard=-1;
+  for(let wi=0;wi<expected.length;wi++){
+   const target=norm(expected[wi]);
+   // Only allow a tiny forward tolerance for recognition noise. This prevents
+   // a later sentence or duplicate word from being selected as the current one.
+   let found=-1;
+   for(let h=cursor;h<Math.min(heard.length,cursor+3);h++){
+    if(norm(heard[h])===target){found=h;break;}
+   }
+   if(found>=0){matched++;lastHeard=found;cursor=found+1;}
   }
+  const ratio=matched/expected.length;
+  const isComplete=ratio>=0.78 && (expected.length<4 || matched>=expected.length-1);
+  sentenceDetails.push({sentenceIndex:si,complete:isComplete,ratio,matched,total:expected.length});
+  if(isComplete){completed++;heardCursor=Math.max(heardCursor,lastHeard+1);lastSentence=si;lastMatchedWord=lastHeard;}
+  else break; // Never leap over an unfinished sentence.
  }
- const spans=host.querySelectorAll(`.continuousWord[data-page-index=\"${continuousPageIndex}\"]`);
- spans.forEach(span=>{span.style.background="";span.style.borderRadius="";});
- if(last>=0){
-  const target=host.querySelector(`.continuousWord[data-page-index=\"${continuousPageIndex}\"][data-word-index=\"${last}\"]`);
-  if(target){target.style.background="#d9f2df";target.style.borderRadius="3px";scrollContinuousTargetIntoView(target,true);}
- }
+ return {sentences,heard,completed,total:sentences.length,ratio:sentences.length?completed/sentences.length:0,lastSentence,lastMatchedWord,details:sentenceDetails};
+}
+function scrollToCurrentSentence(item,progress){
+ const host=document.getElementById("referenceText");if(!host||!progress)return;
+ const targetIndex=Math.min(progress.completed,Math.max(0,progress.sentences.length-1));
+ const target=host.querySelector(`.continuousSentence[data-page-index="${continuousPageIndex}"][data-sentence-index="${targetIndex}"]`);
+ if(target)scrollContinuousTargetIntoView(target,true);
 }
 updateReadingPosition=function(spoken){
  if(!continuousBookMode){if(baseUpdateReadingPosition)baseUpdateReadingPosition(spoken);return;}
@@ -3579,18 +3589,21 @@ updateReadingPosition=function(spoken){
  resetInactivityTimer();
  const item=continuousPages[continuousPageIndex];
  item.page.transcript=spoken;finalTranscript=spoken;
- scrollToConfirmedWord(item,spoken);
- const cov=continuousPageCoverage(item,spoken);
- if(!cov||!cov.ref||cov.ref.length<1){saveContinuousState();return;}
- const minWords=Math.min(cov.ref.length,Math.max(5,Math.ceil(cov.ref.length*.65)));
- if(!continuousAutoAdvanceLock&&cov.heard.length>=minWords&&cov.ratio>=.72&&cov.lastRatio>=.72){
+ const progress=sentenceSequenceProgress(item,spoken);
+ scrollToCurrentSentence(item,progress);
+ const status=document.getElementById("readingStatus");
+ if(status&&progress.total){status.textContent=`Reading sentence ${Math.min(progress.completed+1,progress.total)} of ${progress.total} · Page ${item.page.pageNumber||item.pageIndex+1}`;}
+ // Save progress continuously, but advance only when sentences have been read
+ // in order. An unfinished sentence blocks matching later sentences.
+ if(!continuousAutoAdvanceLock&&progress.total>0&&progress.completed===progress.total){
   continuousAutoAdvanceLock=true;
-  if(!item.page.result){const ops=alignWords(cov.ref,cov.heard);item.page.result=calculateResult(ops,cov.ref,cov.heard);item.page.result.uncertainRecognition=true;item.page.result.timestamp=new Date().toISOString();item.page.autoCompleted=true;}
+  const ref=tokenize(item.page.text||""),heard=tokenize(spoken);
+  if(!item.page.result){const ops=alignWords(ref,heard);item.page.result=calculateResult(ops,ref,heard);item.page.result.uncertainRecognition=true;item.page.result.timestamp=new Date().toISOString();item.page.autoCompleted=true;}
   saveContinuousState();
   setTimeout(()=>{
    if(!continuousBookMode||!sessionHasStarted)return;
    if(continuousPageIndex<continuousPages.length-1){setContinuousActive(continuousPageIndex+1);continuousAutoAdvanceLock=false;saveContinuousState();}
-   else{document.getElementById("readingStatus").textContent="You have reached the end of the book. You can evaluate your reading when ready.";sessionHasStarted=false;saveContinuousState();}
+   else{if(status)status.textContent="You have reached the end of the book. You can evaluate your reading when ready.";sessionHasStarted=false;saveContinuousState();}
   },650);
  }else saveContinuousState();
 };
@@ -3700,45 +3713,8 @@ window.addEventListener("beforeunload",()=>{if(continuousBookMode)saveContinuous
 
 
 /* =====================================================
-TARGETED IMPROVEMENTS: LIVE HIGHLIGHTING + PROGRESS
+TARGETED IMPROVEMENTS: PROGRESS (NO WORD HIGHLIGHTING)
 ===================================================== */
-function liveWordTokens(text){
- return (text||"").match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu)||[];
-}
-function liveNormalize(word){return (word||"").toLocaleLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");}
-function highlightedTextHTML(text, spoken, provisional){
- const ref=liveWordTokens(text), heard=liveWordTokens(spoken);
- let matched=[], ri=0, hi=0, lastMatched=-1;
- // Monotonic matching avoids jumping to a later duplicate occurrence.
- for(;hi<heard.length;hi++){
-  const hw=liveNormalize(heard[hi]); let found=-1;
-  for(let j=ri;j<ref.length;j++){if(liveNormalize(ref[j])===hw){found=j;break;}}
-  if(found>=0){for(let k=ri;k<found;k++)matched[k]="unread";matched[found]="correct";ri=found+1;lastMatched=found;}
- }
- let index=0;
- return (text||"").split(/([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)/gu).map(part=>{
-  if(!/^[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*$/u.test(part))return escapeHTML(part);
-  const state=matched[index]||"unread", thisIndex=index++;
-  const isCurrent=provisional && thisIndex===lastMatched;
-  return `<span class="live-word ${isCurrent?'current':state}" data-live-word="${thisIndex}">${escapeHTML(part)}</span>`;
- }).join("");
-}
-function refreshLiveWordHighlight(spoken, provisional=false){
- const host=document.getElementById("referenceText"); if(!host)return;
- if(continuousBookMode){
-  const item=continuousPages[continuousPageIndex]; if(!item)return;
-  const ref=host.querySelectorAll(`.continuousWord[data-page-index="${continuousPageIndex}"]`);
-  const heard=liveWordTokens(spoken), words=liveWordTokens(item.page.text||"");
-  let cursor=0,last=-1;
-  ref.forEach((el,i)=>{el.classList.remove("correct","current","misread","unread");el.style.background="";el.style.borderRadius="3px";});
-  for(const w of heard){for(let j=cursor;j<words.length;j++){if(liveNormalize(words[j])===liveNormalize(w)){last=j;cursor=j+1;break;}}}
-  ref.forEach((el,i)=>{if(i<cursor)el.classList.add("correct");else el.classList.add("unread");});
-  if(last>=0){const target=host.querySelector(`.continuousWord[data-page-index="${continuousPageIndex}"][data-word-index="${last}"]`);if(target){target.classList.remove("correct");target.classList.add(provisional?"current":"correct");target.style.background=provisional?"#ffe680":"#d8f5df";}}
-  return;
- }
- const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex]; if(!page)return;
- host.innerHTML=highlightedTextHTML(page.text||"",spoken,provisional);
-}
 window.evaluateNow=function(){
  if(continuousBookMode){saveContinuousState();window.evaluateContinuousBook('progress');return;}
  const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex];
@@ -3748,14 +3724,14 @@ window.evaluateNow=function(){
  if(spoken)page.transcript=spoken;
  const ref=tokenize(page.text||""), heard=tokenize(spoken);
  let last=-1, cursor=0;
- for(const word of heard){for(let j=cursor;j<ref.length;j++){if(ref[j]===word){last=j;cursor=j+1;break;}}}
+ for(const word of heard){if(cursor<ref.length&&ref[cursor]===word){last=cursor;cursor++;}}
  const attemptedRef=last>=0?ref.slice(0,last+1):[];
  const ops=alignWords(attemptedRef,heard);
  const result=calculateResult(ops,attemptedRef,heard);
  const confirmed=!!page.result;
  saveBooks();
  const pct=ref.length&&last>=0?Math.round((last+1)/ref.length*100):0;
- host.innerHTML=`<div class="resultBox"><h3>Reading Assessment So Far</h3><p><strong>Book:</strong> ${escapeHTML((books.find(b=>b.id===currentBookId)||{}).title||"")}</p><p><strong>Section:</strong> ${escapeHTML((getCurrentChapter()||{}).title||"")}, page ${escapeHTML(String(page.pageNumber||currentPageIndex+1))}</p><p><strong>Progress:</strong> ${pct}% of this page reached (${Math.max(0,last+1)} of ${ref.length} reference words)</p><p><strong>Status:</strong> ${confirmed?"Saved page result":"Provisional assessment based on speech heard so far"}</p><p>Correct: ${result.correct} · Misread/changed: ${result.changed} · Potentially skipped: ${result.missing} · Extra/repeated: ${result.extra}</p><p>Accuracy: ${result.score}% ${confirmed?"(saved result)":"(provisional; recognition may revise it)"}</p><p class="small">Only the passage up to the last matched reference word is assessed. Unread words are not treated as errors.</p></div>`;
+ host.innerHTML=`<div class="resultBox"><h3>Reading Assessment So Far</h3><p><strong>Book:</strong> ${escapeHTML((books.find(b=>b.id===currentBookId)||{}).title||"")}</p><p><strong>Section:</strong> ${escapeHTML((getCurrentChapter()||{}).title||"")}, page ${escapeHTML(String(page.pageNumber||currentPageIndex+1))}</p><p><strong>Progress:</strong> ${pct}% of this page reached (${Math.max(0,last+1)} of ${ref.length} reference words)</p><p><strong>Status:</strong> ${confirmed?"Saved page result":"Provisional assessment based on speech heard so far"}</p><p>Correct: ${result.correct} · Misread/changed: ${result.changed} · Potentially skipped: ${result.missing} · Extra/repeated: ${result.extra}</p><p>Accuracy: ${result.score}% ${confirmed?"(saved result)":"(provisional; recognition may revise it)"}</p><p class="small">Only the passage up to the last sequentially matched reference word is assessed. Unread words are not treated as errors.</p></div>`;
 };
 window.openProgressDashboard=function(){
  const book=books.find(b=>b.id===currentBookId);
@@ -3764,19 +3740,6 @@ window.openProgressDashboard=function(){
  window.openParentAssessment();
  const host=document.getElementById("parentAssessmentPanel");
  if(host)host.scrollIntoView({behavior:"smooth",block:"start"});
-};
-const previousUpdateReadingPositionForHighlight=updateReadingPosition;
-updateReadingPosition=function(spoken){
- try{refreshLiveWordHighlight(spoken,!!isRecording);}
- catch(e){console.warn("Live highlighting update failed",e);}
- return previousUpdateReadingPositionForHighlight(spoken);
-};
-// Keep the displayed reference text highlighted when a reader page is loaded.
-const previousLoadReaderPageForHighlight=loadReaderPage;
-loadReaderPage=function(){
- previousLoadReaderPageForHighlight();
- const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex];
- if(page)refreshLiveWordHighlight(page.transcript||"",false);
 };
 // Refresh actual progress data when the existing parent assessment is requested.
 const previousOpenParentAssessmentForProgress=window.openParentAssessment;

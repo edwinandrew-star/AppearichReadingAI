@@ -307,6 +307,7 @@ button:disabled{
     color:#795d00;
 }
 
+.live-word{display:inline;border-radius:3px;padding:1px 2px;transition:background-color .08s}.live-word.correct{background:#d8f5df;color:#12652d}.live-word.current{background:#ffe680;color:#5b4800}.live-word.misread{background:#ffdcdc;color:#9d1c1c}.live-word.unread{background:transparent;color:inherit}
 .word.extra{
     background:#e4e4e4;
     color:#555;
@@ -348,7 +349,7 @@ button:disabled{
 
 <header>
     <div class="logo">AI Reading Supervision</div>
-    <div class="brand">Appearich</div>
+    <div style="display:flex;align-items:center;gap:8px"><button class="secondary" onclick="openProgressDashboard()">Progress</button><div class="brand">Appearich</div></div>
 </header>
 
 <div class="container">
@@ -639,6 +640,8 @@ The phone acts as the AI supervisor.
         disabled>
 Stop & Check
 </button>
+
+<button class="secondary" onclick="evaluateNow()">Evaluate Now</button>
 
 <div id="continuousEvaluationControls" style="display:none;gap:8px;flex-wrap:wrap;margin-top:10px">
 <button class="secondary" onclick="evaluateContinuousBook('progress')">Evaluate Progress So Far</button>
@@ -3694,6 +3697,93 @@ window.previousCompletedPage=function(){
  document.getElementById("readingStatus").textContent="Reviewing earlier reading. Your current reading position is preserved.";
 };
 window.addEventListener("beforeunload",()=>{if(continuousBookMode)saveContinuousState();});
+
+
+/* =====================================================
+TARGETED IMPROVEMENTS: LIVE HIGHLIGHTING + PROGRESS
+===================================================== */
+function liveWordTokens(text){
+ return (text||"").match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu)||[];
+}
+function liveNormalize(word){return (word||"").toLocaleLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");}
+function highlightedTextHTML(text, spoken, provisional){
+ const ref=liveWordTokens(text), heard=liveWordTokens(spoken);
+ let matched=[], ri=0, hi=0, lastMatched=-1;
+ // Monotonic matching avoids jumping to a later duplicate occurrence.
+ for(;hi<heard.length;hi++){
+  const hw=liveNormalize(heard[hi]); let found=-1;
+  for(let j=ri;j<ref.length;j++){if(liveNormalize(ref[j])===hw){found=j;break;}}
+  if(found>=0){for(let k=ri;k<found;k++)matched[k]="unread";matched[found]="correct";ri=found+1;lastMatched=found;}
+ }
+ let index=0;
+ return (text||"").split(/([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)/gu).map(part=>{
+  if(!/^[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*$/u.test(part))return escapeHTML(part);
+  const state=matched[index]||"unread", thisIndex=index++;
+  const isCurrent=provisional && thisIndex===lastMatched;
+  return `<span class="live-word ${isCurrent?'current':state}" data-live-word="${thisIndex}">${escapeHTML(part)}</span>`;
+ }).join("");
+}
+function refreshLiveWordHighlight(spoken, provisional=false){
+ const host=document.getElementById("referenceText"); if(!host)return;
+ if(continuousBookMode){
+  const item=continuousPages[continuousPageIndex]; if(!item)return;
+  const ref=host.querySelectorAll(`.continuousWord[data-page-index="${continuousPageIndex}"]`);
+  const heard=liveWordTokens(spoken), words=liveWordTokens(item.page.text||"");
+  let cursor=0,last=-1;
+  ref.forEach((el,i)=>{el.classList.remove("correct","current","misread","unread");el.style.background="";el.style.borderRadius="3px";});
+  for(const w of heard){for(let j=cursor;j<words.length;j++){if(liveNormalize(words[j])===liveNormalize(w)){last=j;cursor=j+1;break;}}}
+  ref.forEach((el,i)=>{if(i<cursor)el.classList.add("correct");else el.classList.add("unread");});
+  if(last>=0){const target=host.querySelector(`.continuousWord[data-page-index="${continuousPageIndex}"][data-word-index="${last}"]`);if(target){target.classList.remove("correct");target.classList.add(provisional?"current":"correct");target.style.background=provisional?"#ffe680":"#d8f5df";}}
+  return;
+ }
+ const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex]; if(!page)return;
+ host.innerHTML=highlightedTextHTML(page.text||"",spoken,provisional);
+}
+window.evaluateNow=function(){
+ if(continuousBookMode){saveContinuousState();window.evaluateContinuousBook('progress');return;}
+ const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex];
+ const host=document.getElementById("onDemandEvaluation");
+ if(!page||!host){alert("Open a reading session to evaluate progress.");return;}
+ const spoken=(finalTranscript||page.transcript||"").trim();
+ if(spoken)page.transcript=spoken;
+ const ref=tokenize(page.text||""), heard=tokenize(spoken);
+ let last=-1, cursor=0;
+ for(const word of heard){for(let j=cursor;j<ref.length;j++){if(ref[j]===word){last=j;cursor=j+1;break;}}}
+ const attemptedRef=last>=0?ref.slice(0,last+1):[];
+ const ops=alignWords(attemptedRef,heard);
+ const result=calculateResult(ops,attemptedRef,heard);
+ const confirmed=!!page.result;
+ saveBooks();
+ const pct=ref.length&&last>=0?Math.round((last+1)/ref.length*100):0;
+ host.innerHTML=`<div class="resultBox"><h3>Reading Assessment So Far</h3><p><strong>Book:</strong> ${escapeHTML((books.find(b=>b.id===currentBookId)||{}).title||"")}</p><p><strong>Section:</strong> ${escapeHTML((getCurrentChapter()||{}).title||"")}, page ${escapeHTML(String(page.pageNumber||currentPageIndex+1))}</p><p><strong>Progress:</strong> ${pct}% of this page reached (${Math.max(0,last+1)} of ${ref.length} reference words)</p><p><strong>Status:</strong> ${confirmed?"Saved page result":"Provisional assessment based on speech heard so far"}</p><p>Correct: ${result.correct} · Misread/changed: ${result.changed} · Potentially skipped: ${result.missing} · Extra/repeated: ${result.extra}</p><p>Accuracy: ${result.score}% ${confirmed?"(saved result)":"(provisional; recognition may revise it)"}</p><p class="small">Only the passage up to the last matched reference word is assessed. Unread words are not treated as errors.</p></div>`;
+};
+window.openProgressDashboard=function(){
+ const book=books.find(b=>b.id===currentBookId);
+ if(!book){showSection("homeSection");alert("Open a book first to view its progress.");return;}
+ showSection("bookSection");
+ window.openParentAssessment();
+ const host=document.getElementById("parentAssessmentPanel");
+ if(host)host.scrollIntoView({behavior:"smooth",block:"start"});
+};
+const previousUpdateReadingPositionForHighlight=updateReadingPosition;
+updateReadingPosition=function(spoken){
+ try{refreshLiveWordHighlight(spoken,!!isRecording);}
+ catch(e){console.warn("Live highlighting update failed",e);}
+ return previousUpdateReadingPositionForHighlight(spoken);
+};
+// Keep the displayed reference text highlighted when a reader page is loaded.
+const previousLoadReaderPageForHighlight=loadReaderPage;
+loadReaderPage=function(){
+ previousLoadReaderPageForHighlight();
+ const chapter=getCurrentChapter(), page=chapter&&chapter.pages[currentPageIndex];
+ if(page)refreshLiveWordHighlight(page.transcript||"",false);
+};
+// Refresh actual progress data when the existing parent assessment is requested.
+const previousOpenParentAssessmentForProgress=window.openParentAssessment;
+window.openParentAssessment=function(){
+ if(continuousBookMode)saveContinuousState();
+ return previousOpenParentAssessmentForProgress();
+};
 
 /* =====================================================
 INITIALIZE

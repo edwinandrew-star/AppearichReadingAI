@@ -1928,15 +1928,52 @@ function createRecognition(){
  r.continuous=true;
  r.interimResults=true;
 
- // Each onstart is a distinct browser recognition run. Final-result keys are
- // scoped to that run so a restart cannot replay old finals into the transcript.
+ // Keep recognition results by their browser-provided slot. Android may revise a
+ // slot or replay overlapping final phrases; never treat an interim revision as new speech.
  let interimTranscript="";
  let processedFinalResults=new Set();
+ let lastFinalBySlot=new Map();
+
+ function normalizeSpeechKey(value){
+  return (value||"").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+ }
+ function appendFinalWithoutOverlap(text){
+  const incoming=(text||"").trim();if(!incoming)return;
+  const existingWords=finalTranscript.trim()?finalTranscript.trim().split(/\s+/):[];
+  let incomingWords=incoming.split(/\s+/);
+  const norm=w=>w.toLocaleLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,"");
+  // Collapse repeated adjacent chunks inside a single returned phrase (a common bad result).
+  const cleaned=[];
+  for(let i=0;i<incomingWords.length;){
+   let repeat=0;
+   for(let size=Math.min(8,Math.floor((incomingWords.length-i)/2));size>=2;size--){
+    let same=true;
+    for(let j=0;j<size;j++)if(norm(incomingWords[i+j])!==norm(incomingWords[i+size+j])){same=false;break;}
+    if(same){repeat=size;break;}
+   }
+   if(repeat){cleaned.push(...incomingWords.slice(i,i+repeat));i+=repeat*2;}
+   else cleaned.push(incomingWords[i++]);
+  }
+  incomingWords=cleaned;
+  // Remove the largest repeated tail/head overlap, including Android's repeated phrase finals.
+  let overlap=Math.min(existingWords.length,incomingWords.length);
+  while(overlap>0){
+   let matches=true;
+   for(let j=0;j<overlap;j++){
+    if(norm(existingWords[existingWords.length-overlap+j])!==norm(incomingWords[j])){matches=false;break;}
+   }
+   if(matches)break;overlap--;
+  }
+  const addition=incomingWords.slice(overlap).join(" ");
+  if(addition)finalTranscript=(finalTranscript+" "+addition).trim();
+  // If the whole phrase was replayed, do not append it again.
+ }
 
  r.onstart=function(){
   isRecording=true;
   interimTranscript="";
   processedFinalResults=new Set();
+  lastFinalBySlot=new Map();
   document.getElementById("readingStatus").className="status listening";
   document.getElementById("readingStatus").textContent="🎤 AI is listening...";
   document.getElementById("startButton").disabled=true;
@@ -1950,13 +1987,18 @@ function createRecognition(){
    const text=(result[0]&&result[0].transcript||"").trim();
    if(!text)continue;
    if(result.isFinal){
-    const key=String(i)+"|"+text.toLocaleLowerCase();
+    const key=String(i)+"|"+normalizeSpeechKey(text);
     if(!processedFinalResults.has(key)){
      processedFinalResults.add(key);
-     finalTranscript=(finalTranscript+" "+text).trim();
+     // Same slot with changed final text is usually a browser revision, not new speech.
+     const prior=lastFinalBySlot.get(i);
+     if(prior!==normalizeSpeechKey(text)){
+      appendFinalWithoutOverlap(text);
+      lastFinalBySlot.set(i,normalizeSpeechKey(text));
+     }
     }
    }else{
-    // Interim updates are snapshots, not new speech: replace them on every event.
+    // Interim results are a fresh snapshot each event, never accumulated across events.
     interimTranscript=(interimTranscript+" "+text).trim();
    }
   }

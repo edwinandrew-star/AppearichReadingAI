@@ -1918,157 +1918,76 @@ SPEECH RECOGNITION
 ===================================================== */
 
 function createRecognition(){
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SpeechRecognition){
+  alert("Speech recognition is not supported here. Please use Chrome or Edge.");
+  return null;
+ }
+ const r=new SpeechRecognition();
+ r.lang="en-US";
+ r.continuous=true;
+ r.interimResults=true;
 
-const SpeechRecognition =
-window.SpeechRecognition ||
-window.webkitSpeechRecognition;
+ // Each onstart is a distinct browser recognition run. Final-result keys are
+ // scoped to that run so a restart cannot replay old finals into the transcript.
+ let interimTranscript="";
+ let processedFinalResults=new Set();
 
-if(!SpeechRecognition){
+ r.onstart=function(){
+  isRecording=true;
+  interimTranscript="";
+  processedFinalResults=new Set();
+  document.getElementById("readingStatus").className="status listening";
+  document.getElementById("readingStatus").textContent="🎤 AI is listening...";
+  document.getElementById("startButton").disabled=true;
+  document.getElementById("stopButton").disabled=false;
+ };
 
-alert(
-"Speech recognition is not supported here. Please use Chrome or Edge."
-);
+ r.onresult=function(event){
+  interimTranscript="";
+  for(let i=0;i<event.results.length;i++){
+   const result=event.results[i];
+   const text=(result[0]&&result[0].transcript||"").trim();
+   if(!text)continue;
+   if(result.isFinal){
+    const key=String(i)+"|"+text.toLocaleLowerCase();
+    if(!processedFinalResults.has(key)){
+     processedFinalResults.add(key);
+     finalTranscript=(finalTranscript+" "+text).trim();
+    }
+   }else{
+    // Interim updates are snapshots, not new speech: replace them on every event.
+    interimTranscript=(interimTranscript+" "+text).trim();
+   }
+  }
+  const display=(finalTranscript+" "+interimTranscript).trim();
+  document.getElementById("liveTranscript").textContent=display||"Listening...";
+  updateReadingPosition(display);
+ };
 
-return null;
-
+ r.onerror=function(event){
+  console.log("Speech error:",event.error);
+  isRecording=false;
+  if(event.error==="not-allowed"){
+   const status=document.getElementById("readingStatus");
+   if(status)status.textContent="Microphone permission is required. Allow access, then tap Start Reading.";
+  }else if(event.error!=="no-speech"&&event.error!=="aborted"){
+   const status=document.getElementById("readingStatus");
+   if(status)status.textContent="Listening stopped by the browser. Tap Start Reading to continue.";
+  }
+  resetRecordingUI();
+ };
+ r.onend=function(){
+  isRecording=false;
+  if(shouldCompareAfterStop){
+   shouldCompareAfterStop=false;
+   setTimeout(compareCurrentPage,300);
+  }else{
+   resetRecordingUI();
+  }
+ };
+ return r;
 }
-
-const r =
-new SpeechRecognition();
-
-r.lang="en-US";
-
-r.continuous=true;
-
-r.interimResults=true;
-
-
-r.onstart=function(){
-
-isRecording=true;
-
-document.getElementById(
-"readingStatus"
-).className=
-"status listening";
-
-document.getElementById(
-"readingStatus"
-).textContent=
-"🎤 AI is listening...";
-
-document.getElementById(
-"startButton"
-).disabled=true;
-
-document.getElementById(
-"stopButton"
-).disabled=false;
-
-};
-
-
-r.onresult=function(event){
-
-let interim="";
-
-for(
-let i=event.resultIndex;
-i<event.results.length;
-i++
-){
-
-const text =
-event.results[i][0].transcript;
-
-if(
-event.results[i].isFinal
-){
-
-finalTranscript +=
-" "+text;
-
-}else{
-
-interim += text;
-
-}
-
-}
-
-const display =
-(
-finalTranscript+
-" "+
-interim
-).trim();
-
-document.getElementById(
-"liveTranscript"
-).textContent=
-display ||
-"Listening...";
-
-
-/*
-Track where the student is
-while reading.
-*/
-
-updateReadingPosition(display);
-
-};
-
-
-r.onerror=function(event){
-
-console.log(
-"Speech error:",
-event.error
-);
-
-isRecording=false;
-
-if(
-event.error==="not-allowed"
-){
-
-alert(
-"Please allow microphone access."
-);
-
-}
-
-resetRecordingUI();
-
-};
-
-
-r.onend=function(){
-
-isRecording=false;
-
-if(shouldCompareAfterStop){
-
-shouldCompareAfterStop=false;
-
-setTimeout(
-compareCurrentPage,
-300
-);
-
-}else{
-
-resetRecordingUI();
-
-}
-
-};
-
-return r;
-
-}
-
 
 /* =====================================================
 START RECORDING

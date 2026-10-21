@@ -3389,18 +3389,29 @@ updateReadingPosition=function(spoken){
  if(!spoken)return;resetInactivityTimer();
  const c=getCurrentChapter(),p=c&&c.pages[currentPageIndex];if(!c||!p)return;
  p.transcript=spoken;persistReadingSession();
- const ref=tokenize(p.text),heard=tokenize(spoken);if(!ref.length||!heard.length||p.autoCompleted)return;
- let matched=0,last=-1;
- for(const w of heard){for(let j=last+1;j<ref.length;j++){if(ref[j]===w){matched++;last=j;break;}}}
- if(heard.length>=Math.max(5,Math.floor(ref.length*.65))&&matched/ref.length>=.72&&last>=Math.floor(ref.length*.72)){
+ const ref=tokenize(p.text||""),heard=tokenize(spoken||"");if(!ref.length||!heard.length||p.autoCompleted)return;
+ // Use the same word-attempt completion rule as the manual page control.
+ // A changed/misread word counts as attempted; missing/skipped and extra/repeated
+ // words do not. Never auto-complete at the older 72% matching threshold.
+ const completion=extractReadingCompletion(p.text||"",spoken||"");
+ if(completion.percent>=90){
   p.autoCompleted=true;const ops=alignWords(ref,heard);p.result=calculateResult(ops,ref,heard);p.result.uncertainRecognition=true;p.result.timestamp=new Date().toISOString();persistReadingSession();
   setTimeout(()=>{if(!sessionHasStarted)return;if(currentPageIndex<c.pages.length-1){currentPageIndex++;c.currentPosition=currentPageIndex;finalTranscript="";persistReadingSession();loadReaderPage();startRecognitionWithoutClearing();}else{sessionHasStarted=false;finishChapter();}},1200);
  }
 };
 window.nextPage=function(){
- const c=getCurrentChapter();if(!c)return;const p=c.pages[currentPageIndex];
- if(!p.result&&!p.autoCompleted){alert("Finish reading this page before moving forward.");return;}
+ const c=getCurrentChapter();if(!c)return;const p=c.pages[currentPageIndex];if(!p)return;
+ const completion=extractReadingCompletion(p.text||"",p.transcript||finalTranscript||"");
+ // This is the final nextPage handler used by the live reading session. Check
+ // the threshold even when an old result/autoCompleted flag already exists.
+ if(completion.percent<90){
+  const status=document.getElementById("readingStatus");
+  if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
+  alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
+  return;
+ }
  if(currentPageIndex>=c.pages.length-1){if(c.pages.every(p=>p.result))finishChapter();return;}
+ if(!p.result){const ref=tokenize(p.text||""),heard=tokenize(p.transcript||finalTranscript||"");p.result=calculateResult(alignWords(ref,heard),ref,heard);p.result.uncertainRecognition=true;p.result.timestamp=new Date().toISOString();p.autoCompleted=true;}
  currentPageIndex++;c.currentPosition=currentPageIndex;finalTranscript="";persistReadingSession();loadReaderPage();startRecognitionWithoutClearing();
 };
 const baseFinishChapter=window.finishChapter;

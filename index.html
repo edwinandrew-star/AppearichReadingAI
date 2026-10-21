@@ -2908,6 +2908,7 @@ ${result.score}%
 <p>
 Reading accuracy
 </p>
+<p><strong>Reading completion:</strong> ${extractReadingCompletion(page.text||"",page.transcript||"").percent}% (90% required to continue)</p>
 
 <div class="statGrid">
 
@@ -2983,8 +2984,16 @@ NEXT PAGE
 window.nextPage =
 function(){
 
-const chapter =
-getCurrentChapter();
+const chapter = getCurrentChapter();
+const page = chapter?.pages?.[currentPageIndex];
+if(!chapter||!page)return;
+const completion=extractReadingCompletion(page.text||"",page.transcript||"");
+if(completion.percent<90){
+ const status=document.getElementById("readingStatus");
+ if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
+ alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
+ return;
+}
 
 if(
 currentPageIndex >=
@@ -3213,12 +3222,38 @@ reader.readAsDataURL(file);
 
 
 function cleanOCR(text){
-return String(text || "").replace(/\r/g,"\n").split(/\n+/)
- .map(line=>line.replace(/\s+/g," ").trim())
- .filter(line=>line && !/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(line))
- .join(" ").replace(/\s+/g," ").trim();
+ // Keep the original page order and remove obvious non-reading lines without
+ // rewriting the uploaded page or inventing missing content.
+ const lines=String(text||"").replace(/\r/g,"\n").split(/\n+/)
+  .map(line=>line.replace(/[\t ]+/g," ").trim())
+  .filter(Boolean);
+ const kept=[];
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i];
+  if(/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(line))continue;
+  if(/^\d{1,4}$/.test(line))continue;
+  if(/^(chapter|unit|lesson|contents|table of contents)\s*([0-9ivxlc:-]+)?\s*$/i.test(line))continue;
+  if(/^(www\.|https?:\/\/|copyright\b|©|all rights reserved\b)/i.test(line))continue;
+  kept.push(line);
+ }
+ if(kept.length>1 && looksLikeStandaloneHeading(kept[0]) && !looksLikeStandaloneHeading(kept[1])) kept.shift();
+ return kept.join(" ").replace(/\s+/g," ").trim();
 }
-
+function looksLikeStandaloneHeading(line){
+ const s=String(line||"").trim(), words=s.split(/\s+/).filter(Boolean);
+ if(!s || words.length>10 || s.length>75 || /[.!?][”’"')\]]?$/.test(s))return false;
+ const allCaps=/^[A-Z0-9 ’'&:.-]+$/.test(s);
+ const titleCase=words.length<=8 && words.every(w=>/^[A-Z0-9][a-z0-9’'-]*$/.test(w));
+ return allCaps || titleCase;
+}
+function extractReadingCompletion(referenceText,spokenText){
+ const reference=tokenize(referenceText||"");
+ const spoken=tokenize(spokenText||"");
+ if(!reference.length||!spoken.length)return {percent:0,attempted:0,total:reference.length};
+ const ops=alignWords(reference,spoken);
+ const attempted=ops.reduce((n,op)=>n+((op.type==="correct"||op.type==="changed")?1:0),0);
+ return {percent:Math.round(attempted/reference.length*100),attempted,total:reference.length};
+}
 
 function escapeHTML(value){
 
@@ -3279,7 +3314,7 @@ function extractPdfReadingText(textContent,pdfPage){
  }
  lines.sort((a,b)=>b.y-a.y);
  return cleanOCR(lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(v=>v.str).join(" "))
- .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join(" "));
+ .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\\n"));
 }
 function persistReadingSession(){
  const c=getCurrentChapter();if(!c)return;
@@ -3556,7 +3591,9 @@ updateReadingPosition=function(spoken){
  if(status&&progress.total){status.textContent=`Reading sentence ${Math.min(progress.completed+1,progress.total)} of ${progress.total} · Page ${item.page.pageNumber||item.pageIndex+1}`;}
  // Save progress continuously, but advance only when sentences have been read
  // in order. An unfinished sentence blocks matching later sentences.
- if(!continuousAutoAdvanceLock&&progress.total>0&&progress.completed===progress.total){
+ const completion=extractReadingCompletion(item.page.text||"",spoken);
+ if(status&&completion.total)status.textContent=`Reading completion: ${completion.percent}% · ${completion.attempted}/${completion.total} words attempted · 90% required`;
+ if(!continuousAutoAdvanceLock&&completion.total>0&&completion.percent>=90){
   continuousAutoAdvanceLock=true;
   const ref=tokenize(item.page.text||""),heard=tokenize(spoken);
   if(!item.page.result){const ops=alignWords(ref,heard);item.page.result=calculateResult(ops,ref,heard);item.page.result.uncertainRecognition=true;item.page.result.timestamp=new Date().toISOString();item.page.autoCompleted=true;}

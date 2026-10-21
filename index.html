@@ -3224,7 +3224,7 @@ reader.readAsDataURL(file);
 function cleanOCR(text){
  // Keep the original page order and remove obvious non-reading lines without
  // rewriting the uploaded page or inventing missing content.
- const lines=String(text||"").replace(/\r/g,"\n").split(/\n+/)
+ const lines=String(text||"").replace(/\\n/g,"\n").replace(/\r/g,"\n").split(/\n+/)
   .map(line=>line.replace(/[\t ]+/g," ").trim())
   .filter(Boolean);
  const kept=[];
@@ -3314,7 +3314,7 @@ function extractPdfReadingText(textContent,pdfPage){
  }
  lines.sort((a,b)=>b.y-a.y);
  return cleanOCR(lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(v=>v.str).join(" "))
- .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\\n"));
+ .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\n"));
 }
 function persistReadingSession(){
  const c=getCurrentChapter();if(!c)return;

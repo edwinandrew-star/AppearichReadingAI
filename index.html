@@ -3526,13 +3526,36 @@ window.startContinuousBookReading=function(){
 function lastMatchedReferenceIndex(reference,spoken){
  const ref=Array.isArray(reference)?reference:tokenize(reference||"");
  const heard=Array.isArray(spoken)?spoken:tokenize(spoken||"");
- let last=-1;
- for(const word of heard){
-  for(let j=last+1;j<ref.length;j++){
-   if(ref[j]===word){last=j;break;}
+ if(!ref.length||!heard.length)return -1;
+ // Track the reading in sentence order. Do not scan ahead through the whole
+ // page for a repeated word (for example, "seat" at the start of a sentence
+ // the child has not reached yet). The next sentence is considered only after
+ // the current sentence has been sufficiently attempted.
+ const sentenceTexts=splitReadingSentences(ref.join(" "));
+ let refOffset=0, heardCursor=0, lastReached=-1;
+ const norm=w=>String(w||"").toLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");
+ for(const sentenceText of sentenceTexts){
+  const expected=tokenize(sentenceText);
+  if(!expected.length)continue;
+  let matched=0, cursor=heardCursor, lastMatchedInSentence=-1, lastHeard=-1;
+  for(let wi=0;wi<expected.length;wi++){
+   const target=norm(expected[wi]);
+   let found=-1;
+   for(let h=cursor;h<Math.min(heard.length,cursor+3);h++){
+    if(norm(heard[h])===target){found=h;break;}
+   }
+   if(found>=0){
+    matched++;lastMatchedInSentence=refOffset+wi;lastHeard=found;cursor=found+1;
+   }
   }
+  if(lastMatchedInSentence>=0)lastReached=lastMatchedInSentence;
+  const ratio=matched/expected.length;
+  const complete=ratio>=0.78&&(expected.length<4||matched>=expected.length-1);
+  if(!complete) return lastReached;
+  heardCursor=Math.max(heardCursor,lastHeard+1);
+  refOffset+=expected.length;
  }
- return last;
+ return lastReached;
 }
 function saveContinuousState(){
  const book=books.find(b=>b.id===currentBookId);if(!book)return;

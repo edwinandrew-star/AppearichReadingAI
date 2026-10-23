@@ -412,6 +412,26 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 .landing-create-account{width:100%;max-width:390px;min-height:50px;border-radius:999px;font-size:16px;font-weight:750;margin-top:6px}
 @media(max-width:760px){.auth-inspired-wrap{grid-template-columns:1fr;gap:24px;padding-top:28px}.auth-inspired-wrap .landing-copy{order:1}.auth-inspired-wrap .landing-image{order:0}.auth-inspired-wrap .landing-image img{max-height:270px}.auth-inspired-wrap .brand-mark{margin-bottom:22px}.landing-support{margin-bottom:20px}.account-links{margin-bottom:10px}}
 
+
+/* Final onboarding layout: image first, brand and actions beneath. */
+#landingView .auth-inspired-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;max-width:680px;min-height:calc(100vh - 90px);padding:28px 24px 18px;text-align:center}
+#landingView .landing-image{order:0;width:100%;display:flex;justify-content:center;align-items:center}
+#landingView .landing-image img{width:auto;max-width:100%;height:auto;max-height: min(42vh,390px);object-fit:contain}
+#landingView .landing-copy{order:1;width:100%;max-width:480px;margin:0 auto}
+#landingView .brand-mark{font-size:clamp(25px,4vw,34px);letter-spacing:4px;margin:0 0 14px;color:var(--forest)}
+#landingView .landing-tagline{font-size:19px;line-height:1.5;margin:0 0 8px;color:var(--forest)}
+#landingView .landing-support{margin:0 auto 22px;max-width:420px}
+#landingView .provider-actions{align-items:center;margin:0 auto;width:100%}
+#landingView .landing-create-account{width:100%;max-width:390px;min-height:54px;border-radius:999px}
+#landingView .account-links{margin:18px auto 0}
+#registerView .auth-card,#signinView .auth-card{max-width:430px;margin:28px auto;padding:34px 32px;border:0;border-radius:24px;box-shadow:0 8px 32px rgba(21,61,53,.08);background:#fff}
+#registerView .auth-card h1,#signinView .auth-card h1{text-align:center;color:#183b13;font-size:28px;margin:6px 0 22px}
+#registerView .auth-card>p.app-muted:first-of-type{text-align:center;margin-bottom:22px}
+#registerView .auth-card input,#signinView .auth-card input{border:1px solid #edf0ec;border-radius:999px;padding:15px 17px;margin-bottom:14px;background:#fff}
+#registerView .auth-card label,#signinView .auth-card label{font-weight:500;color:#5e6b62;margin:13px 0 7px 12px}
+#registerView .auth-card form button,#signinView .auth-card form button{width:100%;border-radius:999px;min-height:52px;margin-top:12px}
+#registerView .app-back,#signinView .app-back{margin-bottom:10px}
+@media(max-width:760px){#landingView .auth-inspired-wrap{min-height:calc(100vh - 70px);padding:22px 20px 16px;gap:14px}#landingView .landing-image img{max-height:34vh}#landingView .landing-copy{order:1}#registerView .auth-card,#signinView .auth-card{margin:18px 14px;padding:24px 22px}}
 </style>
 </head>
 
@@ -422,9 +442,9 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 <div id="appShell">
   <main id="landingView" class="app-view">
     <div class="landing-wrap auth-inspired-wrap">
+      <div class="landing-image"><img src="images/homescreen1.jpg" alt="Appearich Reading AI"></div>
       <div class="landing-copy">
-        <div class="brand-mark">APPEARICH <span>READING AI</span></div>
-        <h1>Welcome to Appearich</h1>
+        <div class="brand-mark">APPEARICH</div>
         <p class="landing-tagline">Every word moves them forward.</p>
         <p class="landing-support">A brighter reading journey starts here. Help every child build confidence, one page at a time.</p>
         <div class="landing-actions provider-actions">
@@ -432,7 +452,6 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
         </div>
         <p class="account-links">Already have an account? <button type="button" onclick="appShow('signinView')">Sign in</button></p>
       </div>
-      <div class="landing-image"><img src="images/homescreen1.jpg" alt="Appearich Reading AI"></div>
     </div>
     <p class="storage-note">Phase 1 stores accounts and reading data in this browser only.</p>
   </main>

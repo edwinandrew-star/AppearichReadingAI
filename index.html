@@ -3995,3 +3995,12 @@ window.addEventListener('focus',()=>{if(currentAccount&&currentAccount.role==='p
  #landingView .landing-create-account{width:100%;max-width:390px;min-height:56px;}
  #landingView .account-links{margin:22px 0 0;}
 }
+
+/* Landing copy readability: comfortable line and word spacing. */
+#landingView .landing-welcome{line-height:1.22;letter-spacing:-.45px;word-spacing:.025em;}
+#landingView .landing-tagline{line-height:1.9;letter-spacing:.12px;word-spacing:.045em;}
+#landingView .landing-support{line-height:1.85;letter-spacing:.1px;word-spacing:.04em;}
+@media(max-width:760px){
+  #landingView .landing-welcome{line-height:1.24;letter-spacing:-.3px;}
+  #landingView .landing-tagline{line-height:1.85;max-width:360px;}
+}

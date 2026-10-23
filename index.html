@@ -455,6 +455,70 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 @media(min-width:761px){#landingView .landing-wrap.auth-inspired-wrap{max-width:900px!important;padding-top:32px!important;}#landingView .landing-image img{max-height:43vh!important;max-width:560px!important;}#landingView .landing-welcome{font-size:clamp(48px,5vw,68px)!important;}#landingView .landing-create-account{max-width:100%!important;}}
 @media(max-width:760px){#landingView .landing-wrap.auth-inspired-wrap{padding:clamp(18px,3vh,30px) 5.4vw 28px!important;gap:0!important;min-height:100vh!important;}#landingView .landing-image{margin-bottom:24px!important;}#landingView .landing-image img{max-height:36vh!important;min-height:190px!important;}#landingView .landing-welcome{font-size:clamp(38px,10.4vw,58px)!important;line-height:1.04!important;margin-bottom:22px!important;letter-spacing:-.8px!important;}#landingView .landing-tagline{font-size:clamp(17px,4.5vw,22px)!important;line-height:1.85!important;word-spacing:2px!important;margin-bottom:clamp(34px,6vh,52px)!important;}#landingView .landing-create-account{min-height:72px!important;font-size:clamp(21px,6vw,27px)!important;}#landingView .account-links{margin-top:38px!important;}#landingView .landing-support{margin-top:26px!important;}}
 @media(prefers-reduced-motion:reduce){#landingView .landing-create-account{transition:none!important;}}
+
+/* Final landing-page fit: centered copy, readable line lengths, and balanced spacing on every screen. */
+#landingView .landing-wrap.auth-inspired-wrap{
+  width:100%!important; max-width:1120px!important; min-height:100svh!important;
+  margin:0 auto!important; padding:clamp(24px,5vh,56px) clamp(22px,5vw,64px) 34px!important;
+  box-sizing:border-box!important; display:flex!important; flex-direction:column!important;
+  align-items:center!important; justify-content:center!important; gap:0!important; text-align:center!important;
+}
+#landingView .landing-image{width:100%!important; display:flex!important; justify-content:center!important; align-items:center!important; margin:0 auto clamp(20px,3.5vh,34px)!important; padding:0!important;}
+#landingView .landing-image img{width:100%!important; max-width:min(520px,72vw)!important; max-height:clamp(180px,38vh,390px)!important; min-height:0!important; object-fit:contain!important;}
+#landingView .landing-copy{width:100%!important; max-width:700px!important; margin:0 auto!important; display:flex!important; flex-direction:column!important; align-items:center!important; text-align:center!important;}
+#landingView .landing-welcome{width:100%!important; max-width:700px!important; margin:0 auto clamp(14px,2.4vh,22px)!important; font-size:clamp(34px,5vw,58px)!important; line-height:1.12!important; letter-spacing:-.6px!important; text-wrap:balance; overflow-wrap:normal;}
+#landingView .landing-tagline{width:100%!important; max-width:620px!important; margin:0 auto clamp(24px,4vh,36px)!important; font-size:clamp(17px,2vw,21px)!important; line-height:1.65!important; letter-spacing:0!important; word-spacing:normal!important; text-wrap:pretty; overflow-wrap:break-word;}
+#landingView .landing-actions{width:100%!important; display:flex!important; justify-content:center!important; margin:0 auto!important;}
+#landingView .landing-create-account{width:100%!important; max-width:420px!important; min-height:60px!important; margin:0 auto!important; padding:15px 24px!important; font-size:clamp(18px,2.2vw,23px)!important; line-height:1.2!important; border-radius:16px!important;}
+#landingView .account-links{width:100%!important; margin:22px auto 0!important; text-align:center!important; line-height:1.65!important;}
+#landingView .landing-support{max-width:620px!important; margin:22px auto 0!important; text-align:center!important; line-height:1.65!important;}
+@media(max-width:760px){
+ #landingView .landing-wrap.auth-inspired-wrap{min-height:100svh!important; padding:clamp(18px,3vh,30px) 6vw 28px!important; justify-content:center!important;}
+ #landingView .landing-image{margin-bottom:clamp(16px,2.6vh,24px)!important;}
+ #landingView .landing-image img{max-width:100%!important; max-height:clamp(170px,30vh,280px)!important;}
+ #landingView .landing-welcome{max-width:100%!important; font-size:clamp(34px,9vw,48px)!important; line-height:1.12!important; letter-spacing:-.55px!important; margin-bottom:16px!important;}
+ #landingView .landing-tagline{max-width:100%!important; font-size:clamp(16px,4.4vw,19px)!important; line-height:1.65!important; margin-bottom:clamp(24px,4vh,34px)!important;}
+ #landingView .landing-create-account{max-width:100%!important; min-height:58px!important; font-size:20px!important;}
+ #landingView .account-links{margin-top:20px!important;}
+ #landingView .landing-support{margin-top:20px!important; font-size:13px!important;}
+}
+@media(prefers-reduced-motion:reduce){#landingView *{scroll-behavior:auto!important;transition:none!important;animation:none!important;}}
+/* Desktop: left-aligned copy with illustration on the right; mobile: illustration first. */
+#landingView .landing-wrap.auth-inspired-wrap{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,0.95fr)!important;
+  grid-template-areas:"copy image";align-items:center!important;justify-content:center!important;
+  gap:clamp(36px,5vw,76px)!important;max-width:1240px!important;min-height:100svh!important;
+  padding:clamp(32px,6vh,72px) clamp(28px,6vw,84px)!important;text-align:left!important;
+}
+#landingView .landing-copy{grid-area:copy!important;align-items:flex-start!important;text-align:left!important;
+  max-width:560px!important;width:100%!important;margin:0!important;min-width:0!important;}
+#landingView .landing-image{grid-area:image!important;order:0!important;width:100%!important;min-width:0!important;
+  margin:0!important;justify-content:center!important;align-self:center!important;}
+#landingView .landing-image img{width:100%!important;max-width:560px!important;max-height:min(68vh,620px)!important;min-height:0!important;}
+#landingView .landing-welcome{font-size:clamp(38px,4.2vw,62px)!important;line-height:1.12!important;
+  letter-spacing:-.8px!important;margin:0 0 clamp(20px,3vh,30px)!important;max-width:540px!important;text-align:left!important;}
+#landingView .landing-tagline{font-size:clamp(18px,1.65vw,22px)!important;line-height:1.7!important;
+  letter-spacing:0!important;word-spacing:normal!important;max-width:500px!important;margin:0 0 clamp(28px,4vh,42px)!important;text-align:left!important;}
+#landingView .landing-actions{justify-content:flex-start!important;width:100%!important;margin:0!important;}
+#landingView .landing-create-account{width:100%!important;max-width:380px!important;min-height:62px!important;
+  margin:0!important;padding:16px 26px!important;line-height:1.25!important;font-size:clamp(18px,1.8vw,22px)!important;}
+#landingView .account-links{width:100%!important;text-align:left!important;margin:24px 0 0!important;line-height:1.7!important;}
+#landingView .storage-note{max-width:500px;margin:18px 0 0!important;text-align:left!important;line-height:1.65!important;}
+@media(max-width:760px){
+ #landingView .landing-wrap.auth-inspired-wrap{display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  justify-content:center!important;gap:0!important;min-height:100svh!important;padding:22px 6vw 28px!important;text-align:center!important;}
+ #landingView .landing-image{order:0!important;width:100%!important;justify-content:center!important;margin:0 auto clamp(22px,3vh,30px)!important;}
+ #landingView .landing-image img{width:100%!important;max-width:min(100%,420px)!important;max-height:clamp(170px,29vh,280px)!important;}
+ #landingView .landing-copy{order:1!important;width:100%!important;max-width:560px!important;margin:0 auto!important;align-items:center!important;text-align:center!important;}
+ #landingView .landing-welcome{font-size:clamp(34px,8.8vw,48px)!important;line-height:1.14!important;letter-spacing:-.5px!important;
+  margin:0 0 18px!important;text-align:center!important;overflow-wrap:normal!important;}
+ #landingView .landing-tagline{font-size:clamp(16px,4.3vw,19px)!important;line-height:1.65!important;max-width:520px!important;
+  margin:0 auto 28px!important;text-align:center!important;}
+ #landingView .landing-actions{justify-content:center!important;width:100%!important;}
+ #landingView .landing-create-account{max-width:100%!important;min-height:58px!important;font-size:20px!important;}
+ #landingView .account-links{margin:20px 0 0!important;text-align:center!important;}
+ #landingView .storage-note{margin:20px auto 0!important;padding:0 6vw!important;text-align:center!important;font-size:13px!important;}
+}
 </style>
 
 </head>
@@ -3993,35 +4057,3 @@ window.addEventListener('focus',()=>{if(currentAccount&&currentAccount.role==='p
 
 </body>
 </html>
-/* Landing page polish: more breathing room and a clear primary action. */
-#landingView .auth-inspired-wrap{max-width:1200px;min-height:calc(100vh - 90px);padding:clamp(42px,6vw,88px) clamp(24px,5vw,64px);gap:clamp(48px,8vw,112px);}
-#landingView .landing-copy{max-width:470px;display:flex;flex-direction:column;align-items:flex-start;}
-#landingView .landing-welcome{max-width:440px;font-size:clamp(36px,4.3vw,52px);line-height:1.12;letter-spacing:-.8px;margin:0 0 24px;}
-#landingView .landing-tagline{max-width:420px;font-size:19px;line-height:1.75;margin:0 0 34px;color:#53635a;}
-#landingView .landing-actions{width:100%;margin:0;}
-#landingView .landing-create-account{max-width:340px;min-height:58px;margin:0;border-radius:14px;box-shadow:0 10px 24px rgba(21,61,53,.16);transition:transform .2s ease,box-shadow .2s ease;}
-#landingView .landing-create-account:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(21,61,53,.2);}
-#landingView .account-links{margin:26px 0 0;line-height:1.7;color:#66736d;}
-#landingView .landing-image{padding:10px;}
-#landingView .landing-image img{max-height:min(66vh,600px);}
-#landingView .storage-note{margin:0 auto 18px;text-align:center;color:#87918c;font-size:12px;}
-@media(max-width:760px){
- #landingView .auth-inspired-wrap{padding:26px 24px 34px;gap:30px;min-height:auto;}
- #landingView .landing-image{padding:0;}
- #landingView .landing-image img{max-height:31vh;max-width:100%;}
- #landingView .landing-copy{align-items:center;text-align:center;max-width:520px;}
- #landingView .landing-welcome{font-size:clamp(32px,8vw,42px);margin:0 0 16px;}
- #landingView .landing-tagline{font-size:17px;line-height:1.7;margin:0 auto 28px;max-width:390px;}
- #landingView .landing-actions{justify-content:center;}
- #landingView .landing-create-account{width:100%;max-width:390px;min-height:56px;}
- #landingView .account-links{margin:22px 0 0;}
-}
-
-/* Landing copy readability: comfortable line and word spacing. */
-#landingView .landing-welcome{line-height:1.22;letter-spacing:-.45px;word-spacing:.025em;}
-#landingView .landing-tagline{line-height:1.9;letter-spacing:.12px;word-spacing:.045em;}
-#landingView .landing-support{line-height:1.85;letter-spacing:.1px;word-spacing:.04em;}
-@media(max-width:760px){
-  #landingView .landing-welcome{line-height:1.24;letter-spacing:-.3px;}
-  #landingView .landing-tagline{line-height:1.85;max-width:360px;}
-}

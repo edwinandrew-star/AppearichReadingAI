@@ -413,11 +413,14 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 @media(max-width:760px){.auth-inspired-wrap{grid-template-columns:1fr;gap:24px;padding-top:28px}.auth-inspired-wrap .landing-copy{order:1}.auth-inspired-wrap .landing-image{order:0}.auth-inspired-wrap .landing-image img{max-height:270px}.auth-inspired-wrap .brand-mark{margin-bottom:22px}.landing-support{margin-bottom:20px}.account-links{margin-bottom:10px}}
 
 
-/* Final onboarding layout: image first, brand and actions beneath. */
-#landingView .auth-inspired-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;max-width:680px;min-height:calc(100vh - 90px);padding:28px 24px 18px;text-align:center}
-#landingView .landing-image{order:0;width:100%;display:flex;justify-content:center;align-items:center}
-#landingView .landing-image img{width:auto;max-width:100%;height:auto;max-height: min(42vh,390px);object-fit:contain}
-#landingView .landing-copy{order:1;width:100%;max-width:480px;margin:0 auto}
+/* Refined landing copy: image first, then welcome, tagline and create-account action. */
+#landingView .landing-welcome{font-size:clamp(29px,4.8vw,42px);line-height:1.15;font-weight:800;color:var(--forest);margin:0 0 14px}
+#landingView .landing-tagline{font-size:18px;line-height:1.6;margin:0 auto 24px;color:#53635a;max-width:430px}
+/* Final onboarding layout: copy on the left, illustration on the right. */
+#landingView .auth-inspired-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.95fr);justify-content:center;align-items:center;gap:48px;max-width:1100px;min-height:calc(100vh - 90px);padding:42px 30px;text-align:left}
+#landingView .landing-image{order:1;width:100%;display:flex;justify-content:center;align-items:center}
+#landingView .landing-image img{width:100%;max-width:480px;height:auto;max-height:min(65vh,560px);object-fit:contain}
+#landingView .landing-copy{order:0;width:100%;max-width:480px;margin:0}
 #landingView .brand-mark{font-size:clamp(25px,4vw,34px);letter-spacing:4px;margin:0 0 14px;color:var(--forest)}
 #landingView .landing-tagline{font-size:19px;line-height:1.5;margin:0 0 8px;color:var(--forest)}
 #landingView .landing-support{margin:0 auto 22px;max-width:420px}
@@ -431,7 +434,7 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 #registerView .auth-card label,#signinView .auth-card label{font-weight:500;color:#5e6b62;margin:13px 0 7px 12px}
 #registerView .auth-card form button,#signinView .auth-card form button{width:100%;border-radius:999px;min-height:52px;margin-top:12px}
 #registerView .app-back,#signinView .app-back{margin-bottom:10px}
-@media(max-width:760px){#landingView .auth-inspired-wrap{min-height:calc(100vh - 70px);padding:22px 20px 16px;gap:14px}#landingView .landing-image img{max-height:34vh}#landingView .landing-copy{order:1}#registerView .auth-card,#signinView .auth-card{margin:18px 14px;padding:24px 22px}}
+@media(max-width:760px){#landingView .auth-inspired-wrap{grid-template-columns:1fr;min-height:calc(100vh - 70px);padding:28px 20px 24px;gap:22px;text-align:center}#landingView .landing-copy{order:0;margin:0 auto}#landingView .landing-image{order:1}#landingView .landing-image img{max-height:32vh;max-width:100%}#landingView .landing-create-account{margin-left:auto;margin-right:auto}#landingView .account-links{text-align:center}#registerView .auth-card,#signinView .auth-card{margin:18px 14px;padding:24px 22px}}
 </style>
 </head>
 
@@ -444,9 +447,8 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
     <div class="landing-wrap auth-inspired-wrap">
       <div class="landing-image"><img src="images/homescreen1.jpg" alt="Appearich Reading AI"></div>
       <div class="landing-copy">
-        <div class="brand-mark">APPEARICH</div>
-        <p class="landing-tagline">Every word moves them forward.</p>
-        <p class="landing-support">A brighter reading journey starts here. Help every child build confidence, one page at a time.</p>
+        <h1 class="landing-welcome">Welcome to Appearich</h1>
+        <p class="landing-tagline">Appearich Reading AI — helping every child read with confidence, one word at a time.</p>
         <div class="landing-actions provider-actions">
           <button class="app-primary landing-create-account" type="button" onclick="appShow('registerView')">Create account</button>
         </div>

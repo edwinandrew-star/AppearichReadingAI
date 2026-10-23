@@ -3972,3 +3972,26 @@ window.addEventListener('focus',()=>{if(currentAccount&&currentAccount.role==='p
 
 </body>
 </html>
+/* Landing page polish: more breathing room and a clear primary action. */
+#landingView .auth-inspired-wrap{max-width:1200px;min-height:calc(100vh - 90px);padding:clamp(42px,6vw,88px) clamp(24px,5vw,64px);gap:clamp(48px,8vw,112px);}
+#landingView .landing-copy{max-width:470px;display:flex;flex-direction:column;align-items:flex-start;}
+#landingView .landing-welcome{max-width:440px;font-size:clamp(36px,4.3vw,52px);line-height:1.12;letter-spacing:-.8px;margin:0 0 24px;}
+#landingView .landing-tagline{max-width:420px;font-size:19px;line-height:1.75;margin:0 0 34px;color:#53635a;}
+#landingView .landing-actions{width:100%;margin:0;}
+#landingView .landing-create-account{max-width:340px;min-height:58px;margin:0;border-radius:14px;box-shadow:0 10px 24px rgba(21,61,53,.16);transition:transform .2s ease,box-shadow .2s ease;}
+#landingView .landing-create-account:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(21,61,53,.2);}
+#landingView .account-links{margin:26px 0 0;line-height:1.7;color:#66736d;}
+#landingView .landing-image{padding:10px;}
+#landingView .landing-image img{max-height:min(66vh,600px);}
+#landingView .storage-note{margin:0 auto 18px;text-align:center;color:#87918c;font-size:12px;}
+@media(max-width:760px){
+ #landingView .auth-inspired-wrap{padding:26px 24px 34px;gap:30px;min-height:auto;}
+ #landingView .landing-image{padding:0;}
+ #landingView .landing-image img{max-height:31vh;max-width:100%;}
+ #landingView .landing-copy{align-items:center;text-align:center;max-width:520px;}
+ #landingView .landing-welcome{font-size:clamp(32px,8vw,42px);margin:0 0 16px;}
+ #landingView .landing-tagline{font-size:17px;line-height:1.7;margin:0 auto 28px;max-width:390px;}
+ #landingView .landing-actions{justify-content:center;}
+ #landingView .landing-create-account{width:100%;max-width:390px;min-height:56px;}
+ #landingView .account-links{margin:22px 0 0;}
+}

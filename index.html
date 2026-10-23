@@ -391,6 +391,27 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
   }
 }
 
+
+/* White, calm sign-in landing inspired by the supplied reference. */
+.auth-inspired-wrap{max-width:1100px;grid-template-columns:minmax(0,1fr) minmax(300px, .92fr);gap:64px;padding-top:42px;padding-bottom:30px}
+.auth-inspired-wrap .landing-copy{max-width:450px;width:100%;margin:auto}
+.auth-inspired-wrap .brand-mark{margin-bottom:42px}
+.auth-inspired-wrap .landing-copy h1{font-size:clamp(34px,4vw,48px);margin-bottom:14px}
+.auth-inspired-wrap .landing-tagline{font-size:19px;margin-bottom:10px}
+.landing-support{font-size:15px;line-height:1.65;color:#66736d;margin:0 0 26px}
+.provider-actions{display:flex;flex-direction:column;gap:12px;max-width:390px}
+.provider-button{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:52px;border-radius:999px;padding:13px 18px;font-size:15px;font-weight:700;margin:0;box-shadow:none;transition:transform .16s,background .16s}
+.provider-button:hover{opacity:1;transform:translateY(-1px)}
+.google-button{background:#f0f3ed;color:#172d17;border:1px solid #edf0e9}
+.apple-button{background:#9be66d;color:#10220b;border:1px solid #9be66d}
+.google-g{font-family:Arial,sans-serif;font-size:21px;font-weight:800;color:#4285f4;text-shadow:1px 1px 0 #34a853}
+.account-links{font-size:13px;text-align:center;max-width:390px;margin:22px 0 0;color:#66736d}
+.account-links button{display:inline;background:transparent;color:#153d35;font-weight:800;padding:0;margin:0;border-radius:0;min-height:0;text-decoration:underline}
+.account-links span{padding:0 7px;color:#a1aaa4}
+.auth-inspired-wrap .landing-image img{max-height:500px}
+.landing-create-account{width:100%;max-width:390px;min-height:50px;border-radius:999px;font-size:16px;font-weight:750;margin-top:6px}
+@media(max-width:760px){.auth-inspired-wrap{grid-template-columns:1fr;gap:24px;padding-top:28px}.auth-inspired-wrap .landing-copy{order:1}.auth-inspired-wrap .landing-image{order:0}.auth-inspired-wrap .landing-image img{max-height:270px}.auth-inspired-wrap .brand-mark{margin-bottom:22px}.landing-support{margin-bottom:20px}.account-links{margin-bottom:10px}}
+
 </style>
 </head>
 
@@ -400,12 +421,16 @@ body.student-mode #bookSection button[onclick*="createChapterSection"],body.stud
 <!-- Appearich Reading AI Phase 1 account and child interface -->
 <div id="appShell">
   <main id="landingView" class="app-view">
-    <div class="landing-wrap">
+    <div class="landing-wrap auth-inspired-wrap">
       <div class="landing-copy">
         <div class="brand-mark">APPEARICH <span>READING AI</span></div>
         <h1>Welcome to Appearich</h1>
         <p class="landing-tagline">Every word moves them forward.</p>
-        <div class="landing-actions"><button class="app-primary" onclick="appShow('registerView')">Create an account</button><button class="app-secondary" onclick="appShow('signinView')">Sign in</button></div>
+        <p class="landing-support">A brighter reading journey starts here. Help every child build confidence, one page at a time.</p>
+        <div class="landing-actions provider-actions">
+          <button class="app-primary landing-create-account" type="button" onclick="appShow('registerView')">Create account</button>
+        </div>
+        <p class="account-links">Already have an account? <button type="button" onclick="appShow('signinView')">Sign in</button></p>
       </div>
       <div class="landing-image"><img src="images/homescreen1.jpg" alt="Appearich Reading AI"></div>
     </div>
@@ -3895,6 +3920,7 @@ function isChild(){return currentAccount&&currentAccount.role==='student'}
 function showLegacy(on){document.body.classList.toggle('legacy-mode',!!on);document.body.classList.toggle('student-mode',!!on&&isChild());if(on){$('appShell').style.display='none';$('legacyHeader').style.display='';$('legacyApp').style.display='';}else{$('appShell').style.display='';$('legacyHeader').style.display='none';$('legacyApp').style.display='none';}const back=$('parentLegacyReturn');if(back)back.style.display=!!on&&currentAccount&&['parent','admin'].includes(currentAccount.role)?'block':'none';}
 function activeSession(){const s=read(SESSION_KEY,null);if(!s)return null;const a=accounts().find(x=>x.id===s.accountId);return a||null}
 function saveSession(account){currentAccount=account;write(SESSION_KEY,{accountId:account.id,createdAt:new Date().toISOString()})}
+window.appProviderNotice=function(provider){alert(provider+' sign-in is not connected yet. For now, use Sign in or Create account below; Google/Apple authentication can be enabled when the provider setup is configured.');};
 window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','libraryView','progressView','historyView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
 window.appBack=function(fallback){const prev=viewStack.pop();window.appShow(prev||fallback||'landingView',{replace:true})};
 function renderHome(){if(!isChild())return;$('childGreeting').textContent='Hello, '+(currentAccount.name||'reader')+'!'}

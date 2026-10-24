@@ -683,90 +683,208 @@ body.student-mode .chapterCard button[onclick*="deleteChapter"]{display:none!imp
 </style>
 
 
-<style id="appearich-reading-home-gold-theme">
+
+
+
+<style id="appearich-robot-blue-final-theme">
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Poppins:wght@500;600;700;800;900&display=swap');
+
 :root{
-  --appearich-gold:#D7AD2F;
-  --appearich-gold-deep:#B98D12;
-  --appearich-black:#171717;
-  --appearich-gray:#6B6B6B;
-  --appearich-soft:#F7F7F7;
+  --ar-blue:#1599E8;
+  --ar-blue-deep:#0877C9;
+  --ar-blue-soft:#EAF7FF;
+  --ar-black:#111317;
+  --ar-gray:#6D737A;
+  --ar-line:#E9EDF0;
+  --ar-white:#FFFFFF;
 }
-#appShell{background:#fff!important;color:var(--appearich-black)!important;}
+html,body,#appShell{background:#fff!important;color:var(--ar-black)!important;}
+body,#appShell,button,input,select,textarea{font-family:'Nunito','Poppins',Arial,sans-serif!important;}
+h1,h2,h3,.reading-card-copy strong,.child-nav button,.app-primary,.app-secondary{
+  font-family:'Poppins','Nunito',Arial,sans-serif!important;
+}
 #childHomeView,#aiGuideView,#libraryView,#progressView,#historyView,#profileView{background:#fff!important;}
-.reading-home{max-width:760px!important;padding:18px 18px 112px!important;}
+
+/* Home */
+.reading-home{max-width:760px!important;padding:14px 16px 112px!important;background:#fff!important;}
 .reading-hero{
-  position:relative;overflow:hidden;width:100%;height:clamp(210px,35vw,330px);
-  border-radius:24px;background:#111;margin:0 auto 26px;
-  box-shadow:0 10px 28px rgba(0,0,0,.10);
+  position:relative!important;overflow:hidden!important;width:100%!important;
+  height:clamp(220px,38vw,340px)!important;border-radius:25px!important;
+  background:#fff!important;margin:0 auto 27px!important;
+  box-shadow:0 10px 30px rgba(17,19,23,.11)!important;
 }
-.reading-hero img{width:100%;height:100%;object-fit:cover;display:block;}
+.reading-hero img{
+  width:100%!important;height:100%!important;display:block!important;
+  object-fit:cover!important;
+  object-position:center 24%!important;
+  background:#fff!important;
+}
+/* Focus the hero on the robot's head/face and upper body rather than the legs. */
 .reading-hero:after{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(0,0,0,.03) 25%,rgba(0,0,0,.78) 100%);
+  content:""!important;position:absolute!important;inset:0!important;
+  background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.72) 100%)!important;
 }
-.reading-hero-overlay{position:absolute;z-index:2;left:22px;right:22px;bottom:22px;color:#fff;}
-.reading-hero-overlay h1{margin:0 0 6px!important;color:#fff!important;font-size:clamp(26px,6vw,38px)!important;font-weight:900;line-height:1.05;text-shadow:0 2px 8px #0008;}
-.reading-hero-overlay p{margin:0!important;color:#F3C82F!important;font-size:clamp(13px,3.5vw,17px);font-weight:800;}
-.reading-home-section{margin-top:4px;}
-.reading-section-title{display:flex;align-items:center;gap:10px;margin:0 2px 16px;}
-.reading-section-title h2{margin:0;font-size:clamp(20px,4.8vw,27px);letter-spacing:1.7px;color:#171717;font-weight:900;}
-.reading-stack-icon{color:var(--appearich-gold);font-size:25px;transform:rotate(-8deg);}
-.reading-feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.reading-hero-overlay{position:absolute!important;z-index:2!important;left:21px!important;right:21px!important;bottom:20px!important;color:#fff!important;}
+.reading-hero-overlay h1{
+  margin:0 0 5px!important;color:#fff!important;font-size:clamp(27px,6vw,39px)!important;
+  font-weight:900!important;letter-spacing:-.7px!important;line-height:1.04!important;
+  text-shadow:0 2px 10px rgba(0,0,0,.45)!important;
+}
+.reading-hero-overlay p{
+  margin:0!important;color:#58C1FF!important;font-size:clamp(13px,3.5vw,17px)!important;
+  font-weight:800!important;letter-spacing:.1px!important;
+}
+.reading-section-title{display:flex!important;align-items:center!important;gap:10px!important;margin:0 2px 17px!important;}
+.reading-section-title h2{
+  margin:0!important;color:var(--ar-black)!important;font-size:clamp(20px,4.8vw,27px)!important;
+  font-weight:900!important;letter-spacing:1.2px!important;
+}
+.reading-stack-icon{color:var(--ar-blue)!important;font-size:25px!important;}
+
+.reading-feature-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:15px!important;}
 .reading-feature-card{
-  position:relative;overflow:hidden;margin:0;padding:0;height:clamp(180px,42vw,245px);
-  border:0;border-radius:24px;background:#222;text-align:left;box-shadow:0 9px 24px rgba(0,0,0,.12);
+  position:relative!important;overflow:hidden!important;height:clamp(185px,43vw,245px)!important;
+  border:0!important;border-radius:24px!important;background:#111!important;padding:0!important;
+  box-shadow:0 9px 25px rgba(17,19,23,.13)!important;
 }
-.reading-feature-card:hover{opacity:1;transform:translateY(-2px);}
-.reading-feature-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.reading-card-shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 25%,rgba(0,0,0,.82) 100%);}
-.reading-card-copy{position:absolute;z-index:2;left:17px;right:14px;bottom:17px;color:#fff;display:flex;flex-direction:column;gap:3px;}
-.reading-card-copy strong{font-size:clamp(22px,5vw,30px);font-weight:900;}
-.reading-card-copy small{color:#F1C72B;font-size:13px;font-weight:800;}
+.reading-feature-card img{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  object-fit:cover!important;object-position:center 24%!important;
+}
+.reading-card-shade{
+  position:absolute!important;inset:0!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.02) 22%,rgba(0,0,0,.82) 100%)!important;
+}
+.reading-card-copy{left:16px!important;right:13px!important;bottom:16px!important;}
+.reading-card-copy strong{
+  color:#fff!important;font-size:clamp(22px,5vw,30px)!important;font-weight:900!important;
+  letter-spacing:-.4px!important;
+}
+.reading-card-copy small{color:#59C3FF!important;font-size:13px!important;font-weight:800!important;}
+
 .reading-quick-card{
-  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:13px;margin:28px 0 0;
-  padding:18px;border-radius:22px;background:#fff;box-shadow:0 8px 25px rgba(0,0,0,.09);border:1px solid #f0f0f0;
+  background:#fff!important;border:1px solid var(--ar-line)!important;
+  box-shadow:0 8px 25px rgba(17,19,23,.08)!important;border-radius:22px!important;
 }
-.reading-quick-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#FFF8DF;color:var(--appearich-gold-deep);font-size:24px;font-weight:900;}
-.reading-quick-card strong{display:block;font-size:16px;color:#171717;}
-.reading-quick-card span{display:block;margin-top:3px;font-size:13px;color:#777;}
-.reading-quick-card button{margin:0;border:1.5px solid var(--appearich-gold);border-radius:999px;background:#fff;color:var(--appearich-gold-deep);font-weight:800;padding:10px 17px;}
+.reading-quick-icon{background:var(--ar-blue-soft)!important;color:var(--ar-blue-deep)!important;}
+.reading-quick-card strong{color:var(--ar-black)!important;font-weight:900!important;}
+.reading-quick-card span{color:var(--ar-gray)!important;}
+.reading-quick-card button{
+  background:#fff!important;border:1.5px solid var(--ar-blue)!important;
+  color:var(--ar-blue-deep)!important;font-weight:900!important;
+}
+
+/* Bottom navigation */
 .child-nav{
-  grid-template-columns:repeat(4,1fr)!important;background:#fff!important;border-top:1px solid #ececec!important;
-  box-shadow:0 -5px 20px rgba(0,0,0,.06)!important;padding-top:7px!important;
+  grid-template-columns:repeat(4,1fr)!important;background:#fff!important;
+  border-top:1px solid var(--ar-line)!important;
+  box-shadow:0 -5px 22px rgba(17,19,23,.07)!important;
 }
-.child-nav button{color:#6c6c6c!important;background:transparent!important;font-weight:700!important;}
+.child-nav button{background:transparent!important;color:#777D83!important;font-weight:800!important;}
 .child-nav button span{font-size:22px!important;}
-.child-nav button.active{color:var(--appearich-gold-deep)!important;background:transparent!important;font-weight:900!important;}
-.app-page-head h1,.auth-card h1,#profileView h1{color:#171717!important;}
-.app-page .eyebrow{color:var(--appearich-gold-deep)!important;}
-.app-primary{background:var(--appearich-gold)!important;color:#171717!important;}
-.app-secondary{background:#FFF8DF!important;color:#171717!important;}
-.app-status{background:#FFF6D5!important;color:#7B5B00!important;}
-.progress-track{background:#F0F0F0!important;}
-.progress-track span{background:var(--appearich-gold)!important;}
-.ai-guide-page{max-width:760px!important;padding:24px 18px 112px!important;}
+.child-nav button.active{background:transparent!important;color:var(--ar-blue-deep)!important;font-weight:900!important;}
+
+/* Other screens */
+.app-page-head h1,.auth-card h1,#profileView h1{color:var(--ar-black)!important;font-weight:900!important;}
+.app-page .eyebrow{color:var(--ar-blue-deep)!important;font-weight:900!important;}
+.app-primary{background:var(--ar-blue)!important;color:#fff!important;font-weight:900!important;}
+.app-primary:hover{background:var(--ar-blue-deep)!important;}
+.app-secondary{background:var(--ar-blue-soft)!important;color:var(--ar-blue-deep)!important;}
+.app-status{background:var(--ar-blue-soft)!important;color:var(--ar-blue-deep)!important;}
+.progress-track{background:#EDF0F2!important;}
+.progress-track span{background:var(--ar-blue)!important;}
+.app-book-card,.progress-book,.history-card,.profile-card{border-color:var(--ar-line)!important;}
+
+/* AI Guide */
+.ai-guide-page{background:#fff!important;}
 .ai-guide-card{
-  min-height:calc(100vh - 165px);border-radius:30px;padding:26px 22px 30px;text-align:center;
-  background:linear-gradient(180deg,#FFFDF7 0%,#FFF7D9 100%);border:1px solid #F2E2A0;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  background:linear-gradient(180deg,#fff 0%,#F1FAFF 100%)!important;
+  border:1px solid #D9EFFC!important;box-shadow:0 10px 30px rgba(17,19,23,.08)!important;
 }
-.ai-guide-card img{width:min(78%,360px);max-height:410px;object-fit:contain;mix-blend-mode:multiply;margin:6px auto 10px;}
-.ai-guide-badge{padding:7px 13px;border-radius:999px;background:#171717;color:#F3C82F;font-size:11px;font-weight:900;letter-spacing:1.5px;}
-.ai-guide-card h1{color:#171717!important;margin:8px 0 8px;font-size:clamp(27px,6vw,39px);}
-.ai-guide-card p{max-width:520px;color:#5f5f5f;line-height:1.55;margin:0 auto 16px;}
-.ai-coming-pill{background:var(--appearich-gold);color:#171717;font-weight:900;border-radius:999px;padding:11px 22px;margin:4px 0 10px;}
-.ai-guide-card small{color:#8a7a48;}
+.ai-guide-card img{
+  width:min(78%,360px)!important;max-height:410px!important;object-fit:contain!important;
+  object-position:center top!important;margin:6px auto 10px!important;
+}
+.ai-guide-badge{background:var(--ar-black)!important;color:#59C3FF!important;}
+.ai-guide-card h1{color:var(--ar-black)!important;font-weight:900!important;letter-spacing:-.6px!important;}
+.ai-guide-card p{color:var(--ar-gray)!important;font-weight:600!important;}
+.ai-coming-pill{background:var(--ar-blue)!important;color:#fff!important;font-weight:900!important;}
+.ai-guide-card small{color:#73828C!important;}
+
 @media(max-width:520px){
-  .reading-home{padding:12px 12px 105px!important;}
-  .reading-hero{height:225px;border-radius:20px;margin-bottom:22px;}
-  .reading-hero-overlay{left:17px;right:17px;bottom:17px;}
-  .reading-feature-grid{gap:12px;}
-  .reading-feature-card{height:190px;border-radius:20px;}
-  .reading-card-copy{left:14px;bottom:14px;}
-  .reading-quick-card{padding:15px 13px;gap:10px;}
-  .reading-quick-card button{padding:9px 13px;}
-  .ai-guide-page{padding:14px 12px 105px!important;}
-  .ai-guide-card{border-radius:24px;padding:20px 15px;}
+  .reading-home{padding:10px 12px 105px!important;}
+  .reading-hero{height:235px!important;border-radius:21px!important;}
+  .reading-hero img{object-position:center 20%!important;}
+  .reading-feature-grid{gap:12px!important;}
+  .reading-feature-card{height:192px!important;border-radius:21px!important;}
+}
+</style>
+
+
+<style id="appearich-native-app-final">
+html,body{width:100%;min-height:100%;margin:0!important;padding:0!important;background:#fff!important;overscroll-behavior-y:none;}
+body{-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+#appShell{width:100%!important;min-height:100dvh!important;background:#fff!important;overflow-x:hidden!important;}
+.app-view{width:100%!important;max-width:none!important;min-height:100dvh!important;margin:0!important;box-sizing:border-box!important;}
+.reading-home{
+  width:100%!important;max-width:none!important;margin:0!important;
+  padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))!important;
+}
+.reading-hero{
+  width:100%!important;max-width:none!important;
+  height:clamp(230px,40vh,390px)!important;border-radius:24px!important;
+}
+.reading-hero img{object-fit:cover!important;object-position:center 22%!important;}
+.reading-home-section,.reading-quick-card,.home-logout-btn{width:100%!important;box-sizing:border-box!important;}
+.reading-feature-card{min-width:0!important;}
+.home-logout-btn{
+  margin:14px 0 0!important;min-height:54px!important;border:1px solid #E7EBEE!important;
+  border-radius:18px!important;background:#fff!important;color:#222!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;
+  font-family:'Poppins','Nunito',Arial,sans-serif!important;font-size:15px!important;font-weight:800!important;
+  box-shadow:0 5px 18px rgba(17,19,23,.055)!important;
+}
+.home-logout-btn svg{width:20px;height:20px;fill:#1599E8;}
+.native-bottom-nav{
+  position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:1500!important;
+  width:100%!important;max-width:none!important;height:calc(72px + env(safe-area-inset-bottom))!important;
+  padding:7px max(10px,env(safe-area-inset-left)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-right))!important;
+  display:grid!important;grid-template-columns:repeat(4,1fr)!important;align-items:center!important;
+  background:rgba(255,255,255,.97)!important;border-top:1px solid #E9EDF0!important;
+  box-shadow:0 -7px 24px rgba(17,19,23,.065)!important;
+  backdrop-filter:saturate(180%) blur(18px)!important;-webkit-backdrop-filter:saturate(180%) blur(18px)!important;
+}
+.native-bottom-nav.hidden{display:none!important;}
+.native-bottom-nav button{
+  height:58px!important;margin:0!important;padding:5px 2px 4px!important;border:0!important;border-radius:14px!important;
+  background:transparent!important;color:#7B8187!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
+  font-family:'Nunito',Arial,sans-serif!important;font-size:11.5px!important;font-weight:800!important;line-height:1!important;
+}
+.native-bottom-nav button svg{width:23px!important;height:23px!important;fill:currentColor!important;display:block!important;}
+.native-bottom-nav button span{font-size:11.5px!important;line-height:1!important;}
+.native-bottom-nav button.active{color:#0877C9!important;background:#F2FAFF!important;}
+.native-bottom-nav button:active{transform:scale(.96);}
+#aiGuideView,#libraryView,#progressView,#historyView,#profileView{
+  padding-top:max(20px,env(safe-area-inset-top))!important;
+  padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+}
+@media(min-width:900px){
+  .reading-home{padding-left:max(28px,calc((100vw - 1180px)/2))!important;padding-right:max(28px,calc((100vw - 1180px)/2))!important;}
+  .reading-hero{height:min(44vh,440px)!important;}
+  .reading-feature-grid{gap:22px!important;}
+  .reading-feature-card{height:300px!important;}
+  .native-bottom-nav{
+    left:50%!important;right:auto!important;transform:translateX(-50%)!important;
+    width:min(620px,calc(100% - 32px))!important;bottom:14px!important;
+    border:1px solid #E9EDF0!important;border-radius:24px!important;
+    height:74px!important;padding:7px 12px!important;
+  }
+}
+@media(max-width:520px){
+  .reading-home{padding-left:12px!important;padding-right:12px!important;}
+  .reading-hero{height:245px!important;border-radius:21px!important;}
+  .reading-hero img{object-position:center 20%!important;}
 }
 </style>
 
@@ -795,7 +913,7 @@ body.student-mode .chapterCard button[onclick*="deleteChapter"]{display:none!imp
   <main id="signinView" class="app-view hidden"><div class="auth-card"><button class="app-back" onclick="appBack('landingView')">← Back</button><h1>Welcome back</h1><form id="signinForm"><label for="loginId">Email or username</label><input id="loginId" required autocomplete="username"><label for="loginPassword">Password</label><input id="loginPassword" type="password" required autocomplete="current-password"><p id="signinError" class="app-error" role="alert"></p><button class="app-primary" type="submit">Sign in</button></form><p class="app-muted">Sign in to continue directly to your Appearich home. Administrator access remains separate.</p></div></main>
   <main id="childHomeView" class="app-view hidden app-page reading-home">
   <section class="reading-hero">
-    <img src="images/homescreen2.jpg" alt="Appearich Reading AI">
+    <img src="images/homescreen1.jpg" alt="Appearich Reading AI">
     <div class="reading-hero-overlay">
       <h1 id="childGreeting">Welcome!</h1>
       <p>Appearich — Read. Learn. Grow.</p>
@@ -805,18 +923,18 @@ body.student-mode .chapterCard button[onclick*="deleteChapter"]{display:none!imp
   <section class="reading-home-section">
     <div class="reading-section-title">
       <span class="reading-stack-icon">▰</span>
-      <h2>APPEARICH READING</h2>
+      <h2>APPEARICH</h2>
     </div>
 
     <div class="reading-feature-grid">
       <button class="reading-feature-card library-feature" type="button" onclick="appShow('libraryView')">
-        <img src="images/library.jpg" alt="Library" onerror="this.src='images/homescreen2.jpg'">
+        <img src="images/homescreen2.jpg" alt="Library" onerror="this.onerror=null;this.src='images/homescreen1.jpg'">
         <span class="reading-card-shade"></span>
         <span class="reading-card-copy"><strong>Library</strong><small>Open Your Books</small></span>
       </button>
 
       <button class="reading-feature-card progress-feature" type="button" onclick="appShow('progressView')">
-        <img src="images/progress.jpg" alt="Progress" onerror="this.src='images/homescreen2.jpg'">
+        <img src="images/homescreen3.jpg" alt="Progress" onerror="this.onerror=null;this.src='images/homescreen1.jpg'">
         <span class="reading-card-shade"></span>
         <span class="reading-card-copy"><strong>Progress</strong><small>Review Your Reading</small></span>
       </button>
@@ -831,6 +949,10 @@ body.student-mode .chapterCard button[onclick*="deleteChapter"]{display:none!imp
     </div>
     <button type="button" onclick="appShow('historyView')">View</button>
   </section>
+  <button class="home-logout-btn" type="button" onclick="appLogout()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5v3H3v4h7v3zm9-14H8a2 2 0 0 0-2 2v3h2V5h11v14H8v-3H6v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+    <span>Log out</span>
+  </button>
 </main>
   <main id="libraryView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">YOUR BOOKS</p><h1>Library</h1><p>Ready to read? Choose your next book!</p></div></div><div id="libraryBooks" class="app-book-list"></div></main>
   <main id="aiGuideView" class="app-view hidden app-page ai-guide-page">
@@ -850,11 +972,23 @@ body.student-mode .chapterCard button[onclick*="deleteChapter"]{display:none!imp
   <main id="parentView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">PARENT SPACE</p><h1 id="parentGreeting">Parent dashboard</h1><p>Create child accounts and assign books published by Appearich.</p></div></div><div class="app-two-col"><div class="app-panel"><h2>Create a child account</h2><form id="childForm"><label for="childName">Child's name</label><input id="childName" required maxlength="80"><label for="childUsername">Child username</label><input id="childUsername" required maxlength="80" autocomplete="off"><label for="childPassword">Temporary password</label><input id="childPassword" required minlength="6" type="password" autocomplete="new-password"><p id="childError" class="app-error" role="alert"></p><button class="app-primary" type="submit">Create child account</button></form><div id="childList"></div></div><div class="app-panel"><h2>Assign a book</h2><p class="app-muted">Choose from books uploaded by the Appearich administrator. Parents cannot upload or edit the shared book catalogue.</p><form id="assignmentForm"><label for="assignmentChild">Child</label><select id="assignmentChild" required></select><label for="assignmentBook">Book</label><select id="assignmentBook" required></select><button class="app-primary" type="submit">Save assignment</button><p id="assignmentMessage" class="app-muted" role="status"></p></form><h3>Current assignments</h3><div id="assignmentList"></div></div></div><div class="app-panel parent-records"><h2>Saved reading activity</h2><div id="parentProgressList"></div></div></main>
   <main id="adminView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">APPEARICH ADMINISTRATION</p><h1 id="adminGreeting">Administrator dashboard</h1><p>Upload and prepare books for families. Parents can then assign these books to their children.</p></div><button class="app-primary" onclick="openLegacyManager()">Upload / manage books</button></div><div class="app-two-col"><div class="app-panel"><h2>Book catalogue</h2><p class="app-muted">Books saved in this browser are available to parents using this same browser profile.</p><div id="adminBookList"></div></div><div class="app-panel"><h2>Accounts overview</h2><div id="adminAccountStats"></div><p class="app-muted">Phase 1 uses local browser storage. This is not yet a secure multi-device school platform.</p></div></div><div class="app-panel parent-records"><h2>Workflow</h2><ol><li>Administrator uploads a textbook and completes its page extraction in Book Management.</li><li>Parent creates a child account.</li><li>Parent assigns a book from the catalogue.</li><li>Child signs in and reads only books assigned to that child.</li></ol></div></main>
   <main id="legacyReturnView" class="app-view hidden app-page"><div class="auth-card"><h1>Book management</h1><p>Use the existing textbook upload, extraction, chapter, and reading tools below.</p><button class="app-primary" onclick="showLegacyHome()">Open existing book manager</button><button class="app-secondary" onclick="appShow('parentView')">Back to parent dashboard</button></div></main>
-  <nav id="childBottomNav" class="child-nav hidden" aria-label="Reading navigation">
-  <button data-view="childHomeView" onclick="appShow('childHomeView')"><span>⌂</span>Home</button>
-  <button data-view="aiGuideView" onclick="appShow('aiGuideView')"><span>✦</span>AI Guide</button>
-  <button data-view="historyView" onclick="appShow('historyView')"><span>◷</span>History</button>
-  <button data-view="profileView" onclick="appShow('profileView')"><span>●</span>Profile</button>
+  <nav id="childBottomNav" class="child-nav native-bottom-nav hidden" aria-label="Main navigation">
+  <button data-view="childHomeView" onclick="appShow('childHomeView')" aria-label="Home">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.3v-6.2h-5V21H4.2A1.2 1.2 0 0 1 3 19.8v-9.1z"/></svg>
+    <span>Home</span>
+  </button>
+  <button data-view="aiGuideView" onclick="appShow('aiGuideView')" aria-label="AI Guide">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6v2h2.2A3.8 3.8 0 0 1 21 7.8v8.4a3.8 3.8 0 0 1-3.8 3.8H6.8A3.8 3.8 0 0 1 3 16.2V7.8A3.8 3.8 0 0 1 6.8 4H9V2zm-2.2 4A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18h10.4a1.8 1.8 0 0 0 1.8-1.8V7.8A1.8 1.8 0 0 0 17.2 6H6.8zM8 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM8.5 15h7v1.6h-7V15z"/></svg>
+    <span>AI Guide</span>
+  </button>
+  <button data-view="historyView" onclick="appShow('historyView')" aria-label="History">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 1-7.4 5H2l3.5-4L9 9H6.7A6 6 0 1 0 12 6V4zm-1 3h2v5.2l3.2 2-1 1.7-4.2-2.6V7z"/></svg>
+    <span>History</span>
+  </button>
+  <button data-view="profileView" onclick="appShow('profileView')" aria-label="Profile">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-5 0-8 2.5-8 5.5V21h16v-1.5C20 16.5 17 14 12 14z"/></svg>
+    <span>Profile</span>
+  </button>
 </nav>
 </div>
 
@@ -4333,10 +4467,11 @@ window.appProviderNotice=function(provider){alert(provider+' sign-in is not conn
 window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','aiGuideView','libraryView','progressView','historyView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
 window.appBack=function(fallback){const prev=viewStack.pop();window.appShow(prev||fallback||'landingView',{replace:true})};
 window.showAIGuideComingSoon=function(){alert('AI Guide is coming soon.');};
+window.appLogout=function(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}currentAccount=null;viewStack=[];window.appShow('landingView',{replace:true});};
 function renderHome(){if(!isChild())return;$('childGreeting').textContent='Welcome, '+(currentAccount.name||'reader')+'!'}
-function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" style="animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen2.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen2.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="openAssignedBook('${safe(String(b.id))}')">${st.completed?'Continue reading':'Start reading'}</button></div></article>`}).join('')}
-function renderProgress(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen2.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen2.jpg'"><div><h3>${safe(b.title)}</h3><p>Status: ${status}</p><p>Pages completed: ${st.completed}${st.pages?' of '+st.pages:''}</p><p>Page completion: ${st.pct}%</p><p>Reading accuracy: ${st.accuracy===null?'Not available':st.accuracy+'%'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(b.id))}')">Open book</button></div></article>`}).join('')}
-function renderHistory(){const host=$('historyList');if(!host)return;const list=assignedBooks(currentAccount.id);let items=[];for(const b of list){for(const ch of b.chapters||[]){for(const p of ch.pages||[]){if(p.transcript||p.result){items.push({book:b,chapter:ch,page:p})}}}}items.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));if(!items.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Completed or attempted reading appears here when the existing reading engine saves it.</div>';return}host.innerHTML=items.map(x=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(x.book)||'images/homescreen2.jpg'}" alt="${safe(x.book.title)} cover" onerror="this.src='images/homescreen2.jpg'"><div><h3>${safe(x.book.title)}</h3><p>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</p><p>${x.page.updatedAt||x.page.completedAt?'Saved '+safe(new Date(x.page.updatedAt||x.page.completedAt).toLocaleString()):'Saved reading activity'}</p><p>${x.page.result&&Number.isFinite(Number(x.page.result.score))?'Accuracy: '+Number(x.page.result.score)+'%':'Accuracy not available'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(x.book.id))}')">Open book</button></div></article>`).join('')}
+function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" style="animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="openAssignedBook('${safe(String(b.id))}')">${st.completed?'Continue reading':'Start reading'}</button></div></article>`}).join('')}
+function renderProgress(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title)}</h3><p>Status: ${status}</p><p>Pages completed: ${st.completed}${st.pages?' of '+st.pages:''}</p><p>Page completion: ${st.pct}%</p><p>Reading accuracy: ${st.accuracy===null?'Not available':st.accuracy+'%'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(b.id))}')">Open book</button></div></article>`}).join('')}
+function renderHistory(){const host=$('historyList');if(!host)return;const list=assignedBooks(currentAccount.id);let items=[];for(const b of list){for(const ch of b.chapters||[]){for(const p of ch.pages||[]){if(p.transcript||p.result){items.push({book:b,chapter:ch,page:p})}}}}items.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));if(!items.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Completed or attempted reading appears here when the existing reading engine saves it.</div>';return}host.innerHTML=items.map(x=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(x.book)||'images/homescreen2.jpg'}" alt="${safe(x.book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(x.book.title)}</h3><p>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</p><p>${x.page.updatedAt||x.page.completedAt?'Saved '+safe(new Date(x.page.updatedAt||x.page.completedAt).toLocaleString()):'Saved reading activity'}</p><p>${x.page.result&&Number.isFinite(Number(x.page.result.score))?'Accuracy: '+Number(x.page.result.score)+'%':'Accuracy not available'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(x.book.id))}')">Open book</button></div></article>`).join('')}
 function renderProfile(){if(!currentAccount)return;$('profileDetails').innerHTML=`<div class="profile-field"><strong>NAME</strong><span>${safe(currentAccount.name)}</span></div><div class="profile-field"><strong>ACCOUNT TYPE</strong><span>${currentAccount.role==='student'?'Reading account':currentAccount.role==='admin'?'Administrator':'Account'}</span></div><div class="profile-field"><strong>EMAIL / USERNAME</strong><span>${safe(currentAccount.login)}</span></div>`}
 function renderParent(){if(!currentAccount||currentAccount.role!=='parent')return;$('parentGreeting').textContent='Hello, '+(currentAccount.name||'Parent');const children=accounts().filter(a=>a.role==='student'&&a.parentId===currentAccount.id);$('childList').innerHTML=children.length?'<h3>Your children</h3>'+children.map(c=>`<div class="app-list-item"><strong>${safe(c.name)}</strong><br><span class="app-muted">Username: ${safe(c.login)}</span></div>`).join(''):'<p class="app-muted">No child accounts created yet.</p>';$('assignmentChild').innerHTML='<option value="">Choose a child</option>'+children.map(c=>`<option value="${safe(c.id)}">${safe(c.name)} (${safe(c.login)})</option>`).join('');const books=getBooks();$('assignmentBook').innerHTML='<option value="">Choose a book</option>'+books.map(b=>`<option value="${safe(String(b.id))}">${safe(b.title)}</option>`).join('');const assigned=assignments().filter(a=>children.some(c=>c.id===a.childId));$('assignmentList').innerHTML=assigned.length?assigned.map(a=>{const c=children.find(x=>x.id===a.childId),b=books.find(x=>String(x.id)===String(a.bookId));return c&&b?`<div class="app-list-item"><strong>${safe(b.title)}</strong><br>Assigned to ${safe(c.name)} <button class="app-secondary" style="padding:6px 9px;min-height:0;margin-left:8px" onclick="removeAssignment('${safe(a.id)}')">Remove</button></div>`:''}).join(''):'<p class="app-muted">No assignments saved yet.</p>';$('parentProgressList').innerHTML=children.map(c=>{const cb=assignedBooks(c.id);return `<div class="app-list-item"><strong>${safe(c.name)}</strong><br>${cb.length?cb.map(b=>{const st=bookStats(b);return `${safe(b.title)} — ${st.completed}/${st.pages} pages completed; accuracy ${st.accuracy===null?'not available':st.accuracy+'%'}`}).join('<br>'):'No assigned books'}</div>`}).join('')||'<p class="app-muted">Create a child account to view their saved activity.</p>'}
 function renderAdmin(){if(!currentAccount||currentAccount.role!=='admin')return;$('adminGreeting').textContent='Hello, '+(currentAccount.name||'Administrator');const books=getBooks();$('adminBookList').innerHTML=books.length?books.map(b=>{const st=bookStats(b);return `<div class="app-list-item"><strong>${safe(b.title||'Untitled book')}</strong><br><span class="app-muted">${st.pages} page(s) · ${st.completed} completed pages</span></div>`}).join(''):'<div class="app-empty">No books uploaded yet. Use “Upload / manage books” to add the first textbook.</div>';const all=accounts();$('adminAccountStats').innerHTML=`<div class="profile-field"><strong>Parent accounts</strong><span>${all.filter(a=>a.role==='parent').length}</span></div><div class="profile-field"><strong>Child accounts</strong><span>${all.filter(a=>a.role==='student').length}</span></div><div class="profile-field"><strong>Books in catalogue</strong><span>${books.length}</span></div><div class="profile-field"><strong>Assignments</strong><span>${assignments().length}</span></div>`}

@@ -4922,5 +4922,71 @@ body.student-mode #readerSection .bookPage>p.small{font-size:13px!important;marg
 })();
 </script>
 
+
+<script id="appearich-microphone-permission-retry-fix-2026-10-26">
+(function(){
+  function q(id){ return document.getElementById(id); }
+  function setReady(message){
+    var start=q('startButton'), stop=q('stopButton'), status=q('readingStatus');
+    if(start){ start.disabled=false; start.textContent='🎤 Start Reading'; }
+    if(stop) stop.disabled=true;
+    if(status){ status.className='status'; status.textContent=message || 'Ready — tap Start Reading when you are ready.'; }
+  }
+
+  /* Keep the working reader implementation, but put an explicit microphone
+     permission request in front of it. This lets a child retry after an
+     accidental deny/dismiss instead of leaving Start Reading unusable. */
+  var existingStart = window.startRecording;
+  window.startRecording = async function(){
+    if(typeof isRecording!=='undefined' && isRecording) return;
+
+    var start=q('startButton'), status=q('readingStatus');
+    if(start){ start.disabled=true; start.textContent='🎤 Starting…'; }
+    if(status){ status.className='status'; status.textContent='Checking microphone…'; }
+
+    try{
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        setReady('Microphone access is needed. Tap Start Reading and allow the microphone when your browser asks.');
+        if(typeof existingStart==='function') existingStart();
+        return;
+      }
+
+      /* Every user tap is a fresh permission attempt. If permission was only
+         dismissed/temporarily denied, the browser can ask again. */
+      var stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(function(track){ try{ track.stop(); }catch(e){} });
+
+      setReady('Microphone ready — starting…');
+      if(typeof existingStart==='function') existingStart();
+    }catch(err){
+      console.log('Microphone permission/start error:',err);
+      if(typeof sessionHasStarted!=='undefined') sessionHasStarted=false;
+      if(typeof isRecording!=='undefined') isRecording=false;
+      setReady('Microphone was not allowed. You can tap Start Reading again after allowing microphone access in your browser.');
+    }
+  };
+
+  /* SpeechRecognition can also report not-allowed. Never leave the Start
+     button disabled in that case. */
+  document.addEventListener('click',function(e){
+    var b=e.target && e.target.closest ? e.target.closest('#startButton') : null;
+    if(!b) return;
+    setTimeout(function(){
+      if(typeof isRecording!=='undefined' && !isRecording && b.disabled){
+        setReady('Tap Start Reading to try the microphone again.');
+      }
+    },1200);
+  });
+
+  window.addEventListener('focus',function(){
+    var reader=q('readerSection');
+    if(reader && !reader.classList.contains('hidden') && (typeof isRecording==='undefined' || !isRecording)){
+      var start=q('startButton');
+      if(start) start.disabled=false;
+    }
+  });
+})();
+</script>
+
 </body>
 </html>

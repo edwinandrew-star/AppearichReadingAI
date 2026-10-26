@@ -341,6 +341,12 @@ button:disabled{
 #inactivityOverlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(245,245,242,.42);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
 #inactivityOverlay.visible{display:flex}
 #inactivityOverlay button{font-size:18px;padding:16px 24px}
+#readerSection.continuous-chapter-reader .readerGrid{display:block}
+#readerSection.continuous-chapter-reader .bookPage{display:none}
+#readerSection.continuous-chapter-reader .childReadingCard{max-width:760px;margin:12px auto}
+#readerSection.continuous-chapter-reader #readingStatus{font-size:18px;font-weight:700}
+#readerSection.continuous-chapter-reader #startButton,
+#readerSection.continuous-chapter-reader #stopButton{min-width:190px;min-height:54px;font-size:18px}
 </style>
 </head>
 
@@ -3324,7 +3330,7 @@ createRecognition=function(){
  const baseResult=r.onresult;
  r.onresult=function(event){
   const before=finalTranscript;if(baseResult)baseResult.call(r,event);
-  if(finalTranscript!==before||(event.results&&event.results.length)){resetInactivityTimer();persistReadingSession();}
+  if(!continuousChapterMode && (finalTranscript!==before||(event.results&&event.results.length))){resetInactivityTimer();persistReadingSession();}
  };
  const baseEnd=r.onend;
  r.onend=function(event){
@@ -3906,6 +3912,7 @@ window.startRecording=function(){
  saveContinuousChapterState(true);
 };
 
+let lastChapterSpeechKey="";
 const continuousBaseUpdateReadingPosition=updateReadingPosition;
 updateReadingPosition=function(spoken){
  if(!continuousChapterMode){
@@ -3914,8 +3921,14 @@ updateReadingPosition=function(spoken){
  if(!spoken)return;
  const heard=tokenize(spoken);
  if(!heard.length)return;
- lastMeaningfulSpeechAt=Date.now();
- resetInactivityTimer();
+ // Recognition emits revised interim snapshots. Refresh the 30-minute clock
+ // only when the recent recognized words actually change.
+ const speechKey=heard.slice(-12).join(" ").toLocaleLowerCase();
+ if(speechKey && speechKey!==lastChapterSpeechKey){
+   lastChapterSpeechKey=speechKey;
+   lastMeaningfulSpeechAt=Date.now();
+   resetInactivityTimer();
+ }
  continuousReachedWord=Math.max(
    continuousReachedWord,
    findReachedWord(chapterReferenceWords,heard,continuousSessionStartWord)
@@ -3923,7 +3936,7 @@ updateReadingPosition=function(spoken){
  const chapter=getCurrentChapter();
  if(chapter){
    chapter.continuousReading=chapter.continuousReading||{};
-   chapter.continuousReading.transcript=spoken;
+   chapter.continuousReading.transcript=String(finalTranscript||"");
  }
  scheduleContinuousSave();
  const status=document.getElementById("readingStatus");

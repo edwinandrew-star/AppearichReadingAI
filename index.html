@@ -4748,56 +4748,5 @@ body.student-mode #readerSection #pageResult{max-height:110px!important;overflow
 })();
 </script>
 
-\n<script id="appearich-reader-bottom-home-fix-2026-10-26">
-(function(){
-  function realHome(){
-    // Preserve the current reading state before leaving the legacy reader.
-    try{ if(typeof persistReadingSession==='function') persistReadingSession(); }catch(e){}
-    try{
-      if(typeof recognition!=='undefined' && recognition && typeof isRecording!=='undefined' && isRecording){
-        try{ recognition.stop(); }catch(e){}
-        isRecording=false;
-      }
-    }catch(e){}
-
-    // Explicitly leave the legacy reading shell first.
-    try{ if(typeof showLegacy==='function') showLegacy(false); }catch(e){}
-    var shell=document.getElementById('appShell');
-    var legacyHeader=document.getElementById('legacyHeader');
-    var legacyApp=document.getElementById('legacyApp');
-    if(shell) shell.style.display='';
-    if(legacyHeader) legacyHeader.style.display='none';
-    if(legacyApp) legacyApp.style.display='none';
-    document.body.classList.remove('legacy-mode','student-mode');
-
-    // Render the actual existing student Home view.
-    if(typeof window.appShow==='function') window.appShow('childHomeView',{replace:true});
-    if(typeof renderHome==='function') try{ renderHome(); }catch(e){}
-    window.scrollTo(0,0);
-  }
-
-  window.returnToAppHome=realHome;
-
-  function wireBottomHome(){
-    var nav=document.getElementById('childBottomNav');
-    if(!nav)return;
-    var btn=nav.querySelector('button[data-view="childHomeView"]');
-    if(!btn)return;
-    // Replace inline navigation so Home always exits the reader correctly.
-    btn.setAttribute('onclick','returnToAppHome(); return false;');
-  }
-
-  // Capture Home taps even if another reader handler would otherwise intercept them.
-  document.addEventListener('click',function(e){
-    var target=e.target && e.target.closest ? e.target.closest('#childBottomNav button[data-view="childHomeView"]') : null;
-    if(!target)return;
-    e.preventDefault();
-    e.stopPropagation();
-    realHome();
-  },true);
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wireBottomHome);
-  else wireBottomHome();
-})();
-</script>\n</body>
+</body>
 </html>

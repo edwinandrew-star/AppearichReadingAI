@@ -6,12 +6,7 @@
 
 <title>Appearich Reading AI</title>
 
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
-        type="module"></script>
-
-<!-- Tesseract OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- PDF.js is imported once by the application module. OCR is loaded only on demand. -->
 
 <style>
 *{
@@ -823,8 +818,7 @@ body{-webkit-tap-highlight-color:transparent}
 .native-bottom-nav button.active{background:var(--ap-yellow-soft)!important;color:var(--ap-yellow-strong)!important}
 .native-bottom-nav button:active{transform:scale(.96)!important}
 
-/* AI GUIDE — full screen, image from images/homescreen1.jpg.
-   No "Coming Soon" text is visible until the user taps the screen. */
+/* AI GUIDE — static Coming Soon screen; no tap-to-reveal behavior. */
 .ai-guide-clean-page{
   min-height:100dvh!important;width:100%!important;padding:max(28px,env(safe-area-inset-top)) 18px calc(96px + env(safe-area-inset-bottom))!important;
   background:#fff!important;cursor:pointer!important
@@ -944,6 +938,42 @@ body.student-mode #readerSection .good,body.student-mode #readerSection .warning
 .eval-good,.eval-bad{color:#151515!important}
 @media(max-width:760px){body.student-mode #readerSection{height:calc(100dvh - 62px)!important;max-height:calc(100dvh - 62px)!important}body.student-mode #readerSection .readerGrid{height:calc(100% - 185px)!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(170px,42%) minmax(0,1fr)!important;overflow:hidden!important}body.student-mode #readerSection .bookPage{overflow-y:auto!important}body.student-mode #readerSection .readerGrid>div{overflow-y:auto!important}.ai-guide-back{top:4px!important;left:4px!important}}
 </style>
+
+
+<style id="appearich-final-navigation-and-static-guide-fix">
+/* Keep inactive overlays from intercepting any clicks. */
+#inactivityOverlay:not(.visible){pointer-events:none!important;display:none!important}
+/* Static AI Guide: image and Coming Soon are visible immediately. */
+#aiGuideView.ai-guide-clean-page{cursor:default!important;overflow-y:auto!important}
+#aiGuideView .ai-coming-badge{display:block!important;opacity:1!important;visibility:visible!important;animation:none!important}
+#aiGuideView .ai-guide-image-glow{pointer-events:none!important}
+#aiGuideView .ai-guide-clean-inner{animation:none!important}
+#aiGuideView *{animation:none!important;transition:none!important}
+#aiGuideView .ai-guide-back{z-index:10!important}
+/* The legacy manager hides/shows only its own top-level views. */
+#legacyApp > section{min-width:0}
+@media(max-width:760px){
+  body.student-mode #readerSection{
+    height:calc(100dvh - 74px - env(safe-area-inset-bottom))!important;
+    max-height:calc(100dvh - 74px - env(safe-area-inset-bottom))!important;
+    display:flex!important;flex-direction:column!important;min-height:0!important;
+  }
+  body.student-mode #readerSection.hidden{display:none!important}
+  body.student-mode #readerSection .readerGrid{
+    flex:1 1 auto!important;height:auto!important;min-height:0!important;
+    grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(150px,42%) minmax(0,58%)!important;
+  }
+  body.student-mode #readerSection .bookPage,
+  body.student-mode #readerSection .readerGrid>div:last-child{min-height:0!important;overflow:auto!important}
+  body.student-mode #readerSection #referenceText{max-height:none!important;overflow-wrap:anywhere!important}
+}
+@media(min-width:761px){
+  body.student-mode #readerSection{height:calc(100dvh - 20px)!important;max-height:calc(100dvh - 20px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+  body.student-mode #readerSection.hidden{display:none!important}
+  body.student-mode #readerSection .readerGrid{flex:1 1 auto!important;height:auto!important;min-height:0!important}
+}
+</style>
+
 </head>
 
 <body>
@@ -1271,7 +1301,7 @@ READER
 <div class="card">
 
 <div class="reader-nav-row">
-<button class="reader-back-button" type="button" onclick="openChapter(currentBookId,currentChapterId)">← Back</button>
+<button class="reader-back-button" type="button" onclick="backFromReader()">← Back</button>
 <button class="reader-home-button" type="button" onclick="returnToAppHome()">⌂ Home</button>
 </div>
 <button class="secondary reader-previous-page" onclick="previousCompletedPage()">← Previous Completed Page</button>
@@ -1337,10 +1367,10 @@ The phone acts as the AI supervisor.
         class="danger"
         onclick="stopRecording()"
         disabled>
-Stop & Check
+■ Stop & Check
 </button>
 
-<button class="secondary" onclick="evaluateNow()">Evaluate Now</button>
+<button class="secondary" onclick="evaluateNow()">✓ Check My Reading</button>
 
 <div id="continuousEvaluationControls" style="display:none;gap:8px;flex-wrap:wrap;margin-top:10px">
 <button class="secondary" onclick="evaluateContinuousBook('progress')">Evaluate Progress So Far</button>
@@ -1483,6 +1513,23 @@ import * as pdfjsLib from
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
 
+/* OCR is lazy-loaded only when a scanned PDF/image actually needs recognition. */
+let tesseractLoadPromise = null;
+async function ensureTesseractLoaded(){
+  if(window.Tesseract) return window.Tesseract;
+  if(!tesseractLoadPromise){
+    tesseractLoadPromise = new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      script.async=true;
+      script.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error("Tesseract loaded but was not available."));
+      script.onerror=()=>{tesseractLoadPromise=null;reject(new Error("OCR engine could not be downloaded. Check your internet connection and try again."));};
+      document.head.appendChild(script);
+    });
+  }
+  return tesseractLoadPromise;
+}
+
 
 /* =====================================================
 DATA
@@ -1529,13 +1576,15 @@ SECTION NAVIGATION
 ===================================================== */
 
 window.showSection = function(id){
-
-document.querySelectorAll("section")
-.forEach(s=>s.classList.add("hidden"));
-
-document.getElementById(id)
-.classList.remove("hidden");
-
+  const target=document.getElementById(id);
+  if(!target)return;
+  const legacyRoot=document.getElementById("legacyApp");
+  if(!legacyRoot)return;
+  legacyRoot.querySelectorAll(":scope > section").forEach(view=>{
+    view.classList.toggle("hidden",view!==target);
+  });
+  target.classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"auto"});
 };
 
 
@@ -2019,8 +2068,9 @@ Running OCR...
 
 try{
 
+await ensureTesseractLoaded();
 const ocr =
-await Tesseract.recognize(
+await window.Tesseract.recognize(
 image,
 "eng",
 {
@@ -2149,8 +2199,9 @@ ${fileIndex+1}/${files.length}
 
 `;
 
+await ensureTesseractLoaded();
 const ocr =
-await Tesseract.recognize(
+await window.Tesseract.recognize(
 image,
 "eng",
 {
@@ -2696,13 +2747,16 @@ function createRecognition(){
  r.onerror=function(event){
   console.log("Speech error:",event.error);
   isRecording=false;
-  if(event.error==="not-allowed"){
-   const status=document.getElementById("readingStatus");
-   if(status)status.textContent="Microphone permission is required. Allow access, then tap Start Reading.";
+  shouldCompareAfterStop=false;
+  const status=document.getElementById("readingStatus");
+  if(event.error==="not-allowed"||event.error==="service-not-allowed"){
+   if(status)status.textContent="Microphone access is blocked. Please allow microphone access for this website, then press Start Reading again.";
+  }else if(event.error==="audio-capture"){
+   if(status)status.textContent="No microphone was found. Connect or enable a microphone, then press Start Reading again.";
   }else if(event.error!=="no-speech"&&event.error!=="aborted"){
-   const status=document.getElementById("readingStatus");
-   if(status)status.textContent="Listening stopped by the browser. Tap Start Reading to continue.";
+   if(status)status.textContent="Listening stopped. Please press Start Reading to try again.";
   }
+  isRecording=false;
   resetRecordingUI();
  };
  r.onend=function(){
@@ -2721,49 +2775,65 @@ function createRecognition(){
 START RECORDING
 ===================================================== */
 
-window.startRecording =
-function(){
+window.startRecording = async function(){
+  if(isRecording)return;
+  const chapter=getCurrentChapter();
+  const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+  if(!page){
+    const status=document.getElementById("readingStatus");
+    if(status)status.textContent="Please open a chapter before starting to read.";
+    return;
+  }
+  const startButton=document.getElementById("startButton");
+  const stopButton=document.getElementById("stopButton");
+  const status=document.getElementById("readingStatus");
+  if(startButton)startButton.disabled=true;
+  if(stopButton)stopButton.disabled=true;
+  if(status)status.textContent="Checking microphone access…";
 
-if(isRecording)return;
-
-finalTranscript="";
-
-const chapter =
-getCurrentChapter();
-
-const page =
-chapter.pages[currentPageIndex];
-
-page.transcript="";
-
-page.result=null;
-
-document.getElementById(
-"pageResult"
-).innerHTML="";
-
-document.getElementById(
-"liveTranscript"
-).textContent=
-"Listening...";
-
-recognition =
-createRecognition();
-
-if(!recognition)return;
-
-shouldCompareAfterStop=false;
-
-try{
-
-recognition.start();
-
-}catch(error){
-
-console.log(error);
-
-}
-
+  try{
+    if(navigator.mediaDevices&&typeof navigator.mediaDevices.getUserMedia==="function"){
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(track=>track.stop());
+    }
+    finalTranscript="";
+    page.transcript="";
+    page.result=null;
+    document.getElementById("pageResult").innerHTML="";
+    document.getElementById("liveTranscript").textContent="Listening…";
+    recognition=createRecognition();
+    if(!recognition){
+      resetRecordingUI();
+      if(status)status.textContent="Speech recognition is not supported here. Please use Chrome or Edge.";
+      return;
+    }
+    shouldCompareAfterStop=false;
+    try{
+      recognition.start();
+      isRecording=true;
+      if(startButton)startButton.disabled=true;
+      if(stopButton)stopButton.disabled=false;
+      if(status){status.className="status listening";status.textContent="Listening… Start reading aloud.";}
+    }catch(error){
+      console.error("Could not start speech recognition",error);
+      isRecording=false;
+      resetRecordingUI();
+      if(status)status.textContent="Microphone did not start. Please press Start Reading again.";
+    }
+  }catch(error){
+    console.warn("Microphone permission/start failed",error);
+    isRecording=false;
+    shouldCompareAfterStop=false;
+    resetRecordingUI();
+    if(status){
+      status.className="status";
+      status.textContent=(error&&(error.name==="NotAllowedError"||error.name==="PermissionDeniedError"))
+        ?"Microphone access is blocked. Please allow microphone access for this website, then press Start Reading again."
+        :(error&&error.name==="NotFoundError")
+          ?"No microphone was found. Connect or enable a microphone, then press Start Reading again."
+          :"Microphone access could not start. Check your browser permission and press Start Reading again.";
+    }
+  }
 };
 
 
@@ -4003,11 +4073,71 @@ function extractPdfReadingText(textContent,pdfPage){
  .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\n"));
 }
 function persistReadingSession(){
- const c=getCurrentChapter();if(!c)return;
- c.currentPosition=currentPageIndex;
- c.sessionState={pageIndex:currentPageIndex,updatedAt:new Date().toISOString(),transcript:finalTranscript||"",sessionActive:!!sessionHasStarted};
- try{saveBooks();}catch(e){console.error("Progress save failed",e);if(!sessionStorageWarningShown){sessionStorageWarningShown=true;const s=document.getElementById("readingStatus");if(s)s.textContent="Progress could not be saved. Device storage may be full.";}}
+  const c=getCurrentChapter();
+  if(!c)return;
+  const page=c.pages&&c.pages[currentPageIndex];
+  if(page&&finalTranscript&&finalTranscript.trim()){
+    page.transcript=finalTranscript.trim();
+    page.updatedAt=new Date().toISOString();
+  }
+  c.currentPosition=currentPageIndex;
+  c.sessionState={
+    pageIndex:currentPageIndex,
+    updatedAt:new Date().toISOString(),
+    transcript:finalTranscript||"",
+    sessionActive:!!sessionHasStarted
+  };
+  try{saveBooks();}
+  catch(e){
+    console.error("Progress save failed",e);
+    if(!sessionStorageWarningShown){
+      sessionStorageWarningShown=true;
+      const status=document.getElementById("readingStatus");
+      if(status)status.textContent="Progress could not be saved. Device storage may be full.";
+    }
+  }
 }
+
+/* Expose navigation bridges from inside this module so they can access its state safely. */
+window.prepareReaderExit=function(){
+  try{
+    const chapter=getCurrentChapter();
+    const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+    if(page&&finalTranscript&&finalTranscript.trim()){
+      page.transcript=finalTranscript.trim();
+      page.updatedAt=new Date().toISOString();
+    }
+    shouldCompareAfterStop=false;
+    sessionHasStarted=false;
+    if(recognition&&isRecording){
+      try{recognition.stop();}catch(e){}
+    }
+    isRecording=false;
+    resetRecordingUI();
+    persistReadingSession();
+    saveBooks();
+  }catch(e){console.error("Could not safely save reader state",e);}
+  const overlay=document.getElementById("inactivityOverlay");
+  if(overlay)overlay.classList.remove("visible");
+};
+
+window.returnToAppHome=function(){
+  window.prepareReaderExit();
+  if(typeof window.appShow==="function"){
+    if(typeof window.showLegacy==="function")window.showLegacy(false);
+    window.appShow("childHomeView",{replace:true});
+  }
+};
+
+window.backFromReader=function(){
+  window.prepareReaderExit();
+  if(currentBookId&&currentChapterId){
+    window.openChapter(currentBookId,currentChapterId);
+  }else{
+    window.showSection("homeSection");
+  }
+};
+
 function resetInactivityTimer(){
  if(inactivityTimer)clearTimeout(inactivityTimer);
  inactivityTimer=setTimeout(showInactivityOverlay,INACTIVITY_LIMIT_MS);
@@ -4607,93 +4737,6 @@ renderLegacyParentTools=function(){
 </script>
 
 
-<script id="appearich-reading-button-hotfix-2026-10-25">
-(function(){
-  function byId(id){ return document.getElementById(id); }
-
-  // Keep the inactivity layer from blocking the reader unless it is intentionally visible.
-  function syncOverlay(){
-    const o=byId('inactivityOverlay');
-    if(!o)return;
-    const visible=o.classList.contains('visible');
-    o.style.pointerEvents=visible?'auto':'none';
-  }
-
-  // Return to the real child Home without touching saved reading data.
-  window.returnToAppHome=function(){
-    try{
-      if(typeof recognition!=='undefined' && recognition && typeof isRecording!=='undefined' && isRecording){
-        try{ recognition.stop(); }catch(e){}
-        isRecording=false;
-      }
-      if(typeof sessionHasStarted!=='undefined') sessionHasStarted=false;
-      if(typeof persistReadingSession==='function') persistReadingSession();
-    }catch(e){}
-    if(typeof showLegacy==='function') showLegacy(false);
-    if(typeof window.appShow==='function') window.appShow('childHomeView',{replace:true});
-  };
-
-  function wireReaderButtons(){
-    const reader=byId('readerSection');
-    if(!reader)return;
-
-    const home=reader.querySelector('.reader-home-button');
-    if(home){
-      home.onclick=null;
-      home.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.returnToAppHome();});
-    }
-    const back=reader.querySelector('.reader-back-button');
-    if(back){
-      back.onclick=null;
-      back.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.openChapter==='function' && typeof currentBookId!=='undefined' && typeof currentChapterId!=='undefined') window.openChapter(currentBookId,currentChapterId);
-      });
-    }
-    const start=byId('startButton');
-    if(start){
-      start.onclick=null;
-      start.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.startRecording==='function') window.startRecording();
-      });
-    }
-    const stop=byId('stopButton');
-    if(stop){
-      stop.onclick=null;
-      stop.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.stopRecording==='function') window.stopRecording();
-      });
-    }
-    const evalBtn=[...reader.querySelectorAll('button')].find(b=>b.textContent.trim()==='Evaluate Now');
-    if(evalBtn){
-      evalBtn.onclick=null;
-      evalBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.evaluateNow==='function')window.evaluateNow();});
-    }
-    const previous=reader.querySelector('.reader-previous-page');
-    if(previous){
-      previous.onclick=null;
-      previous.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.previousCompletedPage==='function')window.previousCompletedPage();});
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded',function(){syncOverlay();wireReaderButtons();});
-  window.addEventListener('load',function(){syncOverlay();wireReaderButtons();});
-
-  // Re-wire after entering a chapter/reader because the existing app changes views dynamically.
-  const oldOpenChapter=window.openChapter;
-  if(typeof oldOpenChapter==='function'){
-    window.openChapter=function(){const r=oldOpenChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
-  }
-  const oldStartChapter=window.startChapter;
-  if(typeof oldStartChapter==='function'){
-    window.startChapter=function(){const r=oldStartChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
-  }
-})();
-</script>
-
-
 <style id="appearich-child-reader-simple-ui-2026-10-26">
 /* Reading screen only: simple, child-friendly, yellow/black/white. */
 body.student-mode #readerSection{background:#fff!important;color:#111!important;height:calc(100dvh - 58px)!important;max-height:calc(100dvh - 58px)!important;padding:10px!important;overflow:hidden!important}
@@ -4722,31 +4765,5 @@ body.student-mode #readerSection .transcript{max-height:140px!important;overflow
 body.student-mode #readerSection #pageResult{max-height:110px!important;overflow:auto!important}
 @media(max-width:760px){body.student-mode #readerSection{height:calc(100dvh - 54px)!important;max-height:calc(100dvh - 54px)!important;padding:7px!important}body.student-mode #readerSection>.card:first-child{padding:9px 10px!important;border-radius:14px!important}body.student-mode #readerSection .readerGrid{height:calc(100% - 145px)!important;grid-template-columns:1fr!important;grid-template-rows:minmax(150px,42%) minmax(0,58%)!important;gap:7px!important}body.student-mode #readerSection .bookPage{border-radius:14px!important;padding:10px!important}body.student-mode #readerSection #startButton{min-height:54px!important}body.student-mode #readerSection .reader-back-button,body.student-mode #readerSection .reader-home-button{padding:9px 12px!important}}
 </style>
-<script id="appearich-reader-control-reliability-2026-10-26">
-(function(){
- function el(id){return document.getElementById(id)}
- function setReaderState(recording,message){
-   var start=el('startButton'),stop=el('stopButton'),status=el('readingStatus');
-   if(start){start.disabled=!!recording;start.textContent=recording?'🎤 Listening…':'🎤 Start Reading';}
-   if(stop)stop.disabled=!recording;
-   if(status&&message)status.textContent=message;
- }
- function speechSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition||window.recognition);}
- function wireSimpleReader(){
-   var reader=el('readerSection'); if(!reader)return;
-   var evalBtn=[].slice.call(reader.querySelectorAll('button')).find(function(b){return b.textContent.trim()==='Evaluate Now'});
-   if(evalBtn){evalBtn.classList.add('reader-evaluate-button');evalBtn.textContent='✓ Check My Reading';}
-   var start=el('startButton');
-   if(start&&!start.dataset.simpleWired){start.dataset.simpleWired='1';start.addEventListener('click',function(){setTimeout(function(){if(typeof window.isRecording!=='undefined'&&window.isRecording)setReaderState(true,'Listening… Read aloud from your book.');else if(typeof isRecording!=='undefined'&&isRecording)setReaderState(true,'Listening… Read aloud from your book.');},120);});}
-   var stop=el('stopButton');
-   if(stop&&!stop.dataset.simpleWired){stop.dataset.simpleWired='1';stop.textContent='■ Stop & Check';stop.addEventListener('click',function(){setTimeout(function(){setReaderState(false,'Reading paused. Your progress is saved.');},120);});}
-   if(!speechSupported()&&start){start.disabled=true;setReaderState(false,'Speech recording is not supported in this browser. Please use Chrome or another browser with speech recognition.');start.disabled=true;}
- }
- document.addEventListener('DOMContentLoaded',wireSimpleReader);window.addEventListener('load',wireSimpleReader);
- var obs=new MutationObserver(function(){wireSimpleReader()});
- document.addEventListener('DOMContentLoaded',function(){obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});});
-})();
-</script>
-
 </body>
 </html>

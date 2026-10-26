@@ -4606,5 +4606,92 @@ renderLegacyParentTools=function(){
 };
 </script>
 
+
+<script id="appearich-reading-button-hotfix-2026-10-25">
+(function(){
+  function byId(id){ return document.getElementById(id); }
+
+  // Keep the inactivity layer from blocking the reader unless it is intentionally visible.
+  function syncOverlay(){
+    const o=byId('inactivityOverlay');
+    if(!o)return;
+    const visible=o.classList.contains('visible');
+    o.style.pointerEvents=visible?'auto':'none';
+  }
+
+  // Return to the real child Home without touching saved reading data.
+  window.returnToAppHome=function(){
+    try{
+      if(typeof recognition!=='undefined' && recognition && typeof isRecording!=='undefined' && isRecording){
+        try{ recognition.stop(); }catch(e){}
+        isRecording=false;
+      }
+      if(typeof sessionHasStarted!=='undefined') sessionHasStarted=false;
+      if(typeof persistReadingSession==='function') persistReadingSession();
+    }catch(e){}
+    if(typeof showLegacy==='function') showLegacy(false);
+    if(typeof window.appShow==='function') window.appShow('childHomeView',{replace:true});
+  };
+
+  function wireReaderButtons(){
+    const reader=byId('readerSection');
+    if(!reader)return;
+
+    const home=reader.querySelector('.reader-home-button');
+    if(home){
+      home.onclick=null;
+      home.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.returnToAppHome();});
+    }
+    const back=reader.querySelector('.reader-back-button');
+    if(back){
+      back.onclick=null;
+      back.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        if(typeof window.openChapter==='function' && typeof currentBookId!=='undefined' && typeof currentChapterId!=='undefined') window.openChapter(currentBookId,currentChapterId);
+      });
+    }
+    const start=byId('startButton');
+    if(start){
+      start.onclick=null;
+      start.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        if(typeof window.startRecording==='function') window.startRecording();
+      });
+    }
+    const stop=byId('stopButton');
+    if(stop){
+      stop.onclick=null;
+      stop.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        if(typeof window.stopRecording==='function') window.stopRecording();
+      });
+    }
+    const evalBtn=[...reader.querySelectorAll('button')].find(b=>b.textContent.trim()==='Evaluate Now');
+    if(evalBtn){
+      evalBtn.onclick=null;
+      evalBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.evaluateNow==='function')window.evaluateNow();});
+    }
+    const previous=reader.querySelector('.reader-previous-page');
+    if(previous){
+      previous.onclick=null;
+      previous.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.previousCompletedPage==='function')window.previousCompletedPage();});
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){syncOverlay();wireReaderButtons();});
+  window.addEventListener('load',function(){syncOverlay();wireReaderButtons();});
+
+  // Re-wire after entering a chapter/reader because the existing app changes views dynamically.
+  const oldOpenChapter=window.openChapter;
+  if(typeof oldOpenChapter==='function'){
+    window.openChapter=function(){const r=oldOpenChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
+  }
+  const oldStartChapter=window.startChapter;
+  if(typeof oldStartChapter==='function'){
+    window.startChapter=function(){const r=oldStartChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
+  }
+})();
+</script>
+
 </body>
 </html>

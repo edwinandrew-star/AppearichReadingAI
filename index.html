@@ -912,6 +912,38 @@ body{-webkit-tap-highlight-color:transparent}
 #readerSection .readerGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}#readerSection .bookPage,#readerSection .card{min-width:0}#readerSection .reference,#readerSection .transcript{max-width:100%;overflow-wrap:anywhere}#readerSection img{max-width:100%;height:auto}
 @media(max-width:760px){#readerSection .readerGrid{grid-template-columns:1fr!important}#readerSection{overflow-x:hidden}.book-detail-card{padding:20px}.app-book-card{grid-template-columns:82px minmax(0,1fr)!important}.app-book-card .book-action{grid-column:1/-1!important}.app-book-card .book-action button{width:100%}}
 </style>
+
+<style id="appearich-targeted-fixes-2026-10-25">
+/* Only the requested targeted fixes: yellow, black and white on the reading flow. */
+body.student-mode #legacyHeader button[onclick*="openProgressDashboard"]{display:none!important}
+body.student-mode #legacyHeader{background:#151515!important;color:#fff!important}
+body.student-mode #bookSection button[onclick*="startContinuousBookReading"]{display:none!important}
+body.student-mode #bookSection button[onclick*="openParentAssessment"]{display:none!important}
+body.student-mode #bookSection #parentAssessmentCard{display:none!important}
+body.student-mode #readerSection{height:calc(100dvh - 70px)!important;max-height:calc(100dvh - 70px)!important;overflow:hidden!important;padding-bottom:8px!important}
+body.student-mode #readerSection>.card{margin-bottom:10px!important;padding:14px!important}
+body.student-mode #readerSection .readerGrid{height:calc(100% - 175px)!important;min-height:0!important;overflow:hidden!important;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)!important;gap:14px!important}
+body.student-mode #readerSection .readerGrid>.bookPage,body.student-mode #readerSection .readerGrid>div{min-height:0!important;max-height:100%!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+body.student-mode #readerSection .readerGrid>div{padding-right:4px!important}
+body.student-mode #readerSection .bookPage{border:1px solid #ececec!important;background:#fff!important}
+body.student-mode #readerSection .reference{max-height:240px!important;overflow-y:auto!important;background:#fff!important;border-color:#e8e8e8!important}
+body.student-mode #readerSection .transcript{max-height:180px!important;overflow-y:auto!important;background:#151515!important;color:#fff!important}
+body.student-mode #readerSection .progressInner{background:#E4BC31!important}
+body.student-mode #readerSection .status,body.student-mode #readerSection .status.listening{background:#FFF8DC!important;color:#151515!important}
+body.student-mode #readerSection .good,body.student-mode #readerSection .warning,body.student-mode #readerSection .bad{color:#151515!important}
+.reader-nav-row{display:flex!important;gap:9px!important;align-items:center!important;flex-wrap:wrap!important;margin-bottom:8px!important}
+.reader-back-button,.reader-home-button,.ai-guide-back{border:1px solid #151515!important;background:#fff!important;color:#151515!important;border-radius:999px!important;padding:10px 16px!important;font-weight:800!important;box-shadow:0 5px 0 #E4BC31!important;margin:0!important}
+.reader-back-button:active,.reader-home-button:active,.ai-guide-back:active{transform:translateY(2px)!important;box-shadow:0 3px 0 #E4BC31!important}
+.ai-guide-clean-page{cursor:default!important;background:#fff!important}
+.ai-guide-clean-inner{position:relative!important}
+.ai-guide-back{position:absolute!important;left:0!important;top:0!important;z-index:5!important}
+.ai-guide-image-wrap{border:2px solid #151515!important;background:#fff!important}
+.ai-guide-image-glow{background:linear-gradient(transparent,rgba(255,255,255,.92))!important}
+.ai-coming-badge{position:absolute!important;left:50%!important;bottom:20px!important;transform:translateX(-50%)!important;z-index:4!important;white-space:nowrap!important;background:#E4BC31!important;color:#151515!important;border:2px solid #151515!important;border-radius:999px!important;padding:11px 20px!important;font-size:clamp(18px,4vw,28px)!important;font-weight:900!important;letter-spacing:1.5px!important;box-shadow:0 6px 0 #151515!important}
+.ai-guide-clean-title strong{color:#E4BC31!important}.ai-guide-clean-title span,.ai-guide-clean-copy{color:#151515!important}
+.eval-good,.eval-bad{color:#151515!important}
+@media(max-width:760px){body.student-mode #readerSection{height:calc(100dvh - 62px)!important;max-height:calc(100dvh - 62px)!important}body.student-mode #readerSection .readerGrid{height:calc(100% - 185px)!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(170px,42%) minmax(0,1fr)!important;overflow:hidden!important}body.student-mode #readerSection .bookPage{overflow-y:auto!important}body.student-mode #readerSection .readerGrid>div{overflow-y:auto!important}.ai-guide-back{top:4px!important;left:4px!important}}
+</style>
 </head>
 
 <body>
@@ -981,21 +1013,16 @@ body{-webkit-tap-highlight-color:transparent}
   </button>
 </main>
   <main id="libraryView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">YOUR BOOKS</p><h1>Library</h1><p>Ready to read? Choose your next book!</p></div></div><div id="libraryBooks" class="app-book-list"></div></main>
-  <main id="aiGuideView" class="app-view hidden ai-guide-clean-page"
-  onclick="showAIGuideComingSoon()" role="button" tabindex="0"
-  onkeydown="if(event.key==='Enter'||event.key===' ')showAIGuideComingSoon()">
+  <main id="aiGuideView" class="app-view hidden ai-guide-clean-page">
   <div class="ai-guide-clean-inner">
+    <button class="ai-guide-back" type="button" onclick="appBack()">← Back</button>
     <div class="ai-guide-image-wrap">
       <img src="images/homescreen1.jpg" alt="Appearich AI Guide">
       <div class="ai-guide-image-glow"></div>
+      <div class="ai-coming-badge">COMING SOON</div>
     </div>
-    <div class="ai-engine-pill">✦ &nbsp; APPEARICH INTELLIGENCE</div>
     <h1 class="ai-guide-clean-title"><span>Appearich</span><strong>AI Guide</strong></h1>
-    <p class="ai-guide-clean-copy">Your intelligent reading companion.</p>
-    <div class="ai-tap-cue">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a2 2 0 0 1 2 2v6.1l1.2-.7a2 2 0 0 1 2.7.7l2.5 4.1c.5.8.6 1.8.3 2.7l-1 3.1H9.2L5 15.8a2 2 0 0 1 2.8-2.8l2.2 2.2V4a2 2 0 0 1 2-2z"/></svg>
-      Tap to explore
-    </div>
+    <p class="ai-guide-clean-copy">A smarter reading companion is on the way.</p>
   </div>
 </main>
 
@@ -1243,11 +1270,11 @@ READER
 
 <div class="card">
 
-<button class="secondary"
-        onclick="openChapter(currentBookId,currentChapterId)">
-← Exit Reading
-</button>
-<button class="secondary" onclick="previousCompletedPage()">← Previous Completed Page</button>
+<div class="reader-nav-row">
+<button class="reader-back-button" type="button" onclick="openChapter(currentBookId,currentChapterId)">← Back</button>
+<button class="reader-home-button" type="button" onclick="returnToAppHome()">⌂ Home</button>
+</div>
+<button class="secondary reader-previous-page" onclick="previousCompletedPage()">← Previous Completed Page</button>
 
 <h2 id="readerChapterTitle"></h2>
 
@@ -1715,7 +1742,7 @@ ${chapter.pages.length} page(s)
 
 <button class="yellow"
 onclick="openChapter('${currentBookId}','${chapter.id}')">
-Open Chapter
+Read Books
 </button>
 
 <button class="danger"
@@ -4516,6 +4543,67 @@ const baseRenderProgress=renderProgress;renderProgress=function(){const host=$('
 // Refresh dashboards after returning from the existing upload / reading engine.
 window.addEventListener('focus',()=>{if(currentAccount&&currentAccount.role==='parent'&&currentView==='parentView')renderParent();if(currentAccount&&currentAccount.role==='admin'&&currentView==='adminView')renderAdmin()});
 })();
+
+// ===== Targeted fixes requested 2026-10-25 =====
+window.returnToAppHome=function(){
+  try{ if(typeof stopRecording==='function' && isRecording) stopRecording(); }catch(e){}
+  showLegacy(false);
+  window.appShow('childHomeView',{replace:true});
+};
+
+// Student navigation to legacy home must return to the complete app Home, not the legacy manager.
+const _targetedShowSection=window.showSection;
+window.showSection=function(id){
+  if(id==='homeSection' && typeof isChild==='function' && isChild()){
+    return window.returnToAppHome();
+  }
+  _targetedShowSection(id);
+};
+
+// Reading History is grouped by book; chapter/page records stay preserved inside the stored book.
+renderHistory=function(){
+  const host=$('historyList'); if(!host)return;
+  const list=assignedBooks(currentAccount.id);
+  const groups=list.map(book=>{
+    const records=[];
+    for(const chapter of book.chapters||[]) for(const page of chapter.pages||[]){
+      if(page.transcript||page.result) records.push({chapter,page});
+    }
+    if(!records.length)return null;
+    records.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));
+    const latest=records[0].page.updatedAt||records[0].page.completedAt||'';
+    const chaptersRead=new Set(records.map(r=>String(r.chapter.id||r.chapter.title))).size;
+    const evaluated=records.filter(r=>r.page.result).length;
+    const st=bookStats(book);
+    return {book,records,latest,chaptersRead,evaluated,st};
+  }).filter(Boolean).sort((a,b)=>String(b.latest).localeCompare(String(a.latest)));
+  if(!groups.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Books you have read will appear here.</div>';return;}
+  host.innerHTML=groups.map(g=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(g.book)||'images/homescreen2.jpg'}" alt="${safe(g.book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(g.book.title)}</h3><p>${g.chaptersRead} chapter(s) read · ${g.records.length} saved page session(s)</p><p>${g.latest?'Last read '+safe(new Date(g.latest).toLocaleString()):'Saved reading activity'}</p><p>${g.st.pct}% complete${g.evaluated?' · '+g.evaluated+' evaluation(s)':''}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(g.book.id))}')">View Chapters</button></div></article>`).join('');
+};
+
+// Keep the AI Guide static; the old tap-to-reveal function is intentionally neutralized.
+window.showAIGuideComingSoon=function(){};
+
+// Child legacy navigation uses one consistent Back control rather than Library/Progress shortcuts.
+renderLegacyParentTools=function(){
+  let back=$('parentLegacyReturn');
+  if(back) back.remove();
+  back=document.createElement('button');
+  back.id='parentLegacyReturn'; back.className='reader-back-button';
+  back.style.cssText='position:fixed;right:18px;top:12px;z-index:2000';
+  back.textContent=isChild()?'← Back':currentAccount&&currentAccount.role==='admin'?'← Admin dashboard':'← Back';
+  back.addEventListener('click',()=>{
+    if(isChild()){
+      const reader=document.getElementById('readerSection');
+      const chapter=document.getElementById('chapterSection');
+      if(reader && !reader.classList.contains('hidden') && currentBookId && currentChapterId){openChapter(currentBookId,currentChapterId);return;}
+      if(chapter && !chapter.classList.contains('hidden') && currentBookId){openBook(currentBookId);return;}
+      showLegacy(false);window.appShow('libraryView',{replace:true});return;
+    }
+    showLegacy(false);window.appShow(currentAccount&&currentAccount.role==='admin'?'adminView':'childHomeView',{replace:true});
+  });
+  document.body.appendChild(back);
+};
 </script>
 
 </body>

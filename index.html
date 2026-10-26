@@ -898,6 +898,20 @@ body{-webkit-tap-highlight-color:transparent}
 }
 </style>
 
+<style id="appearich-targeted-improvements">
+:root{--ap-yellow:#E4BC31;--ap-black:#151515;--ap-white:#fff;--ap-line:#ececec}
+.app-page,.app-panel,.auth-card,#libraryView,#progressView,#historyView,#evaluationView,#evaluationDetailView,#bookDetailView{background:#fff!important;color:#151515!important}
+.app-primary,.yellow{background:var(--ap-yellow)!important;color:#151515!important;font-weight:800!important}.app-secondary{background:#151515!important;color:#fff!important}
+.app-page h1,.app-page h2,.app-page h3{color:#151515!important}.app-status{background:#fff8dc!important;color:#151515!important}
+.progress-track{height:13px;background:#eee;border-radius:999px;overflow:hidden;margin:12px 0 7px}.progress-fill{height:100%;background:var(--ap-yellow);border-radius:inherit}
+.book-detail-card{max-width:620px;margin:20px auto;text-align:center;border:1px solid var(--ap-line);border-radius:26px;padding:28px;background:#fff;box-shadow:0 12px 34px rgba(0,0,0,.07)}
+.book-detail-cover{width:min(260px,72vw);aspect-ratio:3/4;object-fit:cover;border-radius:18px;box-shadow:0 10px 28px rgba(0,0,0,.12);margin-bottom:20px}.book-detail-card .app-primary{width:100%;max-width:360px;min-height:58px;margin-top:18px}
+.evaluation-report{max-width:900px;margin:auto}.evaluation-session{border:1px solid var(--ap-line);border-radius:18px;padding:18px;margin:14px 0}.evaluation-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}.evaluation-stat{padding:13px;border-radius:14px;background:#fafafa}.evaluation-stat strong{display:block;font-size:24px}.eval-good{color:#14833b}.eval-bad{color:#c62828}
+.coming-soon-wrap{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:#fff;color:#151515}.coming-soon-wrap h1{font-size:clamp(48px,10vw,90px);margin:12px 0;animation:comingDrop .65s ease both}.coming-soon-wrap p{max-width:520px;font-size:18px;line-height:1.7}.coming-soon-mark{font-size:52px;color:var(--ap-yellow);animation:pulse 1.8s ease-in-out infinite}@keyframes comingDrop{from{opacity:0;transform:translateY(-55px)}to{opacity:1;transform:none}}@keyframes pulse{50%{transform:scale(1.12)}}
+.book-cover-preview{width:150px;min-height:190px;border:2px dashed #ddd;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0 18px;background:#fafafa}.book-cover-preview img{width:100%;height:190px;object-fit:cover}
+#readerSection .readerGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}#readerSection .bookPage,#readerSection .card{min-width:0}#readerSection .reference,#readerSection .transcript{max-width:100%;overflow-wrap:anywhere}#readerSection img{max-width:100%;height:auto}
+@media(max-width:760px){#readerSection .readerGrid{grid-template-columns:1fr!important}#readerSection{overflow-x:hidden}.book-detail-card{padding:20px}.app-book-card{grid-template-columns:82px minmax(0,1fr)!important}.app-book-card .book-action{grid-column:1/-1!important}.app-book-card .book-action button{width:100%}}
+</style>
 </head>
 
 <body>
@@ -956,9 +970,9 @@ body{-webkit-tap-highlight-color:transparent}
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 1-7.4 5H2l3.5-4L9 9H6.7A6 6 0 1 0 12 6V4zm-1 3h2v5.2l3.2 2-1 1.7-4.2-2.6V7z"/></svg>
       <span>Reading History</span>
     </button>
-    <button class="home-mini-action" type="button" onclick="appLogout()">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5v3H3v4h7v3zm9-14H8a2 2 0 0 0-2 2v3h2V5h11v14H8v-3H6v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
-      <span>Logout</span>
+    <button class="home-mini-action" type="button" onclick="appShow('evaluationView')">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16v18H4V3zm3 4v2h10V7H7zm0 4v2h10v-2H7zm0 4v2h7v-2H7z"/></svg>
+      <span>Evaluation</span>
     </button>
   </section>
   <button class="home-large-logout" type="button" onclick="appLogout()">
@@ -985,11 +999,14 @@ body{-webkit-tap-highlight-color:transparent}
   </div>
 </main>
 
+  <main id="bookDetailView" class="app-view hidden app-page"><button class="app-back" onclick="appShow('libraryView')">← Library</button><div id="bookDetailContent"></div></main>
+  <main id="evaluationView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">READING RESULTS</p><h1>Evaluation</h1><p>Choose a book to review saved reading results.</p></div></div><div id="evaluationBooks" class="app-book-list"></div></main>
+  <main id="evaluationDetailView" class="app-view hidden app-page"><button class="app-back" onclick="appShow('evaluationView')">← Evaluation</button><div id="evaluationDetail"></div></main>
   <main id="progressView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">YOUR JOURNEY</p><h1>Progress</h1><p>Reading completion and reading accuracy are shown separately.</p></div></div><div id="progressBooks" class="app-book-list"></div></main>
   <main id="historyView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">PAST READING</p><h1>History</h1><p>Your saved reading activity appears here.</p></div></div><div id="historyList" class="app-book-list"></div></main>
   <main id="profileView" class="app-view hidden app-page full-profile-page"><div class="auth-card profile-card"><p class="eyebrow">YOUR ACCOUNT</p><h1>Profile</h1><div id="profileDetails"></div><p class="app-muted">Your account and records are stored in this browser profile. Clearing browser data may permanently delete them.</p><button class="app-primary" onclick="appSignOut()">Sign out</button></div></main>
   <main id="parentView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">PARENT SPACE</p><h1 id="parentGreeting">Parent dashboard</h1><p>Create child accounts and assign books published by Appearich.</p></div></div><div class="app-two-col"><div class="app-panel"><h2>Create a child account</h2><form id="childForm"><label for="childName">Child's name</label><input id="childName" required maxlength="80"><label for="childUsername">Child username</label><input id="childUsername" required maxlength="80" autocomplete="off"><label for="childPassword">Temporary password</label><input id="childPassword" required minlength="6" type="password" autocomplete="new-password"><p id="childError" class="app-error" role="alert"></p><button class="app-primary" type="submit">Create child account</button></form><div id="childList"></div></div><div class="app-panel"><h2>Assign a book</h2><p class="app-muted">Choose from books uploaded by the Appearich administrator. Parents cannot upload or edit the shared book catalogue.</p><form id="assignmentForm"><label for="assignmentChild">Child</label><select id="assignmentChild" required></select><label for="assignmentBook">Book</label><select id="assignmentBook" required></select><button class="app-primary" type="submit">Save assignment</button><p id="assignmentMessage" class="app-muted" role="status"></p></form><h3>Current assignments</h3><div id="assignmentList"></div></div></div><div class="app-panel parent-records"><h2>Saved reading activity</h2><div id="parentProgressList"></div></div></main>
-  <main id="adminView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">APPEARICH ADMINISTRATION</p><h1 id="adminGreeting">Administrator dashboard</h1><p>Upload and prepare books for families. Parents can then assign these books to their children.</p></div><button class="app-primary" onclick="openLegacyManager()">Upload / manage books</button></div><div class="app-two-col"><div class="app-panel"><h2>Book catalogue</h2><p class="app-muted">Books saved in this browser are available to parents using this same browser profile.</p><div id="adminBookList"></div></div><div class="app-panel"><h2>Accounts overview</h2><div id="adminAccountStats"></div><p class="app-muted">Phase 1 uses local browser storage. This is not yet a secure multi-device school platform.</p></div></div><div class="app-panel parent-records"><h2>Workflow</h2><ol><li>Administrator uploads a textbook and completes its page extraction in Book Management.</li><li>Parent creates a child account.</li><li>Parent assigns a book from the catalogue.</li><li>Child signs in and reads only books assigned to that child.</li></ol></div></main>
+  <main id="adminView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">APPEARICH ADMINISTRATION</p><h1 id="adminGreeting">Administrator dashboard</h1><p>Upload and prepare books for families. Parents can then assign these books to their children.</p></div><button class="app-primary" onclick="openBookUpload()">Upload Book</button></div><div class="app-two-col"><div class="app-panel"><h2>Book catalogue</h2><p class="app-muted">Books saved in this browser are available to parents using this same browser profile.</p><div id="adminBookList"></div></div><div class="app-panel"><h2>Accounts overview</h2><div id="adminAccountStats"></div><p class="app-muted">Phase 1 uses local browser storage. This is not yet a secure multi-device school platform.</p></div></div><div class="app-panel parent-records"><h2>Workflow</h2><ol><li>Administrator uploads a textbook and completes its page extraction in Book Management.</li><li>Parent creates a child account.</li><li>Parent assigns a book from the catalogue.</li><li>Child signs in and reads only books assigned to that child.</li></ol></div></main>
   <main id="legacyReturnView" class="app-view hidden app-page"><div class="auth-card"><h1>Book management</h1><p>Use the existing textbook upload, extraction, chapter, and reading tools below.</p><button class="app-primary" onclick="showLegacyHome()">Open existing book manager</button><button class="app-secondary" onclick="appShow('parentView')">Back to parent dashboard</button></div></main>
   <nav id="childBottomNav" class="child-nav native-bottom-nav hidden" aria-label="Main navigation">
   <button data-view="childHomeView" onclick="appShow('childHomeView')" aria-label="Home">
@@ -1036,7 +1053,7 @@ supervision.
 
 <button class="yellow"
         onclick="showSection('createBookSection')">
-Create Book
+Upload Book
 </button>
 
 </div>
@@ -1057,29 +1074,20 @@ CREATE BOOK
 ===================================================== -->
 
 <section id="createBookSection" class="hidden">
-
-<div class="card">
-
-<h2>Create Book</h2>
-
-<label>Book name</label>
-
-<input id="bookTitle"
-       type="text"
-       placeholder="Example: English Standard Five">
-
-<button class="yellow"
-        onclick="createBook()">
-Create Book
-</button>
-
-<button class="secondary"
-        onclick="showSection('homeSection')">
-Cancel
-</button>
-
+<div class="card upload-book-card">
+<h2>Upload Book</h2>
+<p class="small">Add the book file and a separate cover image. The existing extraction engine will prepare the reading pages.</p>
+<label>Book title</label>
+<input id="bookTitle" type="text" placeholder="Example: English Standard Five">
+<label>Book file</label>
+<input id="bookFile" type="file" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
+<label>Cover image</label>
+<input id="bookCoverFile" type="file" accept="image/png,image/jpeg,image/jpg,image/webp">
+<div id="bookCoverPreview" class="book-cover-preview"><span class="small">Cover preview</span></div>
+<div id="bookUploadStatus" class="small"></div>
+<button class="yellow" id="uploadBookButton" onclick="createBook()">Save &amp; Process Book</button>
+<button class="secondary" onclick="showSection('homeSection')">Cancel</button>
 </div>
-
 </section>
 
 
@@ -1588,41 +1596,27 @@ container.appendChild(div);
 }
 
 
-window.createBook = function(){
-
-const title =
-document.getElementById("bookTitle")
-.value.trim();
-
-if(!title){
-
-alert("Enter a book title.");
-
-return;
-
-}
-
-const book={
-
-id:Date.now().toString(),
-
-title:title,
-
-chapters:[]
-
+window.createBook = async function(){
+ const title=document.getElementById("bookTitle").value.trim();
+ const bookFile=document.getElementById("bookFile").files[0];
+ const coverFile=document.getElementById("bookCoverFile").files[0];
+ const status=document.getElementById("bookUploadStatus");
+ if(!title){alert("Enter a book title.");return;}
+ if(!bookFile){alert("Select the actual book file.");return;}
+ if(!coverFile){alert("Select a separate cover image.");return;}
+ const button=document.getElementById("uploadBookButton"); if(button)button.disabled=true;
+ try{
+  const cover=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(coverFile)});
+  const book={id:Date.now().toString(),title,coverImage:cover,sourceFileName:bookFile.name,createdAt:new Date().toISOString(),chapters:[]};
+  books.push(book); currentBookId=book.id; saveBooks();
+  const dt=new DataTransfer();dt.items.add(bookFile);document.getElementById("chapterFiles").files=dt.files;
+  document.getElementById("chapterTitle").value="Book pages";
+  if(status)status.textContent="Processing book pages…";
+  await window.processChapterFiles();
+  document.getElementById("bookTitle").value="";document.getElementById("bookFile").value="";document.getElementById("bookCoverFile").value="";
+  const prev=document.getElementById("bookCoverPreview");if(prev)prev.innerHTML='<span class="small">Cover preview</span>';
+ }catch(error){console.error(error);books=books.filter(b=>b.id!==currentBookId);saveBooks();if(status)status.textContent="Book upload failed. Please retry without closing this page.";if(button)button.disabled=false;}
 };
-
-books.push(book);
-
-saveBooks();
-
-document.getElementById("bookTitle")
-.value="";
-
-openBook(book.id);
-
-};
-
 
 window.deleteBook = function(id){
 
@@ -4476,24 +4470,24 @@ function getBooks(){return read('appearich_reading_books',[])}
 function safe(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function words(text){return String(text||'').trim().split(/\s+/).filter(Boolean).length}
 function bookStats(book){let pages=0,completed=0,attempted=0,accuracies=[];for(const ch of (book.chapters||[])){for(const p of (ch.pages||[])){pages++;if(p.result)completed++;const ref=words(p.text),heard=words(p.transcript);if(heard)attempted+=Math.min(ref,heard);if(p.result&&Number.isFinite(Number(p.result.score)))accuracies.push(Number(p.result.score));}}const pct=pages?Math.round(completed/pages*100):0;return {pages,completed,pct,attempted,accuracy:accuracies.length?Math.round(accuracies.reduce((a,b)=>a+b,0)/accuracies.length):null}}
-function bookCover(book){for(const ch of book.chapters||[])for(const p of ch.pages||[])if(p.image)return p.image;return ''}
+function bookCover(book){if(book&&book.coverImage)return book.coverImage;for(const ch of book.chapters||[])for(const p of ch.pages||[])if(p.image)return p.image;return ''}
 function assignedBooks(childId){const all=getBooks();const ids=assignments().filter(a=>a.childId===childId).map(a=>String(a.bookId));return ids.length?all.filter(b=>ids.includes(String(b.id))):all}
 function isChild(){return currentAccount&&currentAccount.role==='student'}
 function showLegacy(on){document.body.classList.toggle('legacy-mode',!!on);document.body.classList.toggle('student-mode',!!on&&isChild());if(on){$('appShell').style.display='none';$('legacyHeader').style.display='';$('legacyApp').style.display='';}else{$('appShell').style.display='';$('legacyHeader').style.display='none';$('legacyApp').style.display='none';}const back=$('parentLegacyReturn');if(back){back.style.display=!!on&&currentAccount?'block':'none';back.textContent=isChild()?'← Library':currentAccount&&currentAccount.role==='admin'?'← Admin dashboard':'← Dashboard';}}
 function activeSession(){const s=read(SESSION_KEY,null);if(!s)return null;const a=accounts().find(x=>x.id===s.accountId);return a||null}
 function saveSession(account){currentAccount=account;write(SESSION_KEY,{accountId:account.id,createdAt:new Date().toISOString()})}
 window.appProviderNotice=function(provider){alert(provider+' sign-in is not connected yet. For now, use Sign in or Create account below; Google/Apple authentication can be enabled when the provider setup is configured.');};
-window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','aiGuideView','libraryView','progressView','historyView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
+window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','aiGuideView','libraryView','bookDetailView','progressView','historyView','evaluationView','evaluationDetailView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='evaluationView')renderEvaluation();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
 window.appBack=function(fallback){const prev=viewStack.pop();window.appShow(prev||fallback||'landingView',{replace:true})};
-window.showAIGuideComingSoon=function(){alert('Coming soon! Appearich AI Guide is being prepared.');};
+window.showAIGuideComingSoon=function(){const v=document.getElementById('aiGuideView');if(v)v.innerHTML='<div class="coming-soon-wrap"><button class="app-back" onclick="event.stopPropagation();appShow(\'childHomeView\')">← Home</button><div class="coming-soon-mark">✦</div><h1>Coming Soon</h1><p>Appearich AI Guide is being prepared to support the reading journey.</p></div>';};
 window.appLogout=function(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}currentAccount=null;viewStack=[];window.appShow('landingView',{replace:true});};
 function renderHome(){if(!isChild())return;$('childGreeting').textContent='Welcome, '+(currentAccount.name||'reader')+'!'}
-function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" style="animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="openAssignedBook('${safe(String(b.id))}')">${st.completed?'Continue reading':'Start reading'}</button></div></article>`}).join('')}
+function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" style="animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="openBookDetail('${safe(String(b.id))}')">View Book</button></div></article>`}).join('')}
 function renderProgress(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title)}</h3><p>Status: ${status}</p><p>Pages completed: ${st.completed}${st.pages?' of '+st.pages:''}</p><p>Page completion: ${st.pct}%</p><p>Reading accuracy: ${st.accuracy===null?'Not available':st.accuracy+'%'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(b.id))}')">Open book</button></div></article>`}).join('')}
 function renderHistory(){const host=$('historyList');if(!host)return;const list=assignedBooks(currentAccount.id);let items=[];for(const b of list){for(const ch of b.chapters||[]){for(const p of ch.pages||[]){if(p.transcript||p.result){items.push({book:b,chapter:ch,page:p})}}}}items.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));if(!items.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Completed or attempted reading appears here when the existing reading engine saves it.</div>';return}host.innerHTML=items.map(x=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(x.book)||'images/homescreen2.jpg'}" alt="${safe(x.book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(x.book.title)}</h3><p>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</p><p>${x.page.updatedAt||x.page.completedAt?'Saved '+safe(new Date(x.page.updatedAt||x.page.completedAt).toLocaleString()):'Saved reading activity'}</p><p>${x.page.result&&Number.isFinite(Number(x.page.result.score))?'Accuracy: '+Number(x.page.result.score)+'%':'Accuracy not available'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(x.book.id))}')">Open book</button></div></article>`).join('')}
 function renderProfile(){if(!currentAccount)return;$('profileDetails').innerHTML=`<div class="profile-field"><strong>NAME</strong><span>${safe(currentAccount.name)}</span></div><div class="profile-field"><strong>ACCOUNT TYPE</strong><span>${currentAccount.role==='student'?'Reading account':currentAccount.role==='admin'?'Administrator':'Account'}</span></div><div class="profile-field"><strong>EMAIL / USERNAME</strong><span>${safe(currentAccount.login)}</span></div>`}
 function renderParent(){if(!currentAccount||currentAccount.role!=='parent')return;$('parentGreeting').textContent='Hello, '+(currentAccount.name||'Parent');const children=accounts().filter(a=>a.role==='student'&&a.parentId===currentAccount.id);$('childList').innerHTML=children.length?'<h3>Your children</h3>'+children.map(c=>`<div class="app-list-item"><strong>${safe(c.name)}</strong><br><span class="app-muted">Username: ${safe(c.login)}</span></div>`).join(''):'<p class="app-muted">No child accounts created yet.</p>';$('assignmentChild').innerHTML='<option value="">Choose a child</option>'+children.map(c=>`<option value="${safe(c.id)}">${safe(c.name)} (${safe(c.login)})</option>`).join('');const books=getBooks();$('assignmentBook').innerHTML='<option value="">Choose a book</option>'+books.map(b=>`<option value="${safe(String(b.id))}">${safe(b.title)}</option>`).join('');const assigned=assignments().filter(a=>children.some(c=>c.id===a.childId));$('assignmentList').innerHTML=assigned.length?assigned.map(a=>{const c=children.find(x=>x.id===a.childId),b=books.find(x=>String(x.id)===String(a.bookId));return c&&b?`<div class="app-list-item"><strong>${safe(b.title)}</strong><br>Assigned to ${safe(c.name)} <button class="app-secondary" style="padding:6px 9px;min-height:0;margin-left:8px" onclick="removeAssignment('${safe(a.id)}')">Remove</button></div>`:''}).join(''):'<p class="app-muted">No assignments saved yet.</p>';$('parentProgressList').innerHTML=children.map(c=>{const cb=assignedBooks(c.id);return `<div class="app-list-item"><strong>${safe(c.name)}</strong><br>${cb.length?cb.map(b=>{const st=bookStats(b);return `${safe(b.title)} — ${st.completed}/${st.pages} pages completed; accuracy ${st.accuracy===null?'not available':st.accuracy+'%'}`}).join('<br>'):'No assigned books'}</div>`}).join('')||'<p class="app-muted">Create a child account to view their saved activity.</p>'}
-function renderAdmin(){if(!currentAccount||currentAccount.role!=='admin')return;$('adminGreeting').textContent='Hello, '+(currentAccount.name||'Administrator');const books=getBooks();$('adminBookList').innerHTML=books.length?books.map(b=>{const st=bookStats(b);return `<div class="app-list-item"><strong>${safe(b.title||'Untitled book')}</strong><br><span class="app-muted">${st.pages} page(s) · ${st.completed} completed pages</span></div>`}).join(''):'<div class="app-empty">No books uploaded yet. Use “Upload / manage books” to add the first textbook.</div>';const all=accounts();$('adminAccountStats').innerHTML=`<div class="profile-field"><strong>Parent accounts</strong><span>${all.filter(a=>a.role==='parent').length}</span></div><div class="profile-field"><strong>Child accounts</strong><span>${all.filter(a=>a.role==='student').length}</span></div><div class="profile-field"><strong>Books in catalogue</strong><span>${books.length}</span></div><div class="profile-field"><strong>Assignments</strong><span>${assignments().length}</span></div>`}
+function renderAdmin(){if(!currentAccount||currentAccount.role!=='admin')return;$('adminGreeting').textContent='Hello, '+(currentAccount.name||'Administrator');const books=getBooks();$('adminBookList').innerHTML=books.length?books.map(b=>{const st=bookStats(b);return `<div class="app-list-item"><strong>${safe(b.title||'Untitled book')}</strong><br><span class="app-muted">${st.pages} page(s) · ${st.completed} completed pages</span></div>`}).join(''):'<div class="app-empty">No books uploaded yet. Use “Upload Book” to add the first textbook.</div>';const all=accounts();$('adminAccountStats').innerHTML=`<div class="profile-field"><strong>Parent accounts</strong><span>${all.filter(a=>a.role==='parent').length}</span></div><div class="profile-field"><strong>Child accounts</strong><span>${all.filter(a=>a.role==='student').length}</span></div><div class="profile-field"><strong>Books in catalogue</strong><span>${books.length}</span></div><div class="profile-field"><strong>Assignments</strong><span>${assignments().length}</span></div>`}
 window.removeAssignment=function(id){if(!confirm('Remove this book assignment? Saved book and reading data will not be deleted.'))return;write(ASSIGN_KEY,assignments().filter(a=>a.id!==id));renderParent()}
 window.openAssignedBook=function(id){if(!isChild())return;const allowed=assignedBooks(currentAccount.id).some(b=>String(b.id)===String(id));if(!allowed){alert('This book is not available to your account.');return}const book=getBooks().find(b=>String(b.id)===String(id));if(!book)return;renderLegacyParentTools();showLegacy(true);if(typeof window.openBook==='function'){window.openBook(id)}else{alert('The existing reading system is still loading. Please try again.')}};
 window.openLegacyManager=function(){if(!currentAccount||currentAccount.role!=='admin')return;showLegacy(true);if(typeof window.showSection==='function')window.showSection('homeSection');renderLegacyParentTools()};
@@ -4505,9 +4499,20 @@ $('parentRegisterForm').addEventListener('submit',e=>{e.preventDefault();const n
 $('signinForm').addEventListener('submit',e=>{e.preventDefault();const login=$('loginId').value.trim().toLowerCase(),password=$('loginPassword').value;const a=accounts().find(x=>x.login.toLowerCase()===login&&x.password===password);if(!a){$('signinError').textContent='We could not sign you in with those details. Check your username and password.';return}saveSession(a);$('signinError').textContent='';e.target.reset();window.appShow(a.role==='student'?'childHomeView':a.role==='admin'?'adminView':'parentView',{replace:true})});
 $('childForm').addEventListener('submit',e=>{e.preventDefault();if(!currentAccount||currentAccount.role!=='parent')return;const name=$('childName').value.trim(),login=$('childUsername').value.trim().toLowerCase(),password=$('childPassword').value;const err=$('childError');err.textContent='';if(accounts().some(a=>a.login.toLowerCase()===login)){err.textContent='That username is already in use in this browser.';return}const a={id:'student_'+Date.now().toString(36),name,login,password,role:'student',parentId:currentAccount.id,createdAt:new Date().toISOString()};const all=accounts();all.push(a);if(!write(ACCOUNT_KEY,all)){err.textContent='Could not save this account. Check available browser storage.';return}e.target.reset();renderParent()});
 $('assignmentForm').addEventListener('submit',e=>{e.preventDefault();if(!currentAccount||currentAccount.role!=='parent')return;const childId=$('assignmentChild').value,bookId=$('assignmentBook').value;const child=accounts().find(a=>a.id===childId&&a.parentId===currentAccount.id&&a.role==='student');const book=getBooks().find(b=>String(b.id)===String(bookId));if(!child||!book){$('assignmentMessage').textContent='Choose a child and an existing book.';return}let list=assignments();if(!list.some(a=>a.childId===childId&&String(a.bookId)===String(bookId)))list.push({id:'as_'+Date.now().toString(36),childId,bookId:String(bookId),assignedAt:new Date().toISOString(),assignedBy:currentAccount.id});if(!write(ASSIGN_KEY,list)){$('assignmentMessage').textContent='Could not save the assignment. Check browser storage.';return}$('assignmentMessage').textContent='Assignment saved in this browser.';renderParent()});
-window.addEventListener('popstate',()=>{const hash=location.hash.replace(/^#/,'');const routes={'landing':'landingView','register':'registerView','signin':'signinView','child-home':'childHomeView','ai-guide':'aiGuideView','library':'libraryView','progress':'progressView','history':'historyView','profile':'profileView','parent':'parentView','admin':'adminView'};let view=routes[hash]||'landingView';const saved=activeSession();if(!saved){currentAccount=null;if(!['landingView','registerView','signinView'].includes(view))view='landingView'}else{currentAccount=saved;if(saved.role==='student'&&!['childHomeView','aiGuideView','libraryView','progressView','historyView','profileView'].includes(view))view='childHomeView';if(saved.role==='parent'&&!['parentView','landingView','registerView','signinView'].includes(view))view='parentView';if(saved.role==='admin'&&!['adminView','landingView','registerView','signinView'].includes(view))view='adminView'}window.appShow(view,{replace:true})});
+window.addEventListener('popstate',()=>{const hash=location.hash.replace(/^#/,'');const routes={'landing':'landingView','register':'registerView','signin':'signinView','child-home':'childHomeView','ai-guide':'aiGuideView','library':'libraryView','book-detail':'bookDetailView','progress':'progressView','history':'historyView','evaluation':'evaluationView','evaluation-detail':'evaluationDetailView','profile':'profileView','parent':'parentView','admin':'adminView'};let view=routes[hash]||'landingView';const saved=activeSession();if(!saved){currentAccount=null;if(!['landingView','registerView','signinView'].includes(view))view='landingView'}else{currentAccount=saved;if(saved.role==='student'&&!['childHomeView','aiGuideView','libraryView','bookDetailView','progressView','historyView','evaluationView','evaluationDetailView','profileView'].includes(view))view='childHomeView';if(saved.role==='parent'&&!['parentView','landingView','registerView','signinView'].includes(view))view='parentView';if(saved.role==='admin'&&!['adminView','landingView','registerView','signinView'].includes(view))view='adminView'}window.appShow(view,{replace:true})});
 // Keep legacy navigation functional, while adding a parent-dashboard return control to its book list.
 window.addEventListener('DOMContentLoaded',()=>{ensureAdminAccount();showLegacy(false);const saved=activeSession();if(saved){currentAccount=saved;window.appShow(saved.role==='student'?'childHomeView':saved.role==='admin'?'adminView':'parentView',{replace:true})}else window.appShow('landingView',{replace:true});});
+// Targeted functional improvements requested for Library, Progress, Evaluation and upload.
+let selectedAppBookId=null;
+window.openBookUpload=function(){if(!currentAccount||currentAccount.role!=='admin')return;showLegacy(true);showSection('createBookSection');renderLegacyParentTools();};
+window.openBookDetail=function(id){if(!isChild())return;const book=assignedBooks(currentAccount.id).find(b=>String(b.id)===String(id));if(!book)return;selectedAppBookId=String(id);const st=bookStats(book);const host=$('bookDetailContent');host.innerHTML=`<article class="book-detail-card"><img class="book-detail-cover" src="${bookCover(book)||'images/homescreen1.jpg'}" alt="${safe(book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><h1>${safe(book.title||'Untitled book')}</h1><p class="app-muted">${st.pages} page(s) · ${st.pct}% completed</p><div class="progress-track"><div class="progress-fill" style="width:${Math.max(0,Math.min(100,st.pct))}%"></div></div><button class="app-primary" onclick="openAssignedBook('${safe(String(book.id))}')">Open to Read</button></article>`;appShow('bookDetailView');};
+function evaluationItems(book){const out=[];for(const ch of book.chapters||[])for(const p of ch.pages||[])if(p.result)out.push({chapter:ch,page:p,result:p.result});return out;}
+function renderEvaluation(){const host=$('evaluationBooks');if(!host)return;const list=assignedBooks(currentAccount.id).filter(b=>evaluationItems(b).length);if(!list.length){host.innerHTML='<div class="app-empty">No completed evaluations yet. Use Evaluate Now during reading; saved results will appear here.</div>';return;}host.innerHTML=list.map(b=>{const items=evaluationItems(b),st=bookStats(b);return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover"><div><h3>${safe(b.title)}</h3><p>${items.length} saved evaluation(s)</p><p>${st.accuracy===null?'Accuracy unavailable':'Average accuracy: '+st.accuracy+'%'}</p></div><div class="book-action"><button class="app-primary" onclick="openEvaluationDetail('${safe(String(b.id))}')">View Evaluation</button></div></article>`}).join('');}
+window.openEvaluationDetail=function(id){const book=assignedBooks(currentAccount.id).find(b=>String(b.id)===String(id));if(!book)return;const items=evaluationItems(book),host=$('evaluationDetail');host.innerHTML=`<div class="evaluation-report"><div class="app-page-head"><div><p class="eyebrow">SAVED RESULTS</p><h1>${safe(book.title)}</h1><p>${items.length} evaluated page(s)</p></div><img class="app-book-cover" src="${bookCover(book)||'images/homescreen1.jpg'}" alt="${safe(book.title)} cover"></div>${items.map(x=>{const r=x.result||{};const correct=Number.isFinite(Number(r.correct))?Number(r.correct):'Unavailable',changed=Number.isFinite(Number(r.changed))?Number(r.changed):'Unavailable',missing=Number.isFinite(Number(r.missing))?Number(r.missing):'Unavailable',extra=Number.isFinite(Number(r.extra))?Number(r.extra):'Unavailable',score=Number.isFinite(Number(r.score))?Number(r.score)+'%':'Unavailable';return `<section class="evaluation-session"><h3>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</h3><div class="evaluation-stats"><div class="evaluation-stat"><span>Accuracy</span><strong>${score}</strong></div><div class="evaluation-stat"><span>Correct</span><strong class="eval-good">${correct}</strong></div><div class="evaluation-stat"><span>Misread / changed</span><strong class="eval-bad">${changed}</strong></div><div class="evaluation-stat"><span>Skipped</span><strong class="eval-bad">${missing}</strong></div><div class="evaluation-stat"><span>Extra / repeated</span><strong>${extra}</strong></div></div><p><strong>Transcript:</strong> ${x.page.transcript?safe(x.page.transcript):'Unavailable'}</p>${Array.isArray(r.ops)?`<div class="wordResults">${r.ops.map(op=>`<span class="word ${op.type==='match'?'correct':op.type==='sub'?'changed':op.type==='del'?'missing':'extra'}">${safe(op.heard||op.ref||op.word||'')}</span>`).join('')}</div>`:'<p class="app-muted">Detailed word-by-word corrections were not captured for this evaluation.</p>'}</section>`}).join('')}</div>`;appShow('evaluationDetailView');};
+// Cover preview is visual only until Save & Process Book stores it with the book.
+const coverInput=$('bookCoverFile');if(coverInput)coverInput.addEventListener('change',()=>{const f=coverInput.files[0],host=$('bookCoverPreview');if(!host)return;if(!f){host.innerHTML='<span class="small">Cover preview</span>';return;}const r=new FileReader();r.onload=()=>host.innerHTML=`<img src="${r.result}" alt="Book cover preview">`;r.readAsDataURL(f);});
+// Upgrade progress cards with an actual completion bar and keep Progress dedicated to progress only.
+const baseRenderProgress=renderProgress;renderProgress=function(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return;}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'Partially read';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover"><div><h3>${safe(b.title)}</h3><p>${status} · ${st.completed}${st.pages?' of '+st.pages:''} pages</p><div class="progress-track" aria-label="${st.pct}% completed"><div class="progress-fill" style="width:${st.pct}%"></div></div><p><strong>${st.pct}% complete</strong></p></div></article>`}).join('');};
 // Refresh dashboards after returning from the existing upload / reading engine.
 window.addEventListener('focus',()=>{if(currentAccount&&currentAccount.role==='parent'&&currentView==='parentView')renderParent();if(currentAccount&&currentAccount.role==='admin'&&currentView==='adminView')renderAdmin()});
 })();

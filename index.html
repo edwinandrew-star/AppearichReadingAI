@@ -1057,6 +1057,17 @@ body.student-mode #readerSection .good,body.student-mode #readerSection .warning
 </main>
 
   <main id="bookDetailView" class="app-view hidden app-page"><button class="app-back" onclick="appShow('libraryView')">← Library</button><div id="bookDetailContent"></div></main>
+  <main id="readingStartView" class="app-view hidden app-page">
+    <button class="app-back" type="button" onclick="appShow('libraryView')">← Library</button>
+    <section class="reading-start-card" style="max-width:560px;margin:28px auto;padding:28px 22px;text-align:center;background:#fff;border:1px solid #e9e9e9;border-radius:22px;box-shadow:0 12px 35px rgba(0,0,0,.07)">
+      <img id="readingStartCover" src="images/homescreen1.jpg" alt="Selected book cover" style="width:min(190px,55%);height:230px;object-fit:cover;border-radius:14px;margin:0 auto 18px;display:block" onerror="this.src='images/homescreen1.jpg'">
+      <p class="eyebrow">READY TO READ?</p>
+      <h1 id="readingStartTitle">Your book</h1>
+      <p id="readingStartDescription" class="app-muted">When you are ready, tap Start Recording. The reading screen will open and your browser will ask for microphone access.</p>
+      <button id="readingStartButton" class="app-primary" type="button" style="width:100%;min-height:58px;font-size:18px" onclick="beginAssignedBookReading()">🎤 Start Recording</button>
+      <p class="app-muted" style="font-size:13px;margin-top:12px">Your reading screen opens next. Allow microphone access when asked, then read aloud.</p>
+    </section>
+  </main>
   <main id="evaluationView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">READING RESULTS</p><h1>Evaluation</h1><p>Choose a book to review saved reading results.</p></div></div><div id="evaluationBooks" class="app-book-list"></div></main>
   <main id="evaluationDetailView" class="app-view hidden app-page"><button class="app-back" onclick="appShow('evaluationView')">← Evaluation</button><div id="evaluationDetail"></div></main>
   <main id="progressView" class="app-view hidden app-page"><div class="app-page-head"><div><p class="eyebrow">YOUR JOURNEY</p><h1>Progress</h1><p>Reading completion and reading accuracy are shown separately.</p></div></div><div id="progressBooks" class="app-book-list"></div></main>
@@ -4131,11 +4142,15 @@ window.returnToAppHome=function(){
 
 window.backFromReader=function(){
   window.prepareReaderExit();
-  if(currentBookId&&currentChapterId){
-    window.openChapter(currentBookId,currentChapterId);
-  }else{
-    window.showSection("homeSection");
+  // The child reader has one simple route back to the Library; do not expose the
+  // older chapter-selection/book-manager screens to children.
+  if(document.body.classList.contains("student-mode") && typeof window.appShow==="function"){
+    if(typeof window.showLegacy==="function")window.showLegacy(false);
+    window.appShow("libraryView",{replace:true});
+    return;
   }
+  if(currentBookId&&currentChapterId)window.openChapter(currentBookId,currentChapterId);
+  else window.showSection("homeSection");
 };
 
 function resetInactivityTimer(){
@@ -4325,19 +4340,34 @@ function scrollContinuousTargetIntoView(target,smooth=true){
   host.scrollTo({left:nextLeft,behavior:smooth?"smooth":"auto"});
  }
 }
-window.startContinuousBookReading=function(){
- const book=books.find(b=>b.id===currentBookId);if(!book)return;
+window.startContinuousBookReading=function(options={}){
+ // Refresh from localStorage so a book uploaded or updated earlier in this session is not stale.
+ try{
+  const savedBooks=JSON.parse(localStorage.getItem("appearich_reading_books")||"[]");
+  if(Array.isArray(savedBooks)&&savedBooks.length)books=savedBooks;
+ }catch(e){console.warn("Could not refresh saved books",e);}
+ const book=books.find(b=>String(b.id)===String(currentBookId));
+ if(!book){alert("The selected book could not be loaded. Return to the Library and select it again.");return false;}
  continuousPages=buildContinuousPageList(book);
- if(!continuousPages.length){alert("Upload the book's pages first.");return;}
+ if(!continuousPages.length){alert("This book has no readable pages yet. Please ask the administrator to finish processing its pages.");return false;}
  continuousBookMode=true;continuousAutoAdvanceLock=false;
  let resume=continuousPages.findIndex(x=>!x.page.result);
  if(resume<0)resume=0;
  const saved=book.continuousSession;
  if(saved&&Number.isInteger(saved.pageIndex)&&saved.pageIndex<continuousPages.length&&saved.pageIndex>=0)resume=saved.pageIndex;
- sessionHasStarted=true;setContinuousActive(resume);showSection("readerSection");
- document.getElementById("onDemandEvaluation").innerHTML="";
- resetInactivityTimer();
- setTimeout(()=>{if(continuousBookMode)startRecognitionWithoutClearing();},180);
+ const autoStart=options.autoStart!==false;
+ sessionHasStarted=autoStart;setContinuousActive(resume);showSection("readerSection");
+ const legacyBack=document.getElementById("parentLegacyReturn");
+ if(legacyBack&&document.body.classList.contains("student-mode"))legacyBack.style.display="none";
+ const evaluation=document.getElementById("onDemandEvaluation");if(evaluation)evaluation.innerHTML="";
+ if(autoStart){resetInactivityTimer();setTimeout(()=>{if(continuousBookMode&&sessionHasStarted)startRecognitionWithoutClearing();},180);}
+ else {
+   const status=document.getElementById("readingStatus");
+   if(status){status.className="status";status.textContent="Tap Start Reading to allow microphone access and begin reading aloud.";}
+   const start=document.getElementById("startButton"),stop=document.getElementById("stopButton");
+   if(start)start.disabled=false;if(stop)stop.disabled=true;
+ }
+ return true;
 };
 function lastMatchedReferenceIndex(reference,spoken){
  const ref=Array.isArray(reference)?reference:tokenize(reference||"");
@@ -4465,14 +4495,53 @@ window.stopRecording=function(){
  sessionHasStarted=false;
  const status=document.getElementById("readingStatus");if(status)status.textContent="Reading paused and saved. Evaluation is available when you are ready.";
 };
-window.startRecording=function(){
- if(!continuousBookMode){originalContinuousStartRecording();return;}
+window.startRecording=async function(){
+ if(!continuousBookMode){if(typeof originalContinuousStartRecording==='function')return originalContinuousStartRecording();return;}
  if(isRecording)return;
- const item=continuousPages[continuousPageIndex];if(!item)return;
- sessionHasStarted=true;finalTranscript=item.page.transcript||"";
- document.getElementById("pageResult").innerHTML="";
- document.getElementById("liveTranscript").textContent=finalTranscript||"Listening...";
- resetInactivityTimer();startRecognitionWithoutClearing();
+ const item=continuousPages[continuousPageIndex];
+ const status=document.getElementById("readingStatus");
+ const start=document.getElementById("startButton"),stop=document.getElementById("stopButton");
+ if(!item){if(status)status.textContent="Open a book with readable pages first.";return;}
+ if(start)start.disabled=true;if(stop)stop.disabled=true;
+ if(status){status.className="status";status.textContent="Checking microphone permission…";}
+ try{
+   if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
+     throw Object.assign(new Error('Secure connection required'),{name:'SecurityError'});
+   }
+   if(!navigator.mediaDevices||typeof navigator.mediaDevices.getUserMedia!=='function'){
+     throw Object.assign(new Error('Microphone access is unavailable'),{name:'NotSupportedError'});
+   }
+   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+   // Request permission on this button tap, then release the preflight stream before
+   // Web Speech starts. Always stop tracks even if a later setup step throws.
+   try{stream.getTracks().forEach(track=>track.stop());}catch(e){}
+   sessionHasStarted=true;sessionPausedByOverlay=false;finalTranscript=item.page.transcript||'';
+   document.getElementById("pageResult").innerHTML="";
+   document.getElementById("liveTranscript").textContent=finalTranscript||"Listening…";
+   shouldCompareAfterStop=false;
+   // Create a fresh SpeechRecognition instance after permission succeeds. This avoids
+   // trying to restart an instance that the browser has already ended.
+   recognition=null;
+   recognition=createRecognition();
+   if(!recognition)throw Object.assign(new Error('Speech recognition is unsupported'),{name:'NotSupportedError'});
+   resetInactivityTimer();
+   recognition.start();
+   if(status){status.className="status listening";status.textContent="Starting microphone… Begin reading aloud.";}
+ }catch(error){
+   console.error('Start Reading failed:',error);
+   sessionHasStarted=false;isRecording=false;
+   if(start)start.disabled=false;if(stop)stop.disabled=true;
+   if(status){status.className="status";status.textContent=
+     error&&(['NotAllowedError','PermissionDeniedError'].includes(error.name))
+       ?"Microphone permission is blocked. Allow microphone access in your browser settings, then tap Start Reading again."
+       :error&&error.name==='NotFoundError'
+         ?"No microphone was found. Connect or enable a microphone, then tap Start Reading again."
+         :error&&error.name==='SecurityError'
+           ?"Microphone access needs a secure HTTPS website. Open this site using HTTPS, then try again."
+           :error&&error.name==='NotSupportedError'
+             ?"Speech recognition is unavailable. Please use an updated Chrome or Edge browser on HTTPS."
+             :"The microphone could not start. Check browser permissions and tap Start Reading again.";}
+ }
 };
 function calculateSavedBookAssessment(book,saveResult=true){
  const list=buildContinuousPageList(book);
@@ -4634,21 +4703,66 @@ function showLegacy(on){document.body.classList.toggle('legacy-mode',!!on);docum
 function activeSession(){const s=read(SESSION_KEY,null);if(!s)return null;const a=accounts().find(x=>x.id===s.accountId);return a||null}
 function saveSession(account){currentAccount=account;write(SESSION_KEY,{accountId:account.id,createdAt:new Date().toISOString()})}
 window.appProviderNotice=function(provider){alert(provider+' sign-in is not connected yet. For now, use Sign in or Create account below; Google/Apple authentication can be enabled when the provider setup is configured.');};
-window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','aiGuideView','libraryView','bookDetailView','progressView','historyView','evaluationView','evaluationDetailView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='evaluationView')renderEvaluation();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
+window.appShow=function(view,opts={}){if(!$(view))return;const childViews=['childHomeView','aiGuideView','libraryView','bookDetailView','readingStartView','progressView','historyView','evaluationView','evaluationDetailView','profileView'];if(isChild()&&!childViews.includes(view))view='childHomeView';if(currentAccount&&currentAccount.role==='parent'&&[...childViews,'adminView'].includes(view))view='parentView';if(currentAccount&&currentAccount.role==='admin'&&['parentView',...childViews].includes(view))view='adminView';if(!currentAccount&&!['landingView','registerView','signinView'].includes(view))view='landingView';if(currentView!==view&&!opts.replace)viewStack.push(currentView);currentView=view;showLegacy(false);document.querySelectorAll('.app-view').forEach(el=>el.classList.toggle('hidden',el.id!==view));$('childBottomNav').classList.toggle('hidden',!isChild()||!childViews.includes(view));document.querySelectorAll('.child-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='childHomeView')renderHome();if(view==='libraryView')renderLibrary();if(view==='progressView')renderProgress();if(view==='historyView')renderHistory();if(view==='evaluationView')renderEvaluation();if(view==='profileView')renderProfile();if(view==='parentView')renderParent();if(view==='adminView')renderAdmin();try{const url='#'+view.replace('View','').replace(/([A-Z])/g,'-$1').toLowerCase().replace(/^-/, '');if(opts.replace)history.replaceState({appearichView:view},'',url);else history.pushState({appearichView:view},'',url)}catch(e){};window.scrollTo({top:0,behavior:'auto'})};
 window.appBack=function(fallback){const prev=viewStack.pop();window.appShow(prev||fallback||'landingView',{replace:true})};
 window.showAIGuideComingSoon=function(){const v=document.getElementById('aiGuideView');if(v)v.innerHTML='<div class="coming-soon-wrap"><button class="app-back" onclick="event.stopPropagation();appShow(\'childHomeView\')">← Home</button><div class="coming-soon-mark">✦</div><h1>Coming Soon</h1><p>Appearich AI Guide is being prepared to support the reading journey.</p></div>';};
 window.appLogout=function(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}currentAccount=null;viewStack=[];window.appShow('landingView',{replace:true});};
 function renderHome(){if(!isChild())return;$('childGreeting').textContent='Welcome, '+(currentAccount.name||'reader')+'!'}
-function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" style="animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="openBookDetail('${safe(String(b.id))}')">View Book</button></div></article>`}).join('')}
-function renderProgress(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title)}</h3><p>Status: ${status}</p><p>Pages completed: ${st.completed}${st.pages?' of '+st.pages:''}</p><p>Page completion: ${st.pct}%</p><p>Reading accuracy: ${st.accuracy===null?'Not available':st.accuracy+'%'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(b.id))}')">Open book</button></div></article>`}).join('')}
-function renderHistory(){const host=$('historyList');if(!host)return;const list=assignedBooks(currentAccount.id);let items=[];for(const b of list){for(const ch of b.chapters||[]){for(const p of ch.pages||[]){if(p.transcript||p.result){items.push({book:b,chapter:ch,page:p})}}}}items.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));if(!items.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Completed or attempted reading appears here when the existing reading engine saves it.</div>';return}host.innerHTML=items.map(x=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(x.book)||'images/homescreen2.jpg'}" alt="${safe(x.book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(x.book.title)}</h3><p>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</p><p>${x.page.updatedAt||x.page.completedAt?'Saved '+safe(new Date(x.page.updatedAt||x.page.completedAt).toLocaleString()):'Saved reading activity'}</p><p>${x.page.result&&Number.isFinite(Number(x.page.result.score))?'Accuracy: '+Number(x.page.result.score)+'%':'Accuracy not available'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(x.book.id))}')">Open book</button></div></article>`).join('')}
+function renderLibrary(){const host=$('libraryBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">No books are available yet. Books published by the Appearich administrator will appear here.</div>';return}host.innerHTML=list.map((b,i)=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';const assignment=assignments().find(a=>a.childId===currentAccount.id&&String(a.bookId)===String(b.id));const assignedDate=assignment&&assignment.assignedAt?new Date(assignment.assignedAt).toLocaleDateString():'';return `<article class="app-book-card" role="button" tabindex="0" onclick="openAssignedBook('${safe(String(b.id))}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAssignedBook('${safe(String(b.id))}')}" style="cursor:pointer;animation-delay:${Math.min(i,8)*35}ms"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title||'Untitled book')}</h3>${assignedDate?`<p>Assigned ${safe(assignedDate)}</p>`:''}<p>${st.pages} page(s) · ${st.pct}% of pages completed</p><span class="app-status">${status}</span></div><div class="book-action"><button class="app-primary" onclick="event.stopPropagation();openAssignedBook('${safe(String(b.id))}')">Read Now</button></div></article>`}).join('')}
+function renderProgress(){const host=$('progressBooks');if(!host)return;const list=assignedBooks(currentAccount.id);if(!list.length){host.innerHTML='<div class="app-empty">Your progress will appear after you start reading a book.</div>';return}host.innerHTML=list.map(b=>{const st=bookStats(b),status=st.completed===0?'Not started':st.completed>=st.pages&&st.pages>0?'Completed':'In progress';return `<article class="app-book-card"><img class="app-book-cover" src="${bookCover(b)||'images/homescreen1.jpg'}" alt="${safe(b.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(b.title)}</h3><p>Status: ${status}</p><p>Pages completed: ${st.completed}${st.pages?' of '+st.pages:''}</p><p>Page completion: ${st.pct}%</p><p>Reading accuracy: ${st.accuracy===null?'Not available':st.accuracy+'%'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(b.id))}')">Read Now</button></div></article>`}).join('')}
+function renderHistory(){const host=$('historyList');if(!host)return;const list=assignedBooks(currentAccount.id);let items=[];for(const b of list){for(const ch of b.chapters||[]){for(const p of ch.pages||[]){if(p.transcript||p.result){items.push({book:b,chapter:ch,page:p})}}}}items.sort((a,b)=>String(b.page.updatedAt||b.page.completedAt||'').localeCompare(String(a.page.updatedAt||a.page.completedAt||'')));if(!items.length){host.innerHTML='<div class="app-empty">No saved reading activity yet. Completed or attempted reading appears here when the existing reading engine saves it.</div>';return}host.innerHTML=items.map(x=>`<article class="app-book-card"><img class="app-book-cover" src="${bookCover(x.book)||'images/homescreen2.jpg'}" alt="${safe(x.book.title)} cover" onerror="this.src='images/homescreen1.jpg'"><div><h3>${safe(x.book.title)}</h3><p>${safe(x.chapter.title||'Chapter')} · Page ${safe(x.page.pageNumber||'')}</p><p>${x.page.updatedAt||x.page.completedAt?'Saved '+safe(new Date(x.page.updatedAt||x.page.completedAt).toLocaleString()):'Saved reading activity'}</p><p>${x.page.result&&Number.isFinite(Number(x.page.result.score))?'Accuracy: '+Number(x.page.result.score)+'%':'Accuracy not available'}</p></div><div class="book-action"><button class="app-secondary" onclick="openAssignedBook('${safe(String(x.book.id))}')">Read Now</button></div></article>`).join('')}
 function renderProfile(){if(!currentAccount)return;$('profileDetails').innerHTML=`<div class="profile-field"><strong>NAME</strong><span>${safe(currentAccount.name)}</span></div><div class="profile-field"><strong>ACCOUNT TYPE</strong><span>${currentAccount.role==='student'?'Reading account':currentAccount.role==='admin'?'Administrator':'Account'}</span></div><div class="profile-field"><strong>EMAIL / USERNAME</strong><span>${safe(currentAccount.login)}</span></div>`}
 function renderParent(){if(!currentAccount||currentAccount.role!=='parent')return;$('parentGreeting').textContent='Hello, '+(currentAccount.name||'Parent');const children=accounts().filter(a=>a.role==='student'&&a.parentId===currentAccount.id);$('childList').innerHTML=children.length?'<h3>Your children</h3>'+children.map(c=>`<div class="app-list-item"><strong>${safe(c.name)}</strong><br><span class="app-muted">Username: ${safe(c.login)}</span></div>`).join(''):'<p class="app-muted">No child accounts created yet.</p>';$('assignmentChild').innerHTML='<option value="">Choose a child</option>'+children.map(c=>`<option value="${safe(c.id)}">${safe(c.name)} (${safe(c.login)})</option>`).join('');const books=getBooks();$('assignmentBook').innerHTML='<option value="">Choose a book</option>'+books.map(b=>`<option value="${safe(String(b.id))}">${safe(b.title)}</option>`).join('');const assigned=assignments().filter(a=>children.some(c=>c.id===a.childId));$('assignmentList').innerHTML=assigned.length?assigned.map(a=>{const c=children.find(x=>x.id===a.childId),b=books.find(x=>String(x.id)===String(a.bookId));return c&&b?`<div class="app-list-item"><strong>${safe(b.title)}</strong><br>Assigned to ${safe(c.name)} <button class="app-secondary" style="padding:6px 9px;min-height:0;margin-left:8px" onclick="removeAssignment('${safe(a.id)}')">Remove</button></div>`:''}).join(''):'<p class="app-muted">No assignments saved yet.</p>';$('parentProgressList').innerHTML=children.map(c=>{const cb=assignedBooks(c.id);return `<div class="app-list-item"><strong>${safe(c.name)}</strong><br>${cb.length?cb.map(b=>{const st=bookStats(b);return `${safe(b.title)} — ${st.completed}/${st.pages} pages completed; accuracy ${st.accuracy===null?'not available':st.accuracy+'%'}`}).join('<br>'):'No assigned books'}</div>`}).join('')||'<p class="app-muted">Create a child account to view their saved activity.</p>'}
 function renderAdmin(){if(!currentAccount||currentAccount.role!=='admin')return;$('adminGreeting').textContent='Hello, '+(currentAccount.name||'Administrator');const books=getBooks();$('adminBookList').innerHTML=books.length?books.map(b=>{const st=bookStats(b);return `<div class="app-list-item"><strong>${safe(b.title||'Untitled book')}</strong><br><span class="app-muted">${st.pages} page(s) · ${st.completed} completed pages</span></div>`}).join(''):'<div class="app-empty">No books uploaded yet. Use “Upload Book” to add the first textbook.</div>';const all=accounts();$('adminAccountStats').innerHTML=`<div class="profile-field"><strong>Parent accounts</strong><span>${all.filter(a=>a.role==='parent').length}</span></div><div class="profile-field"><strong>Child accounts</strong><span>${all.filter(a=>a.role==='student').length}</span></div><div class="profile-field"><strong>Books in catalogue</strong><span>${books.length}</span></div><div class="profile-field"><strong>Assignments</strong><span>${assignments().length}</span></div>`}
 window.removeAssignment=function(id){if(!confirm('Remove this book assignment? Saved book and reading data will not be deleted.'))return;write(ASSIGN_KEY,assignments().filter(a=>a.id!==id));renderParent()}
-window.openAssignedBook=function(id){if(!isChild())return;const allowed=assignedBooks(currentAccount.id).some(b=>String(b.id)===String(id));if(!allowed){alert('This book is not available to your account.');return}const book=getBooks().find(b=>String(b.id)===String(id));if(!book)return;renderLegacyParentTools();showLegacy(true);if(typeof window.openBook==='function'){window.openBook(id)}else{alert('The existing reading system is still loading. Please try again.')}};
+window.openAssignedBook=function(id){
+ if(!isChild())return;
+ const allowed=assignedBooks(currentAccount.id).some(b=>String(b.id)===String(id));
+ if(!allowed){alert('This book is not available to your account.');return;}
+ const book=getBooks().find(b=>String(b.id)===String(id));if(!book)return;
+ currentBookId=book.id;selectedAppBookId=String(book.id);
+ const title=document.getElementById('readingStartTitle');if(title)title.textContent=book.title||'Your book';
+ const cover=document.getElementById('readingStartCover');if(cover)cover.src=bookCover(book)||'images/homescreen1.jpg';
+ const stats=bookStats(book);const description=document.getElementById('readingStartDescription');
+ if(description)description.textContent=`${stats.pages} page(s) · ${stats.pct}% completed. Tap Start Recording when you are ready. The reading screen will open and ask for microphone access.`;
+ appShow('readingStartView');
+};
+window.beginAssignedBookReading=async function(){
+ if(!isChild()||!currentBookId)return;
+ const button=document.getElementById('readingStartButton');
+ const description=document.getElementById('readingStartDescription');
+ if(button){button.disabled=true;button.textContent='Opening reading screen…';}
+ try{
+  // Keep the selected book id consistent with the latest saved catalogue.
+  const book=getBooks().find(b=>String(b.id)===String(currentBookId));
+  if(!book)throw new Error('The selected book could not be found. Please return to the Library and select it again.');
+  currentBookId=book.id;
+  selectedAppBookId=String(book.id);
+  continuousBookMode=false;sessionHasStarted=false;
+  try{if(recognition&&isRecording)recognition.stop();}catch(e){}
+  isRecording=false;recognition=null;
+  renderLegacyParentTools();
+  showLegacy(true);
+  if(typeof window.startContinuousBookReading!=='function')throw new Error('The reading screen is still loading. Refresh the page and try again.');
+  const opened=window.startContinuousBookReading({autoStart:false});
+  if(opened===false)throw new Error('This book has no readable pages yet. Please ask the administrator to process the book first.');
+  // This is intentionally called directly from the user's button action after the
+  // reading screen is displayed. The browser permission prompt therefore belongs
+  // to the Start Recording action, not to selecting a book.
+  if(typeof window.startRecording!=='function')throw new Error('The recording control is unavailable.');
+  await window.startRecording();
+  // A denied permission leaves the child on the reading screen with a retry button.
+ }catch(error){
+  console.error('Could not begin assigned-book reading:',error);
+  showLegacy(false);
+  appShow('readingStartView',{replace:true});
+  if(description)description.textContent='Could not start reading. '+(error&&error.message?error.message:'Please try again.');
+ }finally{
+  if(button){button.disabled=false;button.textContent='🎤 Start Recording';}
+ }
+};
 window.openLegacyManager=function(){if(!currentAccount||currentAccount.role!=='admin')return;showLegacy(true);if(typeof window.showSection==='function')window.showSection('homeSection');renderLegacyParentTools()};
-function renderLegacyParentTools(){let back=$('parentLegacyReturn');if(!back){back=document.createElement('button');back.id='parentLegacyReturn';back.className='app-primary';back.style.cssText='position:fixed;right:18px;top:12px;z-index:2000;box-shadow:0 4px 18px #0002';document.body.appendChild(back);back.addEventListener('click',()=>{showLegacy(false);window.appShow(isChild()?'libraryView':currentAccount&&currentAccount.role==='admin'?'adminView':'childHomeView',{replace:true})})}back.textContent=isChild()?'← Library':currentAccount&&currentAccount.role==='admin'?'← Admin dashboard':'← Home';back.style.display='block'}
+function renderLegacyParentTools(){let back=$('parentLegacyReturn');if(!back){back=document.createElement('button');back.id='parentLegacyReturn';back.className='app-primary';back.style.cssText='position:fixed;right:18px;top:12px;z-index:2000;box-shadow:0 4px 18px #0002';document.body.appendChild(back);back.addEventListener('click',()=>{showLegacy(false);window.appShow(isChild()?'libraryView':currentAccount&&currentAccount.role==='admin'?'adminView':'childHomeView',{replace:true})})}back.textContent=isChild()?'← Library':currentAccount&&currentAccount.role==='admin'?'← Admin dashboard':'← Home';const reader=document.getElementById('readerSection');back.style.display=(isChild()&&reader&&!reader.classList.contains('hidden'))?'none':'block'}
 window.showLegacyHome=function(){showLegacy(true);if(typeof window.showSection==='function')window.showSection('homeSection')};
 window.appSignOut=function(){if(currentAccount&&currentAccount.role==='student'){/* preserve records; only clear active session */}localStorage.removeItem(SESSION_KEY);currentAccount=null;viewStack=[];window.appShow('landingView',{replace:true})};
 function authenticate(){const s=activeSession();if(!s)return false;currentAccount=s;window.appShow(s.role==='student'?'childHomeView':s.role==='admin'?'adminView':'parentView',{replace:true});return true}

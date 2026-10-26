@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Appearich Reading AI</title>
-
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
-        type="module"></script>
-
-<!-- Tesseract OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
 <style>
 *{
     box-sizing:border-box;
@@ -1471,6 +1463,22 @@ Back to Book
 </div>
 
 
+<script id="appearich-lazy-ocr-loader">
+window.ensureTesseract = function(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(window.__appearichTesseractPromise) return window.__appearichTesseractPromise;
+  window.__appearichTesseractPromise = new Promise(function(resolve,reject){
+    var script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.async=true;
+    script.onload=function(){ window.Tesseract ? resolve(window.Tesseract) : reject(new Error('OCR failed to initialise')); };
+    script.onerror=function(){ window.__appearichTesseractPromise=null; reject(new Error('Could not load OCR. Check your internet connection and try again.')); };
+    document.head.appendChild(script);
+  });
+  return window.__appearichTesseractPromise;
+};
+</script>
+
 <script type="module">
 
 /* =====================================================
@@ -2019,6 +2027,7 @@ Running OCR...
 
 try{
 
+const Tesseract = await window.ensureTesseract();
 const ocr =
 await Tesseract.recognize(
 image,
@@ -2149,6 +2158,7 @@ ${fileIndex+1}/${files.length}
 
 `;
 
+const Tesseract = await window.ensureTesseract();
 const ocr =
 await Tesseract.recognize(
 image,
@@ -4605,95 +4615,6 @@ renderLegacyParentTools=function(){
   document.body.appendChild(back);
 };
 </script>
-
-
-<script id="appearich-reading-button-hotfix-2026-10-25">
-(function(){
-  function byId(id){ return document.getElementById(id); }
-
-  // Keep the inactivity layer from blocking the reader unless it is intentionally visible.
-  function syncOverlay(){
-    const o=byId('inactivityOverlay');
-    if(!o)return;
-    const visible=o.classList.contains('visible');
-    o.style.pointerEvents=visible?'auto':'none';
-  }
-
-  // Return to the real child Home without touching saved reading data.
-  window.returnToAppHome=function(){
-    try{
-      if(typeof recognition!=='undefined' && recognition && typeof isRecording!=='undefined' && isRecording){
-        try{ recognition.stop(); }catch(e){}
-        isRecording=false;
-      }
-      if(typeof sessionHasStarted!=='undefined') sessionHasStarted=false;
-      if(typeof persistReadingSession==='function') persistReadingSession();
-    }catch(e){}
-    if(typeof showLegacy==='function') showLegacy(false);
-    if(typeof window.appShow==='function') window.appShow('childHomeView',{replace:true});
-  };
-
-  function wireReaderButtons(){
-    const reader=byId('readerSection');
-    if(!reader)return;
-
-    const home=reader.querySelector('.reader-home-button');
-    if(home){
-      home.onclick=null;
-      home.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.returnToAppHome();});
-    }
-    const back=reader.querySelector('.reader-back-button');
-    if(back){
-      back.onclick=null;
-      back.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.openChapter==='function' && typeof currentBookId!=='undefined' && typeof currentChapterId!=='undefined') window.openChapter(currentBookId,currentChapterId);
-      });
-    }
-    const start=byId('startButton');
-    if(start){
-      start.onclick=null;
-      start.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.startRecording==='function') window.startRecording();
-      });
-    }
-    const stop=byId('stopButton');
-    if(stop){
-      stop.onclick=null;
-      stop.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
-        if(typeof window.stopRecording==='function') window.stopRecording();
-      });
-    }
-    const evalBtn=[...reader.querySelectorAll('button')].find(b=>b.textContent.trim()==='Evaluate Now');
-    if(evalBtn){
-      evalBtn.onclick=null;
-      evalBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.evaluateNow==='function')window.evaluateNow();});
-    }
-    const previous=reader.querySelector('.reader-previous-page');
-    if(previous){
-      previous.onclick=null;
-      previous.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(typeof window.previousCompletedPage==='function')window.previousCompletedPage();});
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded',function(){syncOverlay();wireReaderButtons();});
-  window.addEventListener('load',function(){syncOverlay();wireReaderButtons();});
-
-  // Re-wire after entering a chapter/reader because the existing app changes views dynamically.
-  const oldOpenChapter=window.openChapter;
-  if(typeof oldOpenChapter==='function'){
-    window.openChapter=function(){const r=oldOpenChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
-  }
-  const oldStartChapter=window.startChapter;
-  if(typeof oldStartChapter==='function'){
-    window.startChapter=function(){const r=oldStartChapter.apply(this,arguments);setTimeout(wireReaderButtons,0);return r;};
-  }
-})();
-</script>
-
-
 <style id="appearich-child-reader-simple-ui-2026-10-26">
 /* Reading screen only: simple, child-friendly, yellow/black/white. */
 body.student-mode #readerSection{background:#fff!important;color:#111!important;height:calc(100dvh - 58px)!important;max-height:calc(100dvh - 58px)!important;padding:10px!important;overflow:hidden!important}
@@ -4722,84 +4643,8 @@ body.student-mode #readerSection .transcript{max-height:140px!important;overflow
 body.student-mode #readerSection #pageResult{max-height:110px!important;overflow:auto!important}
 @media(max-width:760px){body.student-mode #readerSection{height:calc(100dvh - 54px)!important;max-height:calc(100dvh - 54px)!important;padding:7px!important}body.student-mode #readerSection>.card:first-child{padding:9px 10px!important;border-radius:14px!important}body.student-mode #readerSection .readerGrid{height:calc(100% - 145px)!important;grid-template-columns:1fr!important;grid-template-rows:minmax(150px,42%) minmax(0,58%)!important;gap:7px!important}body.student-mode #readerSection .bookPage{border-radius:14px!important;padding:10px!important}body.student-mode #readerSection #startButton{min-height:54px!important}body.student-mode #readerSection .reader-back-button,body.student-mode #readerSection .reader-home-button{padding:9px 12px!important}}
 </style>
-<script id="appearich-reader-control-reliability-2026-10-26">
-(function(){
- function el(id){return document.getElementById(id)}
- function setReaderState(recording,message){
-   var start=el('startButton'),stop=el('stopButton'),status=el('readingStatus');
-   if(start){start.disabled=!!recording;start.textContent=recording?'🎤 Listening…':'🎤 Start Reading';}
-   if(stop)stop.disabled=!recording;
-   if(status&&message)status.textContent=message;
- }
- function speechSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition||window.recognition);}
- function wireSimpleReader(){
-   var reader=el('readerSection'); if(!reader)return;
-   var evalBtn=[].slice.call(reader.querySelectorAll('button')).find(function(b){return b.textContent.trim()==='Evaluate Now'});
-   if(evalBtn){evalBtn.classList.add('reader-evaluate-button');evalBtn.textContent='✓ Check My Reading';}
-   var start=el('startButton');
-   if(start&&!start.dataset.simpleWired){start.dataset.simpleWired='1';start.addEventListener('click',function(){setTimeout(function(){if(typeof window.isRecording!=='undefined'&&window.isRecording)setReaderState(true,'Listening… Read aloud from your book.');else if(typeof isRecording!=='undefined'&&isRecording)setReaderState(true,'Listening… Read aloud from your book.');},120);});}
-   var stop=el('stopButton');
-   if(stop&&!stop.dataset.simpleWired){stop.dataset.simpleWired='1';stop.textContent='■ Stop & Check';stop.addEventListener('click',function(){setTimeout(function(){setReaderState(false,'Reading paused. Your progress is saved.');},120);});}
-   if(!speechSupported()&&start){start.disabled=true;setReaderState(false,'Speech recording is not supported in this browser. Please use Chrome or another browser with speech recognition.');start.disabled=true;}
- }
- document.addEventListener('DOMContentLoaded',wireSimpleReader);window.addEventListener('load',wireSimpleReader);
- var obs=new MutationObserver(function(){wireSimpleReader()});
- document.addEventListener('DOMContentLoaded',function(){obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});});
-})();
-</script>
-
-\n<script id="appearich-reader-bottom-home-fix-2026-10-26">
-(function(){
-  function realHome(){
-    // Preserve the current reading state before leaving the legacy reader.
-    try{ if(typeof persistReadingSession==='function') persistReadingSession(); }catch(e){}
-    try{
-      if(typeof recognition!=='undefined' && recognition && typeof isRecording!=='undefined' && isRecording){
-        try{ recognition.stop(); }catch(e){}
-        isRecording=false;
-      }
-    }catch(e){}
-
-    // Explicitly leave the legacy reading shell first.
-    try{ if(typeof showLegacy==='function') showLegacy(false); }catch(e){}
-    var shell=document.getElementById('appShell');
-    var legacyHeader=document.getElementById('legacyHeader');
-    var legacyApp=document.getElementById('legacyApp');
-    if(shell) shell.style.display='';
-    if(legacyHeader) legacyHeader.style.display='none';
-    if(legacyApp) legacyApp.style.display='none';
-    document.body.classList.remove('legacy-mode','student-mode');
-
-    // Render the actual existing student Home view.
-    if(typeof window.appShow==='function') window.appShow('childHomeView',{replace:true});
-    if(typeof renderHome==='function') try{ renderHome(); }catch(e){}
-    window.scrollTo(0,0);
-  }
-
-  window.returnToAppHome=realHome;
-
-  function wireBottomHome(){
-    var nav=document.getElementById('childBottomNav');
-    if(!nav)return;
-    var btn=nav.querySelector('button[data-view="childHomeView"]');
-    if(!btn)return;
-    // Replace inline navigation so Home always exits the reader correctly.
-    btn.setAttribute('onclick','returnToAppHome(); return false;');
-  }
-
-  // Capture Home taps even if another reader handler would otherwise intercept them.
-  document.addEventListener('click',function(e){
-    var target=e.target && e.target.closest ? e.target.closest('#childBottomNav button[data-view="childHomeView"]') : null;
-    if(!target)return;
-    e.preventDefault();
-    e.stopPropagation();
-    realHome();
-  },true);
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wireBottomHome);
-  else wireBottomHome();
-})();
-</script>\n
+\n
+\n
 <style id="appearich-final-reader-simplification">
 /* Targeted child-reader simplification. */
 body.student-mode #legacyHeader{display:none!important}
@@ -4918,7 +4763,6 @@ body.student-mode #readerSection .bookPage>p.small{font-size:13px!important;marg
   },true);
 
   document.addEventListener('DOMContentLoaded',wireReader);window.addEventListener('load',wireReader);
-  new MutationObserver(wireReader).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
 })();
 </script>
 

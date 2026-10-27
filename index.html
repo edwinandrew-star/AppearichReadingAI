@@ -357,6 +357,21 @@ body.reading-paused .container{background:#d93025}
 body.reading-paused .container > section > .card,
 body.reading-paused #readerSection .card,
 body.reading-paused #readerSection .bookPage{background:#ffe7e7;color:#080808}
+/* Visual reference pages are paged independently; changing them never changes reading progress. */
+#continuousPagesViewer{display:block!important;width:100%;margin:10px 0}
+.continuousReferenceControls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;flex-wrap:wrap}
+.continuousReferenceControls button{flex:1;min-width:110px}
+.continuousOriginalPage{max-height:62vh;overflow:auto}
+.continuousOriginalPage img{max-height:58vh;width:100%;object-fit:contain}
+.comparisonTable{width:100%;border-collapse:collapse;margin-top:12px;table-layout:fixed}
+.comparisonTable th,.comparisonTable td{border:1px solid #ddd;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:left}
+.comparisonTable th{background:#f5f5f5}
+.comparisonWords{line-height:2;white-space:normal}
+.comparisonWords .correct{background:#d9f7df;border-radius:4px;padding:1px 3px}
+.comparisonWords .changed{background:#ffe0e0;border-radius:4px;padding:1px 3px}
+.comparisonWords .missing{background:#fff0c2;border-radius:4px;padding:1px 3px}
+.comparisonWords .extra{background:#e1eaff;border-radius:4px;padding:1px 3px}
+
 body.reading-paused #readerSection .status{background:#ffcaca;color:#7f1010;font-weight:700}
 #resumeReadingButton{display:block;width:100%;min-height:72px;font-size:23px;font-weight:800;margin:12px 0;padding:20px;background:#f3d000;color:#080808;border:3px solid #080808;box-shadow:0 4px 0 rgba(0,0,0,.18)}
 #resumeReadingButton:focus-visible,button:focus-visible{outline:3px solid #2779d8;outline-offset:3px}
@@ -3876,31 +3891,44 @@ function renderContinuousOriginalPages(){
  const viewer=document.getElementById("continuousPagesViewer");
  const singleImage=document.getElementById("readerImage");
  if(!viewer)return;
- viewer.innerHTML="";
- continuousPages.forEach((item,index)=>{
-  const section=document.createElement("div");
-  section.className="continuousOriginalPage";
-  const label=document.createElement("div");
-  label.className="pageLabel";
-  label.textContent=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
-  section.appendChild(label);
-  if(item.page.image){
-   const img=document.createElement("img");
-   img.src=item.page.image;
-   img.alt=`${item.chapter.title||"Book"}, page ${item.page.pageNumber||item.pageIndex+1}`;
-   img.loading="lazy";
-   section.appendChild(img);
-  }else{
-   const fallback=document.createElement("div");
-   fallback.textContent=item.page.text||"No page image is available.";
-   fallback.style.whiteSpace="pre-wrap";
-   section.appendChild(fallback);
-  }
-  viewer.appendChild(section);
- });
- viewer.style.display="flex";
  if(singleImage)singleImage.style.display="none";
+ viewer.innerHTML="";
+ if(!continuousPages.length){viewer.style.display="block";return;}
+ // This index is deliberately separate from continuousPageIndex and the speech position.
+ if(!Number.isInteger(window.visualReferenceIndex))window.visualReferenceIndex=0;
+ window.visualReferenceIndex=Math.max(0,Math.min(window.visualReferenceIndex,continuousPages.length-1));
+ const index=window.visualReferenceIndex;
+ const item=continuousPages[index];
+ const controls=document.createElement("div");
+ controls.className="continuousReferenceControls";
+ const previous=document.createElement("button");
+ previous.className="secondary";previous.textContent="← Previous reference";previous.disabled=index===0;
+ previous.onclick=()=>window.changeVisualReferencePage(-1);
+ const counter=document.createElement("strong");counter.textContent=`Reference page ${index+1} of ${continuousPages.length}`;
+ const next=document.createElement("button");
+ next.className="secondary";next.textContent="Next reference →";next.disabled=index>=continuousPages.length-1;
+ next.onclick=()=>window.changeVisualReferencePage(1);
+ controls.append(previous,counter,next);viewer.appendChild(controls);
+ const section=document.createElement("div");section.className="continuousOriginalPage";
+ const label=document.createElement("div");label.className="pageLabel";
+ label.textContent=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
+ section.appendChild(label);
+ if(item.page.image){const img=document.createElement("img");img.src=item.page.image;img.alt=`${item.chapter.title||"Book"}, page ${item.page.pageNumber||item.pageIndex+1}`;img.loading="lazy";section.appendChild(img);}
+ else{const fallback=document.createElement("div");fallback.textContent=item.page.text||"No page image is available.";fallback.style.whiteSpace="pre-wrap";section.appendChild(fallback);}
+ viewer.appendChild(section);
+ const bottom=controls.cloneNode(true);
+ bottom.querySelectorAll("button")[0].onclick=()=>window.changeVisualReferencePage(-1);
+ bottom.querySelectorAll("button")[1].onclick=()=>window.changeVisualReferencePage(1);
+ viewer.appendChild(bottom);
+ viewer.style.display="block";
 }
+window.changeVisualReferencePage=function(delta){
+ if(!continuousPages.length)return;
+ const old=Number.isInteger(window.visualReferenceIndex)?window.visualReferenceIndex:0;
+ window.visualReferenceIndex=Math.max(0,Math.min(continuousPages.length-1,old+delta));
+ // Only the visual reference changes; do not alter transcript, microphone, or AI reading position.
+ renderContinuousOriginalPages();
+};
 
 // Show every uploaded page in its original order; no speech-driven page switching.
 setContinuousActive = function(index){
@@ -3955,6 +3983,7 @@ window.startContinuousBookReading=function(){
  continuousPages=buildContinuousPageList(book);
  if(!continuousPages.length){alert("Upload the book's pages first.");return;}
  continuousBookMode=true;continuousAutoAdvanceLock=false;
+ window.visualReferenceIndex=0;
  const saved=book.continuousSession;
  const resume=saved&&Number.isInteger(saved.pageIndex)&&saved.pageIndex>=0&&saved.pageIndex<continuousPages.length?saved.pageIndex:0;
  sessionHasStarted=false;clearReadingSessionLimit();
@@ -4120,7 +4149,16 @@ window.evaluateContinuousBook = function(scope){
  }
  const location=formatSavedLocation(report.lastLocation);
  const title=scope==="whole"?"Whole-Book Evaluation":"Reading Progress So Far";
- host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Last saved position:</strong> ${location}</p><p><strong>Book progress:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Passages with speech data evaluated: ${report.assessed} of ${report.list.length}. Unread passages are not counted as mistakes.</p><p>Correct words: ${report.correct} · Missing: ${report.missing} · Changed: ${report.changed} · Extra: ${report.extra}</p><p class="small">Checking progress does not advance to another page or chapter. The child can continue from the saved reading position.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
+ const comparisons=report.pageStats.map(stat=>{
+  const ref=tokenize(stat.item.page.text||"").slice(0,stat.last+1);
+  const heard=tokenize(stat.item.page.transcript||"");
+  const ops=alignWords(ref,heard);
+  const expected=ops.map(op=>op.reference?`<span class="${op.type}">${escapeHTML(op.reference)}</span>`:"").filter(Boolean).join(" ");
+  const spoken=ops.map(op=>op.spoken?`<span class="${op.type}">${escapeHTML(op.spoken)}</span>`:"").filter(Boolean).join(" ");
+  const pageLabel=`Chapter ${stat.item.chapterIndex+1} · Page ${stat.item.page.pageNumber||stat.item.pageIndex+1}`;
+  return `<details class="resultBox" style="margin-top:12px"><summary><strong>${pageLabel}</strong> — ${stat.result.score}% accuracy</summary><table class="comparisonTable"><thead><tr><th>Expected text (AI extracted)</th><th>Words heard from child</th></tr></thead><tbody><tr><td><div class="comparisonWords">${expected||"—"}</div></td><td><div class="comparisonWords">${spoken||"—"}</div></td></tr></tbody></table><p class="small">Green = matched · Red = changed/misread · Yellow = expected but not heard · Blue = extra spoken words</p></details>`;
+ }).join("");
+ host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Last saved position:</strong> ${location}</p><p><strong>Book progress:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Passages with speech data evaluated: ${report.assessed} of ${report.list.length}. Unread passages are not counted as mistakes.</p><p>Correct words: ${report.correct} · Missing: ${report.missing} · Changed: ${report.changed} · Extra: ${report.extra}</p><p class="small">Checking progress does not advance the reading or change the visual reference page. The microphone remains active if reading was active.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button>${comparisons?`<h3 style="margin-top:18px">Spoken words compared with expected textbook text</h3>${comparisons}`:""}</div>`;
 };
 
 /* =====================================================

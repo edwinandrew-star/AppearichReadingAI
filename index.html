@@ -3905,19 +3905,34 @@ setContinuousActive = function(index){
  renderContinuousBookText();
 };
 
-// One combined text reference with normal wrapping; it is not paginated or auto-scrolled.
+// Combined extracted-text reference:
+ // - Extracted words from every page are joined into one continuous reading stream.
+ // - Chapter/page labels are not inserted into the words the AI expects the child to read.
+ // - Original uploaded pages remain available separately as visual references.
+ // - Missing/unextractable text stays represented by the original page reference; it is
+ //   not invented or replaced with OCR guesses here.
 renderContinuousBookText = function(){
  const host=document.getElementById("referenceText");if(!host)return;
  host.classList.add("continuousCombinedText");
- host.style.maxHeight="none";host.style.height="auto";host.style.overflow="visible";
- host.style.overflowX="visible";host.style.overflowY="visible";host.style.whiteSpace="normal";
- const chunks=[];
- continuousPages.forEach((item,i)=>{
-  const label=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
-  const text=String(item.page.text||"").trim();
-  chunks.push(`<div class="continuousTextPage"><div class="continuousMarker" data-continuous-index="${i}">${escapeHTML(label)}</div><span class="continuousSentence">${escapeHTML(text)}</span></div>`);
- });
- host.innerHTML=`<div class="continuousBookFlow">${chunks.join("\n")}</div>`;
+ host.style.maxHeight="none";
+ host.style.height="auto";
+ host.style.overflow="visible";
+ host.style.overflowX="visible";
+ host.style.overflowY="visible";
+ host.style.whiteSpace="normal";
+
+ const combined = continuousPages
+  .map((item,i)=>({
+   index:i,
+   text:String(item.page.text||"").replace(/\\s+/g," ").trim()
+  }))
+  .filter(item=>item.text.length>0);
+
+ const stream = combined.map(item =>
+  `<span class="continuousSentence" data-page-index="${item.index}">${escapeHTML(item.text)}</span>`
+ ).join(" ");
+
+ host.innerHTML = `<div class="continuousBookFlow" style="white-space:normal;overflow-wrap:anywhere;line-height:1.8">${stream || "No extracted reading text is available. Use the original uploaded pages below as reference."}</div>`;
 };
 
 window.startContinuousBookReading=function(){

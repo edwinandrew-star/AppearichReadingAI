@@ -338,6 +338,14 @@ button:disabled{
     }
 }
 
+#continuousPagesViewer{display:none;flex-direction:column;gap:18px;margin:12px 0}
+.continuousOriginalPage{width:100%;background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px;box-shadow:0 3px 12px rgba(0,0,0,.05)}
+.continuousOriginalPage img{display:block;width:100%;height:auto;object-fit:contain}
+.continuousOriginalPage .pageLabel{font-size:13px;color:#555;margin-bottom:8px;font-weight:700}
+#referenceText.continuousCombinedText{height:auto!important;max-height:none!important;overflow:visible!important;overflow-wrap:anywhere;white-space:normal!important;line-height:1.9;padding:14px;background:#fff;border:1px solid #eee;border-radius:10px}
+#referenceText.continuousCombinedText .continuousBookFlow{display:block!important;width:auto!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.9}
+#referenceText.continuousCombinedText .continuousMarker{display:block!important;margin:16px 0 4px!important;white-space:normal!important}
+#referenceText.continuousCombinedText .continuousSentence{display:inline!important;white-space:normal!important}
 #inactivityOverlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(245,245,242,.42);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
 #inactivityOverlay.visible{display:flex}
 #inactivityOverlay button{font-size:18px;padding:16px 24px}
@@ -609,6 +617,7 @@ Page 1
 </h3>
 
 <img id="readerImage">
+<div id="continuousPagesViewer" style="display:none;width:100%"></div>
 
 <p class="small">
 
@@ -637,7 +646,7 @@ The phone acts as the AI supervisor.
         class="danger"
         onclick="stopRecording()"
         disabled>
-Stop & Check
+Stop Reading
 </button>
 
 <button class="secondary" onclick="evaluateNow()">Evaluate Now</button>
@@ -2908,7 +2917,7 @@ ${result.score}%
 <p>
 Reading accuracy
 </p>
-<p><strong>Reading completion:</strong> ${extractReadingCompletion(page.text||"",page.transcript||"").percent}% (90% required to continue)</p>
+
 
 <div class="statGrid">
 
@@ -2988,12 +2997,7 @@ const chapter = getCurrentChapter();
 const page = chapter?.pages?.[currentPageIndex];
 if(!chapter||!page)return;
 const completion=extractReadingCompletion(page.text||"",page.transcript||"");
-if(completion.percent<90){
- const status=document.getElementById("readingStatus");
- if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
- alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
- return;
-}
+
 
 if(
 currentPageIndex >=
@@ -3404,12 +3408,7 @@ window.nextPage=function(){
  const completion=extractReadingCompletion(p.text||"",p.transcript||finalTranscript||"");
  // This is the final nextPage handler used by the live reading session. Check
  // the threshold even when an old result/autoCompleted flag already exists.
- if(completion.percent<90){
-  const status=document.getElementById("readingStatus");
-  if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
-  alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
-  return;
- }
+ 
  if(currentPageIndex>=c.pages.length-1){if(c.pages.every(p=>p.result))finishChapter();return;}
  if(!p.result){const ref=tokenize(p.text||""),heard=tokenize(p.transcript||finalTranscript||"");p.result=calculateResult(alignWords(ref,heard),ref,heard);p.result.uncertainRecognition=true;p.result.timestamp=new Date().toISOString();p.autoCompleted=true;}
  currentPageIndex++;c.currentPosition=currentPageIndex;finalTranscript="";persistReadingSession();loadReaderPage();startRecognitionWithoutClearing();
@@ -3626,7 +3625,7 @@ updateReadingPosition=function(spoken){
  // Save progress continuously, but advance only when sentences have been read
  // in order. An unfinished sentence blocks matching later sentences.
  const completion=extractReadingCompletion(item.page.text||"",spoken);
- if(status&&completion.total)status.textContent=`Reading completion: ${completion.percent}% · ${completion.attempted}/${completion.total} words attempted · 90% required`;
+ 
  if(!continuousAutoAdvanceLock&&completion.total>0&&completion.percent>=90){
   continuousAutoAdvanceLock=true;
   const ref=tokenize(item.page.text||""),heard=tokenize(spoken);
@@ -3779,6 +3778,239 @@ window.openParentAssessment=function(){
  if(continuousBookMode)saveContinuousState();
  return previousOpenParentAssessmentForProgress();
 };
+
+/* =====================================================
+FINAL READING EXPERIENCE OVERRIDES
+- All original pages remain visible in order.
+- Extracted text is combined into one readable reference.
+- No automatic page turning or 90% gate.
+- Child may stop at any time; microphone max session is 30 minutes.
+===================================================== */
+let readingSessionLimitTimer = null;
+const READING_SESSION_LIMIT_MS = 30 * 60 * 1000;
+
+// The old inactivity overlay must not interrupt or resume a reading session.
+resetInactivityTimer = function(){
+ if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+};
+
+function clearReadingSessionLimit(){
+ if(readingSessionLimitTimer){clearTimeout(readingSessionLimitTimer);readingSessionLimitTimer=null;}
+}
+function distributeContinuousTranscriptAcrossPages(book, transcript){
+ if(!book||!Array.isArray(continuousPages)||!continuousPages.length)return;
+ const spoken=tokenize(transcript||"");
+ const reference=[];const pageEnds=[];
+ continuousPages.forEach((item,index)=>{
+  reference.push(...tokenize(item.page.text||""));
+  pageEnds.push({end:reference.length,index});
+ });
+ const buckets=continuousPages.map(()=>[]);
+ if(reference.length&&spoken.length){
+  const operations=alignWords(reference,spoken);
+  let refIndex=0,currentPage=0;
+  for(const op of operations){
+   while(currentPage<pageEnds.length-1&&refIndex>=pageEnds[currentPage].end)currentPage++;
+   if(op.type==="extra"){
+    if(op.spoken)buckets[currentPage].push(op.spoken);
+   }else{
+    if(op.spoken)buckets[currentPage].push(op.spoken);
+    refIndex++;
+   }
+  }
+ }else if(spoken.length){buckets[0]=spoken.slice();}
+ continuousPages.forEach((item,index)=>{item.page.transcript=buckets[index].join(" ");});
+}
+
+saveContinuousState = function(){
+ const book=books.find(b=>b.id===currentBookId);if(!book)return;
+ if(!book.continuousSession)book.continuousSession={};
+ book.continuousSession.pageIndex=continuousPageIndex;
+ book.continuousSession.lastPageIndex=continuousPageIndex;
+ book.continuousSession.fullTranscript=finalTranscript||book.continuousSession.fullTranscript||"";
+ book.continuousSession.updatedAt=new Date().toISOString();
+ book.continuousSession.active=!!sessionHasStarted;
+ distributeContinuousTranscriptAcrossPages(book,book.continuousSession.fullTranscript);
+ try{saveBooks();}catch(e){console.error("Continuous progress save failed",e);}
+};
+
+function deactivateReadingMicrophone(message){
+ clearReadingSessionLimit();
+ if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+ sessionHasStarted=false;
+ sessionPausedByOverlay=false;
+ shouldCompareAfterStop=false;
+ try{if(recognition && isRecording)recognition.stop();}catch(e){}
+ const book=books.find(b=>b.id===currentBookId);
+ if(book){
+  if(!book.continuousSession)book.continuousSession={};
+  book.continuousSession.fullTranscript=finalTranscript||book.continuousSession.fullTranscript||"";
+  book.continuousSession.updatedAt=new Date().toISOString();
+  book.continuousSession.active=false;
+  distributeContinuousTranscriptAcrossPages(book,book.continuousSession.fullTranscript);
+  saveBooks();
+ }
+ const start=document.getElementById("startButton");if(start)start.disabled=false;
+ const stop=document.getElementById("stopButton");if(stop)stop.disabled=true;
+ const status=document.getElementById("readingStatus");
+ if(status){status.className="status";status.textContent=message||"Reading stopped. Your progress has been saved.";}
+ const live=document.getElementById("liveTranscript");if(live&&finalTranscript)live.textContent=finalTranscript;
+}
+
+function renderContinuousOriginalPages(){
+ const viewer=document.getElementById("continuousPagesViewer");
+ const singleImage=document.getElementById("readerImage");
+ if(!viewer)return;
+ viewer.innerHTML="";
+ continuousPages.forEach((item,index)=>{
+  const section=document.createElement("div");
+  section.className="continuousOriginalPage";
+  const label=document.createElement("div");
+  label.className="pageLabel";
+  label.textContent=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
+  section.appendChild(label);
+  if(item.page.image){
+   const img=document.createElement("img");
+   img.src=item.page.image;
+   img.alt=`${item.chapter.title||"Book"}, page ${item.page.pageNumber||item.pageIndex+1}`;
+   img.loading="lazy";
+   section.appendChild(img);
+  }else{
+   const fallback=document.createElement("div");
+   fallback.textContent=item.page.text||"No page image is available.";
+   fallback.style.whiteSpace="pre-wrap";
+   section.appendChild(fallback);
+  }
+  viewer.appendChild(section);
+ });
+ viewer.style.display="flex";
+ if(singleImage)singleImage.style.display="none";
+}
+
+// Show every uploaded page in its original order; no speech-driven page switching.
+setContinuousActive = function(index){
+ if(!continuousPages.length)return;
+ continuousPageIndex=Math.max(0,Math.min(index,continuousPages.length-1));
+ const item=continuousPages[continuousPageIndex];
+ currentBookId=item.book.id;currentChapterId=item.chapter.id;currentPageIndex=item.pageIndex;
+ const book=books.find(b=>b.id===currentBookId);
+ finalTranscript=(book&&book.continuousSession&&book.continuousSession.fullTranscript)||item.page.transcript||"";
+ const title=document.getElementById("readerChapterTitle");if(title)title.textContent=item.book.title+" — Continuous Reading";
+ const pageTitle=document.getElementById("readerPageTitle");if(pageTitle)pageTitle.textContent=`All ${continuousPages.length} book pages`;
+ renderContinuousOriginalPages();
+ const controls=document.getElementById("continuousEvaluationControls");if(controls)controls.style.display="flex";
+ const status=document.getElementById("readingStatus");if(status)status.textContent="Ready to read. The original book pages are shown below.";
+ const progressText=document.getElementById("progressText");if(progressText)progressText.textContent="";
+ const bar=document.getElementById("progressBar");if(bar)bar.style.width="0%";
+ renderContinuousBookText();
+};
+
+// One combined text reference with normal wrapping; it is not paginated or auto-scrolled.
+renderContinuousBookText = function(){
+ const host=document.getElementById("referenceText");if(!host)return;
+ host.classList.add("continuousCombinedText");
+ host.style.maxHeight="none";host.style.height="auto";host.style.overflow="visible";
+ host.style.overflowX="visible";host.style.overflowY="visible";host.style.whiteSpace="normal";
+ const chunks=[];
+ continuousPages.forEach((item,i)=>{
+  const label=`Chapter ${item.chapterIndex+1} · Page ${item.page.pageNumber||item.pageIndex+1}`;
+  const text=String(item.page.text||"").trim();
+  chunks.push(`<div class="continuousTextPage"><div class="continuousMarker" data-continuous-index="${i}">${escapeHTML(label)}</div><span class="continuousSentence">${escapeHTML(text)}</span></div>`);
+ });
+ host.innerHTML=`<div class="continuousBookFlow">${chunks.join("\n")}</div>`;
+};
+
+window.startContinuousBookReading=function(){
+ const book=books.find(b=>b.id===currentBookId);if(!book)return;
+ continuousPages=buildContinuousPageList(book);
+ if(!continuousPages.length){alert("Upload the book's pages first.");return;}
+ continuousBookMode=true;continuousAutoAdvanceLock=false;
+ const saved=book.continuousSession;
+ const resume=saved&&Number.isInteger(saved.pageIndex)&&saved.pageIndex>=0&&saved.pageIndex<continuousPages.length?saved.pageIndex:0;
+ sessionHasStarted=false;clearReadingSessionLimit();
+ setContinuousActive(resume);showSection("readerSection");
+ const result=document.getElementById("onDemandEvaluation");if(result)result.innerHTML="";
+ const pageResult=document.getElementById("pageResult");if(pageResult)pageResult.innerHTML="";
+ const live=document.getElementById("liveTranscript");if(live)live.textContent=(saved&&saved.fullTranscript)||"Nothing recorded yet.";
+ finalTranscript=(saved&&saved.fullTranscript)||"";
+ const start=document.getElementById("startButton");if(start)start.disabled=false;
+ const stop=document.getElementById("stopButton");if(stop)stop.disabled=true;
+ const status=document.getElementById("readingStatus");if(status)status.textContent="Ready. Press Start Reading when the child is ready.";
+};
+
+// While in whole-book mode, keep a single transcript and never move to another page.
+updateReadingPosition = function(spoken){
+ if(!spoken)return;
+ if(!continuousBookMode){
+  const chapter=getCurrentChapter(),page=chapter&&chapter.pages[currentPageIndex];
+  if(page){page.transcript=spoken;persistReadingSession();}
+  return;
+ }
+ const book=books.find(b=>b.id===currentBookId);if(!book)return;
+ if(!book.continuousSession)book.continuousSession={};
+ book.continuousSession.fullTranscript=spoken;
+ book.continuousSession.updatedAt=new Date().toISOString();
+ book.continuousSession.active=!!sessionHasStarted;
+ distributeContinuousTranscriptAcrossPages(book,spoken);
+ const live=document.getElementById("liveTranscript");if(live)live.textContent=spoken;
+ const status=document.getElementById("readingStatus");if(status)status.textContent="AI is listening. The child can stop whenever they want.";
+ saveBooks();
+};
+
+const previousStartRecordingFinal=window.startRecording;
+window.startRecording=function(){
+ if(!continuousBookMode){previousStartRecordingFinal();return;}
+ if(isRecording)return;
+ const book=books.find(b=>b.id===currentBookId);if(!book)return;
+ if(!book.continuousSession)book.continuousSession={};
+ finalTranscript=book.continuousSession.fullTranscript||finalTranscript||"";
+ sessionHasStarted=true;sessionPausedByOverlay=false;
+ const live=document.getElementById("liveTranscript");if(live)live.textContent=finalTranscript||"Listening...";
+ const status=document.getElementById("readingStatus");if(status)status.textContent="Starting microphone...";
+ clearReadingSessionLimit();
+ readingSessionLimitTimer=setTimeout(()=>{
+  deactivateReadingMicrophone("Your reading session has ended. Your reading progress has been saved.");
+ },READING_SESSION_LIMIT_MS);
+ startRecognitionWithoutClearing();
+};
+
+const previousStopRecordingFinal=window.stopRecording;
+window.stopRecording=function(){
+ if(!continuousBookMode){previousStopRecordingFinal();return;}
+ deactivateReadingMicrophone("Reading session stopped. Your reading progress has been saved.");
+};
+
+// Ensure browser recognition never restarts after a manual stop or the 30-minute limit.
+const previousCreateRecognitionFinal=createRecognition;
+createRecognition=function(){
+ const r=previousCreateRecognitionFinal();if(!r)return r;
+ const priorEnd=r.onend;
+ r.onend=function(event){
+  if(!sessionHasStarted){isRecording=false;const start=document.getElementById("startButton");if(start)start.disabled=false;const stop=document.getElementById("stopButton");if(stop)stop.disabled=true;return;}
+  if(priorEnd)priorEnd.call(r,event);
+ };
+ return r;
+};
+
+// No page-turn controls or 90% thresholds are used in whole-book mode.
+window.nextPage=function(){
+ if(continuousBookMode){return;}
+ const chapter=getCurrentChapter();if(!chapter)return;
+ if(currentPageIndex>=chapter.pages.length-1){finishChapter();return;}
+ currentPageIndex++;chapter.currentPosition=currentPageIndex;saveBooks();loadReaderPage();
+};
+
+const originalOpenChapterForSession=window.openChapter;
+window.openChapter=function(...args){
+ if(continuousBookMode&&sessionHasStarted){deactivateReadingMicrophone("Reading session stopped. Your reading progress has been saved.");}
+ if(continuousBookMode){clearReadingSessionLimit();}
+ if(originalOpenChapterForSession)return originalOpenChapterForSession(...args);
+};
+
+window.addEventListener("beforeunload",()=>{
+ clearReadingSessionLimit();
+ if(continuousBookMode){const book=books.find(b=>b.id===currentBookId);if(book){if(!book.continuousSession)book.continuousSession={};book.continuousSession.fullTranscript=finalTranscript||book.continuousSession.fullTranscript||"";book.continuousSession.active=false;saveBooks();}}
+});
 
 /* =====================================================
 INITIALIZE

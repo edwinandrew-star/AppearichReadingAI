@@ -349,6 +349,20 @@ button:disabled{
 #inactivityOverlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(245,245,242,.42);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
 #inactivityOverlay.visible{display:flex}
 #inactivityOverlay button{font-size:18px;padding:16px 24px}
+/* Session UI: active reading uses a clean white background; Stop & Check uses red. */
+body.reading-active{background:#fff;color:#080808}
+body.reading-active .container{background:#fff}
+body.reading-paused{background:#d93025;color:#fff;min-height:100vh}
+body.reading-paused .container{background:#d93025}
+body.reading-paused .container > section > .card,
+body.reading-paused #readerSection .card,
+body.reading-paused #readerSection .bookPage{background:#ffe7e7;color:#080808}
+body.reading-paused #readerSection .status{background:#ffcaca;color:#7f1010;font-weight:700}
+#resumeReadingButton{display:block;width:100%;min-height:72px;font-size:23px;font-weight:800;margin:12px 0;padding:20px;background:#f3d000;color:#080808;border:3px solid #080808;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+#resumeReadingButton:focus-visible,button:focus-visible{outline:3px solid #2779d8;outline-offset:3px}
+#sessionActionHint{font-size:14px;line-height:1.5;margin:8px 0;color:#555}
+body.reading-paused #sessionActionHint{color:#7f1010;font-weight:600}
+@media(max-width:600px){button{min-height:46px}#resumeReadingButton{min-height:76px;font-size:22px}}
 </style>
 </head>
 
@@ -646,10 +660,11 @@ The phone acts as the AI supervisor.
         class="danger"
         onclick="stopRecording()"
         disabled>
-Stop Reading
+Stop &amp; Check
 </button>
-
-<button class="secondary" onclick="evaluateNow()">Evaluate Now</button>
+<button id="resumeReadingButton" class="yellow hidden" onclick="resumeSavedReading()">▶ Resume Reading</button>
+<p id="sessionActionHint" class="small">Start Reading to begin. Check Progress will not stop the microphone.</p>
+<button id="checkProgressButton" class="secondary" onclick="evaluateNow()">Check Progress</button>
 
 <div id="continuousEvaluationControls" style="display:none;gap:8px;flex-wrap:wrap;margin-top:10px">
 <button class="secondary" onclick="evaluateContinuousBook('progress')">Evaluate Progress So Far</button>
@@ -4025,6 +4040,187 @@ window.openChapter=function(...args){
 window.addEventListener("beforeunload",()=>{
  clearReadingSessionLimit();
  if(continuousBookMode){const book=books.find(b=>b.id===currentBookId);if(book){if(!book.continuousSession)book.continuousSession={};book.continuousSession.fullTranscript=finalTranscript||book.continuousSession.fullTranscript||"";book.continuousSession.active=false;saveBooks();}}
+});
+
+/* =====================================================
+FINAL WORKFLOW FIX: ALWAYS USE CONTINUOUS BOOK READING
+- Starting from a chapter card opens the full-book reading stream.
+- The old page-by-page result buttons must not take over this workflow.
+- Checking progress is an assessment only; it does not advance to another chapter.
+===================================================== */
+
+// Treat the existing Start/Read action as a whole-book session, regardless of
+// which chapter card the user clicked. Original uploaded page images remain
+// available as references, while extracted reading text is handled continuously.
+window.startChapter = function(){
+ window.startContinuousBookReading();
+};
+
+// In continuous-book mode, legacy page/chapter navigation must never advance
+// the child or show "continue to the next chapter" prompts.
+window.nextPage = function(){
+ if(continuousBookMode){
+  const status=document.getElementById("readingStatus");
+  if(status)status.textContent="Keep reading the combined book text. Checking progress does not move to another page or chapter.";
+  saveContinuousState();
+  return;
+ }
+ const chapter=getCurrentChapter();
+ if(!chapter)return;
+ if(currentPageIndex>=chapter.pages.length-1){finishChapter();return;}
+ currentPageIndex++;
+ chapter.currentPosition=currentPageIndex;
+ saveBooks();
+ loadReaderPage();
+};
+
+// The legacy chapter-finishing action is disabled during a continuous session.
+const previousFinishChapterForContinuousFix=window.finishChapter;
+window.finishChapter=function(){
+ if(continuousBookMode){
+  saveContinuousState();
+  const status=document.getElementById("readingStatus");
+  if(status)status.textContent="This is one continuous book-reading session. You can keep reading or evaluate progress.";
+  return;
+ }
+ if(previousFinishChapterForContinuousFix)previousFinishChapterForContinuousFix();
+};
+
+// Both evaluation entry points report progress without advancing or resetting
+// the reading session. The microphone/transcript remain available for resuming.
+window.evaluateNow=function(){
+ if(continuousBookMode){
+  saveContinuousState();
+  window.evaluateContinuousBook("progress");
+  return;
+ }
+ window.startContinuousBookReading();
+ setTimeout(()=>{
+  if(continuousBookMode){
+   saveContinuousState();
+   window.evaluateContinuousBook("progress");
+  }
+ },0);
+};
+
+window.evaluateContinuousBook = function(scope){
+ if(!continuousBookMode){
+  window.startContinuousBookReading();
+  setTimeout(()=>window.evaluateContinuousBook(scope||"progress"),0);
+  return;
+ }
+ const host=document.getElementById("onDemandEvaluation");
+ const book=books.find(b=>b.id===currentBookId);
+ if(!book||!host)return;
+ saveContinuousState();
+ const report=calculateSavedBookAssessment(book,true);
+ if(!report.assessed){
+  host.innerHTML='<div class="resultBox"><h3>Reading Progress</h3><p>No recognized reading is saved yet. Start reading, then check progress again.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>';
+  return;
+ }
+ const location=formatSavedLocation(report.lastLocation);
+ const title=scope==="whole"?"Whole-Book Evaluation":"Reading Progress So Far";
+ host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Last saved position:</strong> ${location}</p><p><strong>Book progress:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Passages with speech data evaluated: ${report.assessed} of ${report.list.length}. Unread passages are not counted as mistakes.</p><p>Correct words: ${report.correct} · Missing: ${report.missing} · Changed: ${report.changed} · Extra: ${report.extra}</p><p class="small">Checking progress does not advance to another page or chapter. The child can continue from the saved reading position.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
+};
+
+/* =====================================================
+SESSION UI FIX — WHITE WHILE READING, RED WHEN PAUSED
+- Stop & Check pauses speech recognition and persists the current transcript.
+- Resume Reading restarts recognition without clearing the saved transcript.
+- Check Progress only renders an assessment; it never stops the microphone.
+- Session UI is intentionally isolated from the existing upload/extraction logic.
+===================================================== */
+function setReadingSessionVisualState(state){
+ const body=document.body;
+ body.classList.remove("reading-active","reading-paused");
+ if(state==="active")body.classList.add("reading-active");
+ if(state==="paused")body.classList.add("reading-paused");
+ const start=document.getElementById("startButton");
+ const stop=document.getElementById("stopButton");
+ const resume=document.getElementById("resumeReadingButton");
+ const hint=document.getElementById("sessionActionHint");
+ if(state==="active"){
+  if(start)start.classList.add("hidden");
+  if(stop){stop.classList.remove("hidden");stop.disabled=false;stop.textContent="Stop & Check";}
+  if(resume)resume.classList.add("hidden");
+  if(hint)hint.textContent="Reading is active. Check Progress can be used at any time without stopping the microphone.";
+ }else if(state==="paused"){
+  if(start)start.classList.add("hidden");
+  if(stop){stop.classList.remove("hidden");stop.disabled=true;stop.textContent="Stop & Check";}
+  if(resume)resume.classList.remove("hidden");
+  if(hint)hint.textContent="Reading is paused and saved. Tap Resume Reading to continue from your saved transcript.";
+ }else{
+  if(start){start.classList.remove("hidden");start.disabled=false;}
+  if(stop){stop.classList.remove("hidden");stop.disabled=true;stop.textContent="Stop & Check";}
+  if(resume)resume.classList.add("hidden");
+  if(hint)hint.textContent="Ready to read. Start Reading begins listening; Check Progress does not stop the microphone.";
+ }
+}
+
+// Keep the existing start logic and only add the session's visual/button state.
+const completedStartRecordingBeforeSessionUI=window.startRecording;
+window.startRecording=function(){
+ if(!continuousBookMode){completedStartRecordingBeforeSessionUI();return;}
+ completedStartRecordingBeforeSessionUI();
+ if(sessionHasStarted){setReadingSessionVisualState("active");}
+};
+
+// Stop & Check saves first, then clearly switches to the red paused state.
+const completedStopRecordingBeforeSessionUI=window.stopRecording;
+window.stopRecording=function(){
+ if(!continuousBookMode){completedStopRecordingBeforeSessionUI();return;}
+ saveContinuousState();
+ completedStopRecordingBeforeSessionUI();
+ setReadingSessionVisualState("paused");
+ const status=document.getElementById("readingStatus");
+ if(status){status.className="status";status.textContent="Reading paused and saved. Check the progress report or resume when ready.";}
+};
+
+// Resume uses the existing recording path, which restores the stored transcript.
+window.resumeSavedReading=function(){
+ if(!continuousBookMode){window.startContinuousBookReading();}
+ if(!continuousBookMode)return;
+ const book=books.find(b=>b.id===currentBookId);
+ if(book&&book.continuousSession&&book.continuousSession.fullTranscript){
+  finalTranscript=book.continuousSession.fullTranscript;
+ }
+ setReadingSessionVisualState("active");
+ window.startRecording();
+};
+
+// Explicitly make Check Progress a non-stopping action in whole-book mode.
+window.checkProgressWithoutStopping=function(){
+ if(continuousBookMode){saveContinuousState();window.evaluateContinuousBook("progress");return;}
+ window.evaluateNow();
+};
+const progressButton=document.getElementById("checkProgressButton");
+if(progressButton)progressButton.onclick=window.checkProgressWithoutStopping;
+
+// Reopening a saved session shows the saved/paused state without auto-starting the mic.
+const completedStartContinuousBookReadingBeforeSessionUI=window.startContinuousBookReading;
+window.startContinuousBookReading=function(){
+ completedStartContinuousBookReadingBeforeSessionUI();
+ if(!continuousBookMode)return;
+ const book=books.find(b=>b.id===currentBookId);
+ const saved=book&&book.continuousSession;
+ if(saved&&saved.fullTranscript){
+  const live=document.getElementById("liveTranscript");if(live)live.textContent=saved.fullTranscript;
+  finalTranscript=saved.fullTranscript;
+  setReadingSessionVisualState("paused");
+  const status=document.getElementById("readingStatus");
+  if(status)status.textContent="Saved reading restored. Tap Resume Reading to continue; the microphone has not started yet.";
+ }else{
+  setReadingSessionVisualState("ready");
+ }
+};
+
+// If a browser tab is hidden or refreshed, the existing persistence handlers save the
+// transcript. Never claim that a browser can keep the microphone alive while locked;
+// background microphone behavior depends on the phone, browser, and OS permissions.
+window.addEventListener("pagehide",()=>{
+ if(continuousBookMode){
+  try{saveContinuousState();}catch(error){console.error("Could not save on pagehide",error);}
+ }
 });
 
 /* =====================================================

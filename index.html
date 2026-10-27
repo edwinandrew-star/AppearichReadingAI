@@ -4141,24 +4141,55 @@ window.evaluateContinuousBook = function(scope){
  const host=document.getElementById("onDemandEvaluation");
  const book=books.find(b=>b.id===currentBookId);
  if(!book||!host)return;
- saveContinuousState();
- const report=calculateSavedBookAssessment(book,true);
- if(!report.assessed){
-  host.innerHTML='<div class="resultBox"><h3>Reading Progress</h3><p>No recognized reading is saved yet. Start reading, then check progress again.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>';
+ // Save the latest transcript before rendering the report.
+ try{saveContinuousState();}catch(e){console.warn("Could not save before comparison",e);}
+ const savedSession=book.continuousSession||{};
+ const live=document.getElementById("liveTranscript");
+ const spokenText=String(finalTranscript||savedSession.fullTranscript||(live&&live.textContent)||
+  (continuousPages||[]).map(item=>item.page.transcript||"").filter(Boolean).join(" ")).trim();
+ const expectedTokens=[];
+ (continuousPages||[]).forEach(item=>expectedTokens.push(...tokenize(item.page.text||"")));
+ const spokenTokens=tokenize(spokenText);
+ if(!spokenTokens.length){
+  host.innerHTML='<div class="resultBox"><h3>Reading Progress</h3><p>No recognized spoken words have been saved yet. Start reading and wait for speech recognition to capture words, then press Check Progress.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>';
   return;
  }
- const location=formatSavedLocation(report.lastLocation);
+ // Align only the words spoken so far. A full-book dynamic-programming matrix
+ // can become enormous for long textbooks and may prevent the comparison from appearing.
+ // Green=exact match, red=changed, yellow=expected but skipped, blue=extra spoken.
+ const normWord=w=>String(w||"").toLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");
+ const ops=[];let i=0,j=0;
+ while(j<spokenTokens.length){
+  if(i>=expectedTokens.length){ops.push({type:"extra",reference:"",spoken:spokenTokens[j++]});continue;}
+  const r=expectedTokens[i],w=spokenTokens[j];
+  if(normWord(r)===normWord(w)){ops.push({type:"correct",reference:r,spoken:w});i++;j++;continue;}
+  // If the heard word appears a few words ahead in the reference, mark intervening
+  // expected words as skipped (yellow), then match the heard word.
+  let refAhead=-1;
+  for(let k=i+1;k<Math.min(expectedTokens.length,i+4);k++){
+   if(normWord(expectedTokens[k])===normWord(w)){refAhead=k;break;}
+  }
+  if(refAhead>=0){while(i<refAhead)ops.push({type:"missing",reference:expectedTokens[i++],spoken:""});ops.push({type:"correct",reference:expectedTokens[i],spoken:w});i++;j++;continue;}
+  // If the expected word is heard just after a short extra/repeated word, mark
+  // those spoken words blue before matching it.
+  let spokenAhead=-1;
+  for(let k=j+1;k<Math.min(spokenTokens.length,j+3);k++){
+   if(normWord(spokenTokens[k])===normWord(r)){spokenAhead=k;break;}
+  }
+  if(spokenAhead>=0){while(j<spokenAhead)ops.push({type:"extra",reference:"",spoken:spokenTokens[j++]});ops.push({type:"correct",reference:r,spoken:spokenTokens[j]});i++;j++;continue;}
+  // Neither word appears in the small alignment window: pair them as a misread.
+  ops.push({type:"changed",reference:r,spoken:w});i++;j++;
+ }
+ const spokenComparison=ops.map(op=>op.spoken?`<span class="${op.type}">${escapeHTML(op.spoken)}</span>`:"").filter(Boolean).join(" ");
+ const expectedComparison=ops.map(op=>op.reference?`<span class="${op.type}">${escapeHTML(op.reference)}</span>`:"").filter(Boolean).join(" ");
+ const correct=ops.filter(op=>op.type==="correct").length;
+ const changed=ops.filter(op=>op.type==="changed").length;
+ const missing=ops.filter(op=>op.type==="missing").length;
+ const extra=ops.filter(op=>op.type==="extra").length;
+ const compared=correct+changed+missing;
+ const accuracy=compared?Math.round(correct/compared*100):0;
  const title=scope==="whole"?"Whole-Book Evaluation":"Reading Progress So Far";
- const comparisons=report.pageStats.map(stat=>{
-  const ref=tokenize(stat.item.page.text||"").slice(0,stat.last+1);
-  const heard=tokenize(stat.item.page.transcript||"");
-  const ops=alignWords(ref,heard);
-  const expected=ops.map(op=>op.reference?`<span class="${op.type}">${escapeHTML(op.reference)}</span>`:"").filter(Boolean).join(" ");
-  const spoken=ops.map(op=>op.spoken?`<span class="${op.type}">${escapeHTML(op.spoken)}</span>`:"").filter(Boolean).join(" ");
-  const pageLabel=`Chapter ${stat.item.chapterIndex+1} · Page ${stat.item.page.pageNumber||stat.item.pageIndex+1}`;
-  return `<details class="resultBox" style="margin-top:12px"><summary><strong>${pageLabel}</strong> — ${stat.result.score}% accuracy</summary><table class="comparisonTable"><thead><tr><th>Expected text (AI extracted)</th><th>Words heard from child</th></tr></thead><tbody><tr><td><div class="comparisonWords">${expected||"—"}</div></td><td><div class="comparisonWords">${spoken||"—"}</div></td></tr></tbody></table><p class="small">Green = matched · Red = changed/misread · Yellow = expected but not heard · Blue = extra spoken words</p></details>`;
- }).join("");
- host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Last saved position:</strong> ${location}</p><p><strong>Book progress:</strong> ${report.progress}% (${report.wordsReached} of ${report.wordsInBook} reference words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Passages with speech data evaluated: ${report.assessed} of ${report.list.length}. Unread passages are not counted as mistakes.</p><p>Correct words: ${report.correct} · Missing: ${report.missing} · Changed: ${report.changed} · Extra: ${report.extra}</p><p class="small">Checking progress does not advance the reading or change the visual reference page. The microphone remains active if reading was active.</p><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button>${comparisons?`<h3 style="margin-top:18px">Spoken words compared with expected textbook text</h3>${comparisons}`:""}</div>`;
+ host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Words recognized:</strong> ${spokenTokens.length} &nbsp; <strong>Accuracy in compared words:</strong> ${accuracy}%</p><p><strong>Matched:</strong> ${correct} · <strong>Changed/misread:</strong> ${changed} · <strong>Expected but not heard:</strong> ${missing} · <strong>Extra/repeated spoken:</strong> ${extra}</p><p class="small">Green = matched correctly · Red = spoken word differs from expected · Yellow = expected word skipped/not heard · Blue = extra spoken word. Only the portion reached by the transcript is compared; the unread remainder of the book is not colored as missing. Recognition errors may affect results. Checking progress does not advance reading or stop the microphone.</p><h3 style="margin-top:18px">Words spoken, matched against expected textbook text</h3><table class="comparisonTable"><thead><tr><th>Words spoken by child</th><th>Expected text (AI extracted)</th></tr></thead><tbody><tr><td><div class="comparisonWords">${spokenComparison||"—"}</div></td><td><div class="comparisonWords">${expectedComparison||"—"}</div></td></tr></tbody></table><button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
 };
 
 /* =====================================================

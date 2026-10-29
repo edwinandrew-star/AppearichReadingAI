@@ -3971,6 +3971,18 @@ function countProgressWords(text){return tokenize(String(text||"")).length;}
 function renderSimpleProgressDashboard(){
  const host=document.getElementById("onDemandEvaluation");
  if(!host)return;
+ const renderComparison=(expectedText,spokenText)=>{
+  const expected=tokenize(expectedText||""), heard=tokenize(spokenText||"");
+  if(!expected.length)return '<p class="small">No passage text is available to compare.</p>';
+  if(!heard.length)return '<p class="small">No recognized speech yet. Read aloud, then tap Stop & Check to compare.</p>';
+  const ops=alignWords(expected,heard);
+  return `<div class="wordResults">${ops.map(op=>{
+   if(op.type==="correct")return `<span class="word correct">${escapeHTML(op.reference)}</span>`;
+   if(op.type==="changed")return `<span class="word changed" title="Expected: ${escapeHTML(op.reference)}">${escapeHTML(op.spoken)} <small>(expected: ${escapeHTML(op.reference)})</small></span>`;
+   if(op.type==="missing")return `<span class="word missing" title="Not heard">${escapeHTML(op.reference)}</span>`;
+   return `<span class="word extra">+${escapeHTML(op.spoken)}</span>`;
+  }).join(" ")}</div><p class="small"><span class="word correct">Correct</span> <span class="word changed">Misread</span> <span class="word missing">Not heard</span> <span class="word extra">Extra speech</span></p>`;
+ };
  if(continuousBookMode){
   const book=books.find(b=>b.id===currentBookId);
   const list=book?buildContinuousPageList(book):[];
@@ -3979,19 +3991,20 @@ function renderSimpleProgressDashboard(){
   const bookPct=totalWords?Math.min(100,Math.round(spokenWords/totalWords*100)):0;
   const active=continuousPages[continuousPageIndex];
   const passageTotal=active?countProgressWords(active.page.text):0;
-  const passageSpoken=active?Math.min(passageTotal,countProgressWords(active.page.transcript||finalTranscript)):0;
+  const activeTranscript=active?(active.page.transcript||finalTranscript||""):"";
+  const passageSpoken=active?Math.min(passageTotal,countProgressWords(activeTranscript)):0;
   const passagePct=passageTotal?Math.min(100,Math.round(passageSpoken/passageTotal*100)):0;
-  const passageNumber=continuousPageIndex+1;
-  const passageCount=continuousPages.length;
-  host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Book progress:</strong> ${bookPct}%</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${bookPct}%;background:#2779d8"></div></div><p><strong>Current passage:</strong> ${passageNumber} of ${passageCount} · ${passagePct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${passagePct}%;background:#2779d8"></div></div></div>`;
+  const passageNumber=continuousPageIndex+1, passageCount=continuousPages.length;
+  host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Book progress:</strong> ${bookPct}%</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${bookPct}%;background:#2779d8"></div></div><p><strong>Current passage:</strong> ${passageNumber} of ${passageCount} · ${passagePct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${passagePct}%;background:#2779d8"></div></div><h4>Word comparison</h4>${active?renderComparison(active.page.text,activeTranscript):'<p class="small">No active passage.</p>'}</div>`;
   return;
  }
  const chapter=getCurrentChapter();
  const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
  const expected=countProgressWords(page&&page.text);
- const spoken=Math.min(expected,countProgressWords(page&&(page.transcript||finalTranscript)));
+ const activeTranscript=(page&&(page.transcript||finalTranscript))||"";
+ const spoken=Math.min(expected,countProgressWords(activeTranscript));
  const pct=expected?Math.min(100,Math.round(spoken/expected*100)):0;
- host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Current passage:</strong> ${pct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#2779d8"></div></div></div>`;
+ host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Current passage:</strong> ${pct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#2779d8"></div></div><h4>Word comparison</h4>${renderComparison(page&&page.text,activeTranscript)}</div>`;
 }
 window.stopRecording=function(){
  // Stop listening, save the final transcript, then show progress—not a resume overlay.

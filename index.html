@@ -303,8 +303,8 @@ button:disabled{
 }
 
 .word.changed{
-    background:#fff0b3;
-    color:#795d00;
+    background:#ffdcdc;
+    color:#9d1c1c;
 }
 
 .word.extra{
@@ -1316,7 +1316,7 @@ If PDF has no selectable text,
 use OCR.
 */
 
-if(!extractedText){
+if(!isUsableReadingText(extractedText)){
 
 status.innerHTML=`
 
@@ -1378,10 +1378,8 @@ ${percent
 }
 );
 
-extractedText =
-cleanOCR(
-ocr.data.text
-);
+const ocrText=cleanOCR(ocr.data.text);
+                    if(isUsableReadingText(ocrText)) extractedText=ocrText;
 
 }catch(error){
 
@@ -1503,11 +1501,11 @@ ${percent
 }
 );
 
-const extractedText =
-cleanOCR(
-ocr.data.text
-);
-
+const extractedText=cleanOCR(ocr.data.text);
+if(!isUsableReadingText(extractedText)){
+ status.innerHTML=`<div class="status">OCR could not extract meaningful reading text from image ${escapeHTML(file.name)}. Check image clarity or try a clearer scan. This image was not saved as readable content.</div>`;
+ continue;
+}
 pages.push({
 
 pageNumber:pageNumber++,
@@ -2908,7 +2906,7 @@ ${result.score}%
 <p>
 Reading accuracy
 </p>
-<p><strong>Reading completion:</strong> ${extractReadingCompletion(page.text||"",page.transcript||"").percent}% (90% required to continue)</p>
+<p><strong>Reading completion:</strong> ${extractReadingCompletion(page.text||"",page.transcript||"").percent}% (80% required to continue)</p>
 
 <div class="statGrid">
 
@@ -2988,10 +2986,10 @@ const chapter = getCurrentChapter();
 const page = chapter?.pages?.[currentPageIndex];
 if(!chapter||!page)return;
 const completion=extractReadingCompletion(page.text||"",page.transcript||"");
-if(completion.percent<90){
+if(completion.percent<80){
  const status=document.getElementById("readingStatus");
- if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
- alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
+ if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 80% is required before moving on.`;
+ alert(`Please finish at least 80% of this page before continuing. Current completion: ${completion.percent}%.`);
  return;
 }
 
@@ -3221,6 +3219,14 @@ reader.readAsDataURL(file);
 }
 
 
+// Validate extracted text by meaningful alphanumeric content, not merely a non-empty string.
+function isUsableReadingText(text){
+ const value=String(text||"").replace(/\\s+/g," ").trim();
+ const words=value.match(/[\\p{L}\\p{N}]+/gu)||[];
+ const letters=(value.match(/[\\p{L}\\p{N}]/gu)||[]).length;
+ return words.length>=3 && letters>=12;
+}
+
 function cleanOCR(text){
  // Keep the original page order and remove obvious non-reading lines without
  // rewriting the uploaded page or inventing missing content.
@@ -3394,7 +3400,7 @@ updateReadingPosition=function(spoken){
  // A changed/misread word counts as attempted; missing/skipped and extra/repeated
  // words do not. Never auto-complete at the older 72% matching threshold.
  const completion=extractReadingCompletion(p.text||"",spoken||"");
- if(completion.percent>=90){
+ if(completion.percent>=80){
   p.autoCompleted=true;const ops=alignWords(ref,heard);p.result=calculateResult(ops,ref,heard);p.result.uncertainRecognition=true;p.result.timestamp=new Date().toISOString();persistReadingSession();
   setTimeout(()=>{if(!sessionHasStarted)return;if(currentPageIndex<c.pages.length-1){currentPageIndex++;c.currentPosition=currentPageIndex;finalTranscript="";persistReadingSession();loadReaderPage();startRecognitionWithoutClearing();}else{sessionHasStarted=false;finishChapter();}},1200);
  }
@@ -3404,10 +3410,10 @@ window.nextPage=function(){
  const completion=extractReadingCompletion(p.text||"",p.transcript||finalTranscript||"");
  // This is the final nextPage handler used by the live reading session. Check
  // the threshold even when an old result/autoCompleted flag already exists.
- if(completion.percent<90){
+ if(completion.percent<80){
   const status=document.getElementById("readingStatus");
-  if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 90% is required before moving on.`;
-  alert(`Please finish at least 90% of this page before continuing. Current completion: ${completion.percent}%.`);
+  if(status)status.textContent=`Keep reading this page. ${completion.percent}% completed; at least 80% is required before moving on.`;
+  alert(`Please finish at least 80% of this page before continuing. Current completion: ${completion.percent}%.`);
   return;
  }
  if(currentPageIndex>=c.pages.length-1){if(c.pages.every(p=>p.result))finishChapter();return;}
@@ -3626,8 +3632,8 @@ updateReadingPosition=function(spoken){
  // Save progress continuously, but advance only when sentences have been read
  // in order. An unfinished sentence blocks matching later sentences.
  const completion=extractReadingCompletion(item.page.text||"",spoken);
- if(status&&completion.total)status.textContent=`Reading completion: ${completion.percent}% · ${completion.attempted}/${completion.total} words attempted · 90% required`;
- if(!continuousAutoAdvanceLock&&completion.total>0&&completion.percent>=90){
+ if(status&&completion.total)status.textContent=`Reading completion: ${completion.percent}% · ${completion.attempted}/${completion.total} words attempted · 80% required`;
+ if(!continuousAutoAdvanceLock&&completion.total>0&&completion.percent>=80){
   continuousAutoAdvanceLock=true;
   const ref=tokenize(item.page.text||""),heard=tokenize(spoken);
   if(!item.page.result){const ops=alignWords(ref,heard);item.page.result=calculateResult(ops,ref,heard);item.page.result.uncertainRecognition=true;item.page.result.timestamp=new Date().toISOString();item.page.autoCompleted=true;}
@@ -3755,15 +3761,24 @@ window.evaluateNow=function(){
  const spoken=(finalTranscript||page.transcript||"").trim();
  if(spoken)page.transcript=spoken;
  const ref=tokenize(page.text||""), heard=tokenize(spoken);
- let last=-1, cursor=0;
+ let last=-1,cursor=0;
  for(const word of heard){if(cursor<ref.length&&ref[cursor]===word){last=cursor;cursor++;}}
  const attemptedRef=last>=0?ref.slice(0,last+1):[];
  const ops=alignWords(attemptedRef,heard);
  const result=calculateResult(ops,attemptedRef,heard);
- const confirmed=!!page.result;
- saveBooks();
  const pct=ref.length&&last>=0?Math.round((last+1)/ref.length*100):0;
- host.innerHTML=`<div class="resultBox"><h3>Reading Assessment So Far</h3><p><strong>Book:</strong> ${escapeHTML((books.find(b=>b.id===currentBookId)||{}).title||"")}</p><p><strong>Section:</strong> ${escapeHTML((getCurrentChapter()||{}).title||"")}, page ${escapeHTML(String(page.pageNumber||currentPageIndex+1))}</p><p><strong>Progress:</strong> ${pct}% of this page reached (${Math.max(0,last+1)} of ${ref.length} reference words)</p><p><strong>Status:</strong> ${confirmed?"Saved page result":"Provisional assessment based on speech heard so far"}</p><p>Correct: ${result.correct} · Misread/changed: ${result.changed} · Potentially skipped: ${result.missing} · Extra/repeated: ${result.extra}</p><p>Accuracy: ${result.score}% ${confirmed?"(saved result)":"(provisional; recognition may revise it)"}</p><p class="small">Only the passage up to the last sequentially matched reference word is assessed. Unread words are not treated as errors.</p></div>`;
+ let comparison=ops.map(op=>{
+  if(op.type==="correct")return `<span class="word correct">${escapeHTML(op.reference)}</span>`;
+  if(op.type==="changed")return `<span class="word changed">${escapeHTML(op.spoken)} <small>(expected: ${escapeHTML(op.reference)})</small></span>`;
+  if(op.type==="missing")return `<span class="word missing">${escapeHTML(op.reference)} <small>(missing)</small></span>`;
+  return `<span class="word extra">+${escapeHTML(op.spoken)} <small>(extra)</small></span>`;
+ }).join(" ");
+ if(last>=0&&attemptedRef.length){
+  const current=escapeHTML(ref[last]);
+  comparison+=` <span class="word" style="background:#fff0b3;color:#795d00">Current position: ${current}</span>`;
+ }
+ saveBooks();
+ host.innerHTML=`<div class="resultBox"><h3>Reading Assessment So Far</h3><p><strong>Book:</strong> ${escapeHTML((books.find(b=>b.id===currentBookId)||{}).title||"")}</p><p><strong>Section:</strong> ${escapeHTML((getCurrentChapter()||{}).title||"")}, page ${escapeHTML(String(page.pageNumber||currentPageIndex+1))}</p><p><strong>Where the child reached:</strong> ${last>=0?`word ${last+1} of ${ref.length}: <strong>${escapeHTML(ref[last])}</strong>`:"No sequentially matched word confirmed yet."}</p><p><strong>Expected text:</strong></p><p>${escapeHTML(page.text||"No expected text extracted.")}</p><p><strong>Recognized speech:</strong></p><p>${escapeHTML(spoken||"No speech transcript saved.")}</p><p><strong>Word comparison (up to confirmed position)</strong></p><div class="wordResults">${comparison||'<span class="small">No words available to compare.</span>'}</div><p><strong>Reading coverage:</strong> ${pct}% (${Math.max(0,last+1)} of ${ref.length} reference words reached) · <strong>Reading accuracy:</strong> ${result.score}%</p><p>Correct: ${result.correct} · Changed/misread: ${result.changed} · Missing: ${result.missing} · Extra: ${result.extra}</p><p><strong>Remaining content:</strong> ${Math.max(0,ref.length-(last+1))} words</p><p><strong>80% completion threshold:</strong> ${pct>=80?"Reached":"Not yet reached"}.</p><p class="small">Evaluation preserves the current reading position. Speech recognition can mishear words, so uncertain results should be checked with the child.</p></div>`;
 };
 window.openProgressDashboard=function(){
  const book=books.find(b=>b.id===currentBookId);
@@ -3778,6 +3793,175 @@ const previousOpenParentAssessmentForProgress=window.openParentAssessment;
 window.openParentAssessment=function(){
  if(continuousBookMode)saveContinuousState();
  return previousOpenParentAssessmentForProgress();
+};
+
+
+/* =====================================================
+TARGETED RELIABILITY FIXES
+===================================================== */
+
+// No inactivity timer: silence and elapsed time never automatically pause listening.
+// The existing blur overlay is reserved for deliberate pause/recovery controls.
+resetInactivityTimer=function(){
+ if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+};
+showInactivityOverlay=function(){
+ // Never auto-show the overlay because of silence or elapsed time.
+};
+window.resumeReadingSession=function(){
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ sessionPausedByOverlay=false;
+ sessionHasStarted=true;
+ if(continuousBookMode)saveContinuousState();else persistReadingSession();
+ startRecognitionWithoutClearing();
+};
+function showContinueOverlay(){
+ sessionPausedByOverlay=true;
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.add("visible");
+ persistReadingSession();
+ if(continuousBookMode)saveContinuousState();
+}
+
+// Keep the original transcript and current position when deliberately stopping.
+const finalStopRecordingWithoutOverlay=window.stopRecording;
+window.stopRecording=function(){
+ if(continuousBookMode){
+  shouldCompareAfterStop=false;
+  try{if(recognition&&isRecording)recognition.stop();}catch(e){}
+  const item=continuousPages[continuousPageIndex];
+  if(item){item.page.transcript=finalTranscript||item.page.transcript||"";saveContinuousState();}
+  sessionHasStarted=false;
+  showContinueOverlay();
+  const status=document.getElementById("readingStatus");
+  if(status)status.textContent="Reading paused and saved. Tap Continue Reading to resume.";
+  return;
+ }
+ if(finalStopRecordingWithoutOverlay)finalStopRecordingWithoutOverlay();
+ sessionHasStarted=false;
+ showContinueOverlay();
+};
+
+// Coverage follows the reading sequence: only the current sentence and prior sentences
+// count. Accuracy is still computed separately by alignWords/calculateResult.
+function orderedAttemptCoverage(item,spoken){
+ const progress=sentenceSequenceProgress(item,spoken);
+ let attempted=0,total=0;
+ progress.sentences.forEach((sentence,i)=>{
+  const words=tokenize(sentence); total+=words.length;
+  const detail=progress.details[i];
+  if(detail&&detail.complete)attempted+=words.length;
+  else if(i===progress.completed&&detail)attempted+=Math.min(words.length,detail.matched||0);
+ });
+ return {percent:total?Math.round(attempted/total*100):0,attempted,total,progress};
+}
+
+// Continuous reading position updates without scanning ahead to repeated words elsewhere.
+updateReadingPosition=function(spoken){
+ if(!continuousBookMode){if(baseUpdateReadingPosition)baseUpdateReadingPosition(spoken);return;}
+ if(!spoken||!continuousPages.length)return;
+ const item=continuousPages[continuousPageIndex];
+ item.page.transcript=spoken;
+ finalTranscript=spoken;
+ const coverage=orderedAttemptCoverage(item,spoken);
+ scrollToCurrentSentence(item,coverage.progress);
+ const status=document.getElementById("readingStatus");
+ if(status){
+  status.textContent=`Reading completion: ${coverage.percent}% · ${coverage.attempted}/${coverage.total} words attempted · 80% required`;
+ }
+ // Persist each update; auto-advance only after ordered, evidence-based 80% coverage.
+ if(!continuousAutoAdvanceLock&&coverage.total>0&&coverage.percent>=80){
+  continuousAutoAdvanceLock=true;
+  const ref=tokenize(item.page.text||""),heard=tokenize(spoken);
+  if(!item.page.result){
+   const ops=alignWords(ref,heard);
+   item.page.result={...calculateResult(ops,ref,heard),uncertainRecognition:true,timestamp:new Date().toISOString()};
+   item.page.autoCompleted=true;
+  }
+  saveContinuousState();
+  setTimeout(()=>{
+   if(!continuousBookMode||!sessionHasStarted)return;
+   if(continuousPageIndex<continuousPages.length-1){
+    setContinuousActive(continuousPageIndex+1);
+    continuousAutoAdvanceLock=false;
+    saveContinuousState();
+    // Keep the microphone session alive across the page boundary.
+   }else{
+    if(status)status.textContent="You have reached the end of the book. You can evaluate your reading when ready.";
+    sessionHasStarted=false;saveContinuousState();
+   }
+  },650);
+ }else saveContinuousState();
+};
+
+// Comparison view for book-level evaluation: expected and recognized words are shown
+// in sequence with the existing green/red/yellow conventions.
+function continuousComparisonHTML(item){
+ const expected=tokenize(item.page.text||"");
+ const heard=tokenize(item.page.transcript||"");
+ const ops=alignWords(expected,heard);
+ const words=ops.map(op=>{
+  if(op.type==="correct")return `<span class="word correct">${escapeHTML(op.reference)}</span>`;
+  if(op.type==="changed")return `<span class="word changed">${escapeHTML(op.spoken)} <small>(expected: ${escapeHTML(op.reference)})</small></span>`;
+  if(op.type==="missing")return `<span class="word missing">${escapeHTML(op.reference)} <small>(missing)</small></span>`;
+  return `<span class="word extra">+${escapeHTML(op.spoken)} <small>(extra)</small></span>`;
+ }).join(" ");
+ const coverage=orderedAttemptCoverage(item,item.page.transcript||"");
+ const result=calculateResult(ops,expected,heard);
+ return `<div class="resultBox"><h4>${escapeHTML(item.chapter.title||"Chapter")} — page ${escapeHTML(String(item.page.pageNumber||item.pageIndex+1))}</h4><p><strong>Expected text</strong></p><p>${escapeHTML(item.page.text||"No expected text extracted.")}</p><p><strong>Recognized speech</strong></p><p>${escapeHTML(item.page.transcript||"No speech transcript saved.")}</p><p><strong>Word comparison</strong></p><div class="wordResults">${words||'<span class="small">No words to compare.</span>'}</div><p><strong>Reading coverage:</strong> ${coverage.percent}% (${coverage.attempted}/${coverage.total} words attempted) · <strong>Accuracy:</strong> ${result.score}%</p><p>Correct ${result.correct} · Changed ${result.changed} · Missing ${result.missing} · Extra ${result.extra}</p><p><strong>80% threshold:</strong> ${coverage.percent>=80?"Reached":"Not yet reached"}</p></div>`;
+}
+const originalEvaluateContinuousBook=window.evaluateContinuousBook;
+window.evaluateContinuousBook=function(scope){
+ if(!continuousBookMode){if(originalEvaluateContinuousBook)originalEvaluateContinuousBook(scope);return;}
+ const host=document.getElementById("onDemandEvaluation");
+ const book=books.find(b=>b.id===currentBookId);
+ if(!book||!host)return;
+ saveContinuousState();
+ const report=calculateSavedBookAssessment(book,true);
+ if(!report.assessed){
+  host.innerHTML='<div class="resultBox"><h3>Reading assessment</h3><p>No recognized reading is saved yet. Start reading before evaluating.</p></div>';
+  return;
+ }
+ const active=continuousPages[continuousPageIndex];
+ const comparisons=report.pageStats.slice(-5).reverse().map(x=>continuousComparisonHTML(x.item)).join("");
+ const title=scope==="progress"?"Reading Progress So Far":"Whole-Book Evaluation";
+ host.innerHTML=`<div class="resultBox"><h3>${title}</h3><p><strong>Where the child reached:</strong> ${formatSavedLocation(report.lastLocation)}</p><p><strong>Book coverage:</strong> ${report.progress}% (${report.wordsReached}/${report.wordsInBook} words reached)</p><p><strong>Reading accuracy:</strong> ${report.score}%</p><p>Correct ${report.correct} · Changed ${report.changed} · Missing ${report.missing} · Extra ${report.extra}</p><p><strong>Current unit completion:</strong> ${active?orderedAttemptCoverage(active,active.page.transcript||"").percent:0}% · 80% threshold ${active&&orderedAttemptCoverage(active,active.page.transcript||"").percent>=80?"reached":"not reached"}</p><h3>Spoken-word comparison</h3>${comparisons||'<p class="small">No passage-level word comparison is available yet.</p>'}<button class="secondary" onclick="renderContinuousBookText()">Return to Reading</button></div>`;
+};
+
+// Keep session recovery data and transcript current, including before page refresh/close.
+function saveCurrentReadingSessionSafely(){
+ try{
+  if(continuousBookMode)saveContinuousState();
+  else{
+   const c=getCurrentChapter();
+   const p=c&&c.pages&&c.pages[currentPageIndex];
+   if(p&&finalTranscript)p.transcript=finalTranscript;
+   persistReadingSession();
+  }
+ }catch(e){console.error("Session recovery save failed",e);}
+}
+window.addEventListener("pagehide",saveCurrentReadingSessionSafely);
+document.addEventListener("visibilitychange",()=>{
+ if(document.visibilityState==="hidden")saveCurrentReadingSessionSafely();
+ else if(sessionHasStarted&&!sessionPausedByOverlay&&!isRecording)startRecognitionWithoutClearing();
+});
+
+// Improve PDF text extraction ordering by using the PDF.js item coordinates when available.
+extractPdfReadingText=function(textContent,pdfPage){
+ const items=(textContent.items||[]).filter(x=>x&&typeof x.str==="string"&&x.str.trim());
+ if(!items.length)return "";
+ const rows=[];
+ for(const item of items){
+  const transform=item.transform||[];
+  const x=Number(transform[4]||0), y=Number(transform[5]||0);
+  let row=rows.find(r=>Math.abs(r.y-y)<3);
+  if(!row){row={y,items:[]};rows.push(row);}
+  row.items.push({x,text:item.str.trim()});
+ }
+ rows.sort((a,b)=>b.y-a.y);
+ // Sort within each baseline from left to right; preserve visible word spacing.
+ return cleanOCR(rows.map(r=>r.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(" ")).join("\n"));
 };
 
 /* =====================================================

@@ -3965,6 +3965,66 @@ extractPdfReadingText=function(textContent,pdfPage){
 };
 
 /* =====================================================
+STOP & CHECK + SIMPLE PROGRESS DASHBOARD
+===================================================== */
+function countProgressWords(text){return tokenize(String(text||"")).length;}
+function renderSimpleProgressDashboard(){
+ const host=document.getElementById("onDemandEvaluation");
+ if(!host)return;
+ if(continuousBookMode){
+  const book=books.find(b=>b.id===currentBookId);
+  const list=book?buildContinuousPageList(book):[];
+  let totalWords=0,spokenWords=0;
+  list.forEach(x=>{totalWords+=countProgressWords(x.page.text);spokenWords+=Math.min(countProgressWords(x.page.text),countProgressWords(x.page.transcript));});
+  const bookPct=totalWords?Math.min(100,Math.round(spokenWords/totalWords*100)):0;
+  const active=continuousPages[continuousPageIndex];
+  const passageTotal=active?countProgressWords(active.page.text):0;
+  const passageSpoken=active?Math.min(passageTotal,countProgressWords(active.page.transcript||finalTranscript)):0;
+  const passagePct=passageTotal?Math.min(100,Math.round(passageSpoken/passageTotal*100)):0;
+  const passageNumber=continuousPageIndex+1;
+  const passageCount=continuousPages.length;
+  host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Book progress:</strong> ${bookPct}%</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${bookPct}%;background:#2779d8"></div></div><p><strong>Current passage:</strong> ${passageNumber} of ${passageCount} · ${passagePct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${passagePct}%;background:#2779d8"></div></div></div>`;
+  return;
+ }
+ const chapter=getCurrentChapter();
+ const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+ const expected=countProgressWords(page&&page.text);
+ const spoken=Math.min(expected,countProgressWords(page&&(page.transcript||finalTranscript)));
+ const pct=expected?Math.min(100,Math.round(spoken/expected*100)):0;
+ host.innerHTML=`<div class="resultBox"><h3>Reading Progress</h3><p><strong>Current passage:</strong> ${pct}% read</p><div style="height:10px;background:#e5e5e5;border-radius:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#2779d8"></div></div></div>`;
+}
+window.stopRecording=function(){
+ // Stop listening, save the final transcript, then show progress—not a resume overlay.
+ shouldCompareAfterStop=false;
+ try{if(recognition&&isRecording)recognition.stop();}catch(e){}
+ if(continuousBookMode){
+  const item=continuousPages[continuousPageIndex];
+  if(item){item.page.transcript=finalTranscript||item.page.transcript||"";saveContinuousState();}
+ }else{
+  const chapter=getCurrentChapter();
+  const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+  if(page&&finalTranscript)page.transcript=finalTranscript;
+  persistReadingSession();
+ }
+ sessionHasStarted=false;
+ sessionPausedByOverlay=false;
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ const status=document.getElementById("readingStatus");
+ if(status)status.textContent="Reading checked. Progress saved.";
+ renderSimpleProgressDashboard();
+};
+window.evaluateNow=function(){
+ if(continuousBookMode)saveContinuousState();
+ else persistReadingSession();
+ renderSimpleProgressDashboard();
+};
+window.evaluateContinuousBook=function(scope){
+ if(continuousBookMode)saveContinuousState();
+ renderSimpleProgressDashboard();
+};
+
+/* =====================================================
 INITIALIZE
 ===================================================== */
 

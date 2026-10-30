@@ -297,9 +297,9 @@ button:disabled{
 }
 
 .word.missing{
-    background:#ffdcdc;
-    color:#9d1c1c;
-    text-decoration:line-through;
+    background:#fff0b3;
+    color:#795d00;
+    text-decoration:none;
 }
 
 .word.changed{
@@ -4035,6 +4035,187 @@ window.evaluateNow=function(){
 window.evaluateContinuousBook=function(scope){
  if(continuousBookMode)saveContinuousState();
  renderSimpleProgressDashboard();
+};
+
+
+/* =====================================================
+   STOP & CHECK: CUMULATIVE, WORD-ALIGNED EVALUATION
+   This final handler intentionally overrides earlier dashboard handlers.
+   Session transcripts remain attached to their original passage/page.
+===================================================== */
+function stopCheckAlign(expectedWords, spokenWords){
+ const n=expectedWords.length,m=spokenWords.length;
+ const dp=Array.from({length:n+1},()=>Array(m+1).fill(0));
+ const back=Array.from({length:n+1},()=>Array(m+1).fill(null));
+ for(let i=1;i<=n;i++){dp[i][0]=i;back[i][0]="missing";}
+ for(let j=1;j<=m;j++){dp[0][j]=j;back[0][j]="extra";}
+ const norm=w=>String(w||"").toLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}'-]/gu,"");
+ for(let i=1;i<=n;i++){
+  for(let j=1;j<=m;j++){
+   const a=norm(expectedWords[i-1]),b=norm(spokenWords[j-1]);
+   const sim=wordSimilarity(a,b);
+   const subCost=a===b?0:(sim>=0.55?0.7:1.2);
+   const choices=[
+    {cost:dp[i-1][j-1]+subCost,op:"diagonal",priority:0},
+    {cost:dp[i-1][j]+1,op:"missing",priority:1},
+    {cost:dp[i][j-1]+1,op:"extra",priority:2}
+   ].sort((x,y)=>x.cost-y.cost||x.priority-y.priority);
+   dp[i][j]=choices[0].cost;back[i][j]=choices[0].op;
+  }
+ }
+ const ops=[];let i=n,j=m;
+ while(i>0||j>0){
+  const op=back[i][j];
+  if(i>0&&j>0&&op==="diagonal"){
+   const e=expectedWords[i-1],s=spokenWords[j-1];
+   ops.unshift(norm(e)===norm(s)?{type:"correct",expected:e}:{type:"misread",expected:e,spoken:s});
+   i--;j--;
+  }else if(i>0&&(op==="missing"||j===0)){
+   ops.unshift({type:"missing",expected:expectedWords[i-1]});i--;
+  }else if(j>0){
+   ops.unshift({type:"extra",spoken:spokenWords[j-1]});j--;
+  }else if(i>0){ops.unshift({type:"missing",expected:expectedWords[i-1]});i--;}
+ }
+ return ops;
+}
+function stopCheckStats(text,transcript){
+ const expected=tokenize(text||""),spoken=tokenize(transcript||"");
+ const ops=stopCheckAlign(expected,spoken);
+ const stats={correct:0,misread:0,missing:0,extra:0,total:expected.length,attempted:0};
+ ops.forEach(op=>{
+  if(op.type==="correct")stats.correct++;
+  else if(op.type==="misread")stats.misread++;
+  else if(op.type==="missing")stats.missing++;
+  else stats.extra++;
+ });
+ stats.attempted=stats.correct+stats.misread;
+ stats.progress=stats.total?Math.round(stats.attempted/stats.total*100):0;
+ stats.accuracy=stats.attempted?Math.round(stats.correct/stats.attempted*1000)/10:0;
+ return {stats,ops};
+}
+function stopCheckPassages(){
+ const book=books.find(b=>b.id===currentBookId);
+ if(!book)return [];
+ if(continuousBookMode)return buildContinuousPageList(book);
+ const list=[];
+ (book.chapters||[]).forEach((chapter,chapterIndex)=>{
+  (chapter.pages||[]).forEach((page,pageIndex)=>list.push({book,chapter,page,pageIndex,chapterIndex}));
+ });
+ return list;
+}
+function stopCheckActivePassage(passages){
+ if(continuousBookMode)return passages[Math.min(continuousPageIndex,passages.length-1)];
+ return passages.find(item=>item.chapter.id===currentChapterId&&item.pageIndex===currentPageIndex)||null;
+}
+function renderStopCheckDashboard(){
+ const host=document.getElementById("onDemandEvaluation");
+ if(!host)return;
+ const passages=stopCheckPassages();
+ if(!passages.length){host.innerHTML='<div class="resultBox"><p>No reading passage is available to evaluate.</p></div>';return;}
+ const active=stopCheckActivePassage(passages);
+ if(!active){host.innerHTML='<div class="resultBox"><p>No active passage is available.</p></div>';return;}
+ // Persist the latest cumulative transcript before calculating any totals.
+ const activeTranscript=(active.page.transcript||finalTranscript||"").trim();
+ if(activeTranscript)active.page.transcript=activeTranscript;
+ if(continuousBookMode)saveContinuousState();else persistReadingSession();
+
+ const passage=stopCheckStats(active.page.text||"",activeTranscript);
+ let bookTotal=0,bookAttempted=0,bookCorrect=0;
+ passages.forEach(item=>{
+  const result=stopCheckStats(item.page.text||"",item.page.transcript||"");
+  bookTotal+=result.stats.total;bookAttempted+=result.stats.attempted;bookCorrect+=result.stats.correct;
+ });
+ const bookProgress=bookTotal?Math.round(bookAttempted/bookTotal*100):0;
+ const bookAccuracy=bookAttempted?Math.round(bookCorrect/bookAttempted*1000)/10:0;
+ const s=passage.stats;
+ const comparison=passage.ops.map(op=>{
+  if(op.type==="correct")return `<span class="word correct">${escapeHTML(op.expected)}</span>`;
+  if(op.type==="misread")return `<span class="word changed">${escapeHTML(op.expected)} <small>← heard: ${escapeHTML(op.spoken)}</small></span>`;
+  if(op.type==="missing")return `<span class="word missing">${escapeHTML(op.expected)}</span>`;
+  return "";
+ }).filter(Boolean).join(" ");
+ const extras=passage.ops.filter(op=>op.type==="extra").map(op=>`<span class="word extra">+${escapeHTML(op.spoken)}</span>`).join(" ");
+ const title=continuousBookMode
+  ? `${active.chapter.title||"Chapter"} — page ${active.page.pageNumber||active.pageIndex+1}`
+  : `${active.chapter.title||"Passage"} — page ${active.page.pageNumber||active.pageIndex+1}`;
+ const threshold=s.progress>=80;
+ host.innerHTML=`
+ <div class="resultBox">
+  <h3>Stop & Check — Reading Dashboard</h3>
+  <p><strong>${escapeHTML(title)}</strong></p>
+  <div class="statGrid">
+   <div class="stat"><strong>${s.progress}%</strong>Passage progress</div>
+   <div class="stat"><strong>${bookProgress}%</strong>Overall book progress</div>
+   <div class="stat"><strong>${s.attempted}</strong>Words attempted / ${s.total}</div>
+   <div class="stat"><strong>${s.accuracy}%</strong>Reading accuracy</div>
+  </div>
+  <div class="statGrid" style="margin-top:12px">
+   <div class="stat"><strong class="good">${s.correct}</strong>Correct words</div>
+   <div class="stat"><strong class="bad">${s.misread}</strong>Misread words</div>
+   <div class="stat"><strong style="color:#9a7200">${s.missing}</strong>Missing words</div>
+   <div class="stat"><strong>${s.extra}</strong>Extra words</div>
+  </div>
+  <p class="small">Passage progress counts correct and misread expected words. Extra words do not increase coverage. Book accuracy: ${bookAccuracy}%.</p>
+  <p><strong>80% completion requirement:</strong> ${threshold?"Reached — passage may be completed.":"Not yet reached — continue reading this passage."}</p>
+  <h4>Expected passage and word comparison</h4>
+  <div class="wordResults">${comparison||'<span class="small">No recognized expected words yet.</span>'}</div>
+  <p class="small"><span class="word correct">Green: correct</span> <span class="word changed">Red: misread (expected ← heard)</span> <span class="word missing">Yellow: not yet attempted</span></p>
+  <h4>Extra recognized words</h4>
+  <div class="wordResults">${extras||'<span class="small">No extra words.</span>'}</div>
+  <button class="yellow" onclick="startRecording()">Continue Reading</button>
+ </div>`;
+}
+const previousStopCheckStart=window.startRecording;
+window.startRecording=function(){
+ const host=document.getElementById("onDemandEvaluation");
+ if(host)host.innerHTML="";
+ if(previousStopCheckStart)previousStopCheckStart();
+};
+window.stopRecording=async function(){
+ // Stop the recognition engine and wait for its final onresult/onend event.
+ sessionHasStarted=false;
+ sessionPausedByOverlay=false;
+ shouldCompareAfterStop=false;
+ if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ const stopButton=document.getElementById("stopButton");
+ if(stopButton)stopButton.disabled=true;
+ const status=document.getElementById("readingStatus");
+ if(status)status.textContent="Saving and checking reading...";
+ const rec=recognition;
+ if(rec&&isRecording){
+  await new Promise(resolve=>{
+   let settled=false;
+   const finish=()=>{if(settled)return;settled=true;resolve();};
+   const oldEnd=rec.onend;
+   rec.onend=function(event){
+    try{if(oldEnd)oldEnd.call(rec,event);}finally{finish();}
+   };
+   try{rec.stop();}catch(e){finish();}
+   setTimeout(finish,1800);
+  });
+ }
+ isRecording=false;
+ const passages=stopCheckPassages();
+ const active=stopCheckActivePassage(passages);
+ if(active){
+  const latest=(finalTranscript||active.page.transcript||"").trim();
+  if(latest)active.page.transcript=latest;
+ }
+ if(continuousBookMode)saveContinuousState();else persistReadingSession();
+ if(status)status.textContent="Reading checked. All recognized words and progress have been saved.";
+ const start=document.getElementById("startButton");
+ if(start)start.disabled=false;
+ renderStopCheckDashboard();
+};
+window.evaluateNow=function(){
+ if(continuousBookMode)saveContinuousState();else persistReadingSession();
+ renderStopCheckDashboard();
+};
+window.evaluateContinuousBook=function(){
+ if(continuousBookMode)saveContinuousState();else persistReadingSession();
+ renderStopCheckDashboard();
 };
 
 /* =====================================================

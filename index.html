@@ -3470,7 +3470,7 @@ function setContinuousActive(index){
  document.getElementById("progressBar").style.width=(continuousPageIndex/Math.max(1,continuousPages.length)*100)+"%";
  renderContinuousBookText();
 }
-function renderContinuousBookText(){
+renderContinuousBookText=function(){
  const host=document.getElementById("referenceText");
  host.style.maxHeight="none";
  host.style.height="150px";
@@ -4287,6 +4287,361 @@ window.finishChapter=function(){
  keepReadingMicrophoneAlive();
  return result;
 };
+
+
+/* =====================================================
+   APPEARICH CONTINUOUS READING UPDATE — FINAL OVERRIDES
+   Continuous extracted text, reference-image-only navigation,
+   cumulative speech transcript, and unrestricted Stop & Check.
+===================================================== */
+let readingReferenceImageIndex = 0;
+let readingSessionTranscript = "";
+let continuousReferenceText = "";
+
+function currentContinuousBook(){
+ return books.find(b=>b.id===currentBookId)||null;
+}
+function getAllBookPages(book){
+ const list=[];
+ (book?.chapters||[]).forEach((chapter,chapterIndex)=>{
+  (chapter.pages||[]).forEach((page,pageIndex)=>{
+   list.push({book,chapter,page,chapterIndex,pageIndex});
+  });
+ });
+ return list;
+}
+function stripApplicationPageArtifacts(text){
+ return String(text||"")
+  .replace(/\r/g,"\n")
+  .split(/\n/)
+  .map(line=>line.replace(/[ \t]+/g," ").trim())
+  .filter(line=>{
+   if(!line)return false;
+   if(/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(line))return false;
+   if(/^\s*(?:page|p\.?)\s*[-:#]?\s*\d+\s*$/i.test(line))return false;
+   if(/^\s*\d{1,4}\s*$/.test(line))return false;
+   if(/^(?:image|figure|fig\.|picture|photo)\s*#?\s*\d+(?:\s*[:.-].*)?$/i.test(line))return false;
+   if(/^(?:chapter|unit|lesson)\s+\d+\s*$/i.test(line))return false;
+   return true;
+  }).join("\n")
+  .replace(/[ \t]+\n/g,"\n")
+  .replace(/\n{3,}/g,"\n\n")
+  .trim();
+}
+function buildContinuousReadingText(book){
+ return getAllBookPages(book)
+  .map(({page})=>stripApplicationPageArtifacts(page.text||""))
+  .filter(Boolean)
+  .join("\n\n");
+}
+function saveContinuousReadingSession(){
+ const book=currentContinuousBook();
+ if(!book)return;
+ book.continuousSession=book.continuousSession||{};
+ book.continuousSession.transcript=readingSessionTranscript;
+ book.continuousSession.imageIndex=readingReferenceImageIndex;
+ book.continuousSession.updatedAt=new Date().toISOString();
+ book.continuousSession.active=!!sessionHasStarted;
+ book.continuousSession.lastPosition=readingReferenceImageIndex;
+ try{saveBooks();}
+ catch(e){console.error("Could not save continuous reading session",e);}
+}
+function updateReferenceImage(){
+ const pages=getAllBookPages(currentContinuousBook());
+ const page=pages[readingReferenceImageIndex];
+ const img=document.getElementById("readerImage");
+ const title=document.getElementById("readerPageTitle");
+ if(!page||!img)return;
+ img.style.display="block";
+ img.src=page.page.image||"";
+ img.alt="Original textbook page for reference";
+ if(title)title.textContent=`Reference image ${readingReferenceImageIndex+1} of ${pages.length}`;
+ const status=document.getElementById("readingStatus");
+ if(status)status.textContent=`Reference image ${readingReferenceImageIndex+1} of ${pages.length}. Reading text and microphone session are unchanged.`;
+ const prev=document.getElementById("referencePrevButton");
+ const next=document.getElementById("referenceNextButton");
+ if(prev)prev.disabled=readingReferenceImageIndex<=0;
+ if(next)next.disabled=readingReferenceImageIndex>=pages.length-1;
+ saveContinuousReadingSession();
+}
+window.previousReferenceImage=function(){
+ const pages=getAllBookPages(currentContinuousBook());
+ if(readingReferenceImageIndex>0){readingReferenceImageIndex--;updateReferenceImage();}
+};
+window.nextReferenceImage=function(){
+ const pages=getAllBookPages(currentContinuousBook());
+ if(readingReferenceImageIndex<pages.length-1){readingReferenceImageIndex++;updateReferenceImage();}
+};
+
+function ensureReferenceImageControls(){
+ const image=document.getElementById("readerImage");
+ if(!image)return;
+ const wrapper=image.parentElement;
+ if(!document.getElementById("referencePrevButton")){
+  const controls=document.createElement("div");
+  controls.id="referenceImageControls";
+  controls.style.cssText="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0";
+  controls.innerHTML='<button id="referencePrevButton" class="secondary" onclick="previousReferenceImage()">← Previous Image</button><button id="referenceNextButton" class="secondary" onclick="nextReferenceImage()">Next Image →</button>';
+  image.insertAdjacentElement("afterend",controls);
+ }
+ const hint=wrapper.querySelector("p.small");
+ if(hint)hint.textContent="Original textbook images are reference only. Changing images will not affect reading or microphone.";
+}
+
+function renderContinuousBookText(){
+ const host=document.getElementById("referenceText");
+ const book=currentContinuousBook();
+ if(!host||!book)return;
+ continuousReferenceText=buildContinuousReadingText(book);
+ host.style.maxHeight="none";
+ host.style.height="auto";
+ host.style.minHeight="320px";
+ host.style.overflow="visible";
+ host.style.overflowX="visible";
+ host.style.overflowY="visible";
+ host.style.whiteSpace="pre-wrap";
+ host.style.wordBreak="normal";
+ host.style.lineHeight="1.9";
+ host.style.fontSize="18px";
+ host.style.scrollBehavior="auto";
+ host.style.background="#fff";
+ host.style.padding="18px";
+ // The reader displays only the textbook's extracted content—no app-generated
+ // chapter/page labels, image markers, filename labels, or page navigation.
+ host.textContent=continuousReferenceText||"No readable textbook text was extracted.";
+}
+window.startContinuousBookReading=function(){
+ const book=currentContinuousBook();
+ if(!book){alert("Open a book first.");return;}
+ const pages=getAllBookPages(book);
+ if(!pages.length){alert("Upload textbook pages first.");return;}
+ continuousBookMode=true;
+ continuousPages=pages;
+ continuousPageIndex=0;
+ continuousAutoAdvanceLock=false;
+ const saved=book.continuousSession||{};
+ readingSessionTranscript=String(saved.transcript||"");
+ finalTranscript=readingSessionTranscript;
+ readingReferenceImageIndex=Math.max(0,Math.min(Number(saved.imageIndex)||0,pages.length-1));
+ sessionHasStarted=true;
+ sessionPausedByOverlay=false;
+ ensureReferenceImageControls();
+ renderContinuousBookText();
+ updateReferenceImage();
+ document.getElementById("readerChapterTitle").textContent=book.title||"Continuous Reading";
+ document.getElementById("progressText").textContent="Continuous";
+ document.getElementById("progressBar").style.width="0%";
+ document.getElementById("liveTranscript").textContent=readingSessionTranscript||"Listening transcript will appear here.";
+ document.getElementById("pageResult").innerHTML="";
+ const evalControls=document.getElementById("continuousEvaluationControls");
+ if(evalControls)evalControls.style.display="flex";
+ showSection("readerSection");
+ const start=document.getElementById("startButton");if(start)start.disabled=true;
+ const stop=document.getElementById("stopButton");if(stop)stop.disabled=false;
+ const status=document.getElementById("readingStatus");
+ if(status){status.className="status listening";status.textContent="Continuous reading session active. Microphone is listening.";}
+ saveContinuousReadingSession();
+ startRecognitionWithoutClearing();
+};
+
+function saveTranscriptIntoBookPages(){
+ const book=currentContinuousBook();
+ if(!book)return;
+ const pages=getAllBookPages(book);
+ // Keep original OCR untouched. Save a separate whole-session transcript and
+ // store it in session metadata, rather than replacing page.text or OCR text.
+ book.continuousSession=book.continuousSession||{};
+ book.continuousSession.transcript=readingSessionTranscript;
+ book.continuousSession.imageIndex=readingReferenceImageIndex;
+ book.continuousSession.updatedAt=new Date().toISOString();
+ book.continuousSession.active=!!sessionHasStarted;
+ // Compatibility: attach the session transcript to a separate session record.
+ book.continuousSession.assessmentText=continuousReferenceText;
+ saveBooks();
+}
+
+function stopCheckContinuousAssessment(){
+ const host=document.getElementById("onDemandEvaluation");
+ if(!host)return;
+ const expected=tokenize(continuousReferenceText||buildContinuousReadingText(currentContinuousBook()));
+ const heard=tokenize(readingSessionTranscript||finalTranscript||"");
+ const ops=stopCheckAlign(expected,heard);
+ let correct=0,misread=0,missing=0,extra=0;
+ ops.forEach(op=>{
+  if(op.type==="correct")correct++;
+  else if(op.type==="misread")misread++;
+  else if(op.type==="missing")missing++;
+  else extra++;
+ });
+ const attempted=correct+misread;
+ const coverage=expected.length?Math.round(attempted/expected.length*100):0;
+ const accuracy=attempted?Math.round(correct/attempted*1000)/10:0;
+ const comparison=ops.map(op=>{
+  if(op.type==="correct")return `<span class="word correct">${escapeHTML(op.expected)}</span>`;
+  if(op.type==="misread")return `<span class="word changed">${escapeHTML(op.expected)} <small>← heard: ${escapeHTML(op.spoken)}</small></span>`;
+  if(op.type==="missing")return `<span class="word missing">${escapeHTML(op.expected)}</span>`;
+  return `<span class="word extra">+${escapeHTML(op.spoken)}</span>`;
+ }).join(" ");
+ host.innerHTML=`<div class="resultBox">
+  <h3>Stop & Check — Complete Reading Assessment</h3>
+  <div class="statGrid">
+   <div class="stat"><strong>${coverage}%</strong>Reading coverage</div>
+   <div class="stat"><strong>${accuracy}%</strong>Reading accuracy</div>
+   <div class="stat"><strong>${correct}</strong>Correct words</div>
+   <div class="stat"><strong>${misread}</strong>Misread / changed</div>
+   <div class="stat"><strong>${missing}</strong>Missing / not heard</div>
+   <div class="stat"><strong>${extra}</strong>Extra spoken</div>
+  </div>
+  <p><strong>Expected textbook text (${expected.length} words):</strong></p>
+  <div class="reference" style="max-height:none;white-space:pre-wrap">${escapeHTML(continuousReferenceText)}</div>
+  <p><strong>Recognized speech transcript (${heard.length} words):</strong></p>
+  <div class="transcript" style="white-space:pre-wrap">${escapeHTML(readingSessionTranscript||finalTranscript||"No recognized speech.")}</div>
+  <h4>Word-by-word assessment</h4>
+  <div class="wordResults">${comparison||'<span class="small">No words to compare.</span>'}</div>
+  <p class="small"><span class="word correct">Green: correct</span> <span class="word changed">Red: misread</span> <span class="word missing">Yellow: missing</span> <span class="word extra">Grey: extra spoken</span></p>
+  <p>Coverage measures expected words attempted (correct + misread) divided by all expected words. Accuracy measures correct words divided by attempted expected words. These are separate measures.</p>
+ </div>`;
+}
+
+window.stopRecording=function(){
+ // Stop & Check is an assessment snapshot; keep the session and mic active.
+ sessionHasStarted=true;
+ sessionPausedByOverlay=false;
+ shouldCompareAfterStop=false;
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ if(continuousBookMode){
+  readingSessionTranscript=(finalTranscript||readingSessionTranscript||"").trim();
+  saveTranscriptIntoBookPages();
+  stopCheckContinuousAssessment();
+ }else{
+  const chapter=getCurrentChapter();
+  const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+  if(page)page.transcript=(finalTranscript||page.transcript||"").trim();
+  persistReadingSession();
+  // Legacy chapter mode assesses all pages in that chapter, not just the current page.
+  const allExpected=(chapter?.pages||[]).map(p=>p.text||"").join("\n\n");
+  const allHeard=(chapter?.pages||[]).map(p=>p.transcript||"").join(" ");
+  const savedExpected=continuousReferenceText;
+  const savedTranscript=readingSessionTranscript;
+  continuousReferenceText=allExpected;
+  readingSessionTranscript=allHeard;
+  stopCheckContinuousAssessment();
+  continuousReferenceText=savedExpected;
+  readingSessionTranscript=savedTranscript;
+ }
+ const status=document.getElementById("readingStatus");
+ if(status){status.className="status listening";status.textContent=isRecording?"🎤 Microphone remains active. Assessment saved.":"Assessment saved. Reconnecting microphone…";}
+ const stop=document.getElementById("stopButton");if(stop)stop.disabled=false;
+ const start=document.getElementById("startButton");if(start)start.disabled=!!isRecording;
+ if(!isRecording)startRecognitionWithoutClearing();
+};
+
+window.startRecording=function(){
+ if(!continuousBookMode){
+  sessionHasStarted=true;
+  const ch=getCurrentChapter(),p=ch&&ch.pages&&ch.pages[currentPageIndex];
+  if(p)finalTranscript=p.transcript||"";
+ }else{
+  sessionHasStarted=true;
+  finalTranscript=readingSessionTranscript||"";
+ }
+ sessionPausedByOverlay=false;
+ startRecognitionWithoutClearing();
+};
+
+window.evaluateNow=function(){
+ if(continuousBookMode){
+  readingSessionTranscript=(finalTranscript||readingSessionTranscript||"").trim();
+  saveTranscriptIntoBookPages();
+  stopCheckContinuousAssessment();
+ }else{
+  window.stopRecording();
+ }
+};
+window.evaluateContinuousBook=function(){
+ window.evaluateNow();
+};
+
+window.previousCompletedPage=function(){
+ if(continuousBookMode){window.previousReferenceImage();return;}
+ const chapter=getCurrentChapter();if(!chapter)return;
+ currentPageIndex=Math.max(0,currentPageIndex-1);
+ loadReaderPage();
+};
+
+window.resumeReadingSession=function(){
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ sessionPausedByOverlay=false;sessionHasStarted=true;
+ startRecognitionWithoutClearing();
+};
+
+window.finishChapter=function(){
+ if(continuousBookMode){
+  readingSessionTranscript=(finalTranscript||readingSessionTranscript||"").trim();
+  saveTranscriptIntoBookPages();
+  stopCheckContinuousAssessment();
+  return;
+ }
+ // Legacy chapter completion is no longer gated by a score or completion ratio.
+ const chapter=getCurrentChapter();
+ if(!chapter)return;
+ chapter.completed=true;
+ saveBooks();
+ const baseFinish=window.__appearichOriginalFinishChapter;
+ if(baseFinish)baseFinish();
+};
+
+updateReadingPosition=function(spoken){
+ if(!continuousBookMode)return;
+ if(!spoken)return;
+ readingSessionTranscript=String(spoken).trim();
+ finalTranscript=readingSessionTranscript;
+ const transcript=document.getElementById("liveTranscript");
+ if(transcript)transcript.textContent=readingSessionTranscript;
+ saveTranscriptIntoBookPages();
+ const status=document.getElementById("readingStatus");
+ if(status)status.textContent="🎤 Continuous listening active. Reference image changes do not affect the transcript.";
+}
+
+// Override recognition handlers to preserve cumulative speech and restart after
+// browser-internal recognition endings while the session remains active.
+const finalContinuousRecognitionFactory=createRecognition;
+createRecognition=function(){
+ const r=finalContinuousRecognitionFactory();
+ if(!r)return null;
+ const priorResult=r.onresult;
+ r.onresult=function(event){
+  if(priorResult)priorResult.call(r,event);
+  if(continuousBookMode){
+   readingSessionTranscript=(finalTranscript||"").trim();
+   const live=document.getElementById("liveTranscript");
+   if(live)live.textContent=readingSessionTranscript||"Listening…";
+   saveTranscriptIntoBookPages();
+  }
+ };
+ const priorEnd=r.onend;
+ r.onend=function(event){
+  if(priorEnd)priorEnd.call(r,event);
+  if(sessionHasStarted&&!sessionPausedByOverlay){
+   setTimeout(()=>{
+    if(sessionHasStarted&&!sessionPausedByOverlay&&!isRecording){
+     try{startRecognitionWithoutClearing();}catch(e){console.warn("Speech recognition restart failed",e);}
+    }
+   },500);
+  }
+ };
+ return r;
+};
+
+window.addEventListener("beforeunload",()=>{
+ if(continuousBookMode){
+  readingSessionTranscript=(finalTranscript||readingSessionTranscript||"").trim();
+  saveTranscriptIntoBookPages();
+ }
+});
+
 
 /* =====================================================
 INITIALIZE

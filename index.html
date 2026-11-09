@@ -1266,6 +1266,7 @@ First try extracting actual PDF text.
 */
 
 let extractedText="";
+let usedNativePdfText=false;
 
 try{
 
@@ -1274,6 +1275,7 @@ await pdfPage.getTextContent();
 
 extractedText =
 extractPdfReadingText(textContent, pdfPage);
+usedNativePdfText=isUsableReadingText(extractedText);
 
 }catch(error){
 
@@ -1411,7 +1413,7 @@ pageNumber:pageNumber++,
 
 image:image,
 
-text:cleanOCR(extractedText),
+text:usedNativePdfText ? extractedText : cleanOCR(extractedText),
 
 source:file.name,
 
@@ -3314,19 +3316,56 @@ let sessionStorageWarningShown=false;
 const INACTIVITY_LIMIT_MS=30*60*1000;
 
 function extractPdfReadingText(textContent,pdfPage){
- const viewport=pdfPage.getViewport({scale:1}),lines=[];
- for(const item of (textContent.items||[])){
-  if(!item||typeof item.str!=="string"||!item.str.trim())continue;
-  const y=item.transform?item.transform[5]:null,x=item.transform?item.transform[4]:0;
-  if(y!==null&&viewport.height){const rel=y/viewport.height;if(rel>.965||rel<.035)continue;}
-  const ly=y===null?0:Math.round(y/3)*3;
-  let line=lines.find(v=>Math.abs(v.y-ly)<=3);
-  if(!line){line={y:ly,items:[]};lines.push(line);}
-  line.items.push({x,str:item.str});
+ // Native PDF text extraction: preserve ALL selectable text. Do not trim page
+ // margins, remove page numbers/headings, or pass native text through OCR cleanup.
+ const items=(textContent.items||[])
+  .filter(item=>item&&typeof item.str==="string"&&item.str.length>0)
+  .map((item,index)=>({
+    str:item.str,
+    x:item.transform?item.transform[4]:0,
+    y:item.transform?item.transform[5]:0,
+    width:Number(item.width)||0,
+    height:item.transform?Math.hypot(item.transform[2]||0,item.transform[3]||0):0,
+    hasEOL:!!item.hasEOL,
+    index
+  }));
+ if(!items.length)return "";
+
+ // PDF.js normally emits text in reading order. Sort visually by line (top to
+ // bottom), then x-position within each line. Keep all items including headers,
+ // footers, isolated numbers, and short text fragments.
+ items.sort((a,b)=>{
+   const yDiff=b.y-a.y;
+   const tolerance=Math.max(2,Math.min(5,(a.height+b.height)/4||3));
+   if(Math.abs(yDiff)>tolerance)return yDiff;
+   return a.x-b.x||a.index-b.index;
+ });
+
+ const lines=[];
+ for(const item of items){
+   let line=lines.find(row=>Math.abs(row.y-item.y)<=Math.max(2,Math.min(5,(row.height+item.height)/4||3)));
+   if(!line){line={y:item.y,height:item.height,items:[]};lines.push(line);}
+   line.items.push(item);
  }
  lines.sort((a,b)=>b.y-a.y);
- return cleanOCR(lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(v=>v.str).join(" "))
- .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\n"));
+
+ return lines.map(line=>{
+   line.items.sort((a,b)=>a.x-b.x||a.index-b.index);
+   let output="",previous=null;
+   for(const item of line.items){
+     const part=item.str;
+     if(!part)continue;
+     if(previous){
+       const gap=item.x-(previous.x+previous.width);
+       const fontSize=Math.max(1,previous.height||item.height||10);
+       // Insert a space only when the PDF's geometry indicates a word gap.
+       if(gap>fontSize*0.12&&!/\s$/.test(output)&&!/^\s/.test(part))output+=" ";
+     }
+     output+=part;
+     previous=item;
+   }
+   return output;
+ }).filter(line=>line.length>0).join("\n").trim();
 }
 function persistReadingSession(){
  const c=getCurrentChapter();if(!c)return;

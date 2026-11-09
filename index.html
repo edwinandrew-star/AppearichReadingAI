@@ -1266,7 +1266,6 @@ First try extracting actual PDF text.
 */
 
 let extractedText="";
-let usedNativePdfText=false;
 
 try{
 
@@ -1275,7 +1274,6 @@ await pdfPage.getTextContent();
 
 extractedText =
 extractPdfReadingText(textContent, pdfPage);
-usedNativePdfText=isUsableReadingText(extractedText);
 
 }catch(error){
 
@@ -1413,7 +1411,7 @@ pageNumber:pageNumber++,
 
 image:image,
 
-text:usedNativePdfText ? extractedText : cleanOCR(extractedText),
+text:cleanOCR(extractedText),
 
 source:file.name,
 
@@ -1976,6 +1974,8 @@ function createRecognition(){
  }
 
  r.onstart=function(){
+  speechStartPending=false;
+  microphonePermissionDenied=false;
   isRecording=true;
   interimTranscript="";
   processedFinalResults=new Set();
@@ -2016,7 +2016,9 @@ function createRecognition(){
  r.onerror=function(event){
   console.log("Speech error:",event.error);
   isRecording=false;
-  if(event.error==="not-allowed"){
+  speechStartPending=false;
+  if(event.error==="not-allowed"||event.error==="service-not-allowed"){
+   microphonePermissionDenied=true;
    const status=document.getElementById("readingStatus");
    if(status)status.textContent="Microphone permission is required. Allow access, then tap Start Reading.";
   }else if(event.error!=="no-speech"&&event.error!=="aborted"){
@@ -3316,56 +3318,19 @@ let sessionStorageWarningShown=false;
 const INACTIVITY_LIMIT_MS=30*60*1000;
 
 function extractPdfReadingText(textContent,pdfPage){
- // Native PDF text extraction: preserve ALL selectable text. Do not trim page
- // margins, remove page numbers/headings, or pass native text through OCR cleanup.
- const items=(textContent.items||[])
-  .filter(item=>item&&typeof item.str==="string"&&item.str.length>0)
-  .map((item,index)=>({
-    str:item.str,
-    x:item.transform?item.transform[4]:0,
-    y:item.transform?item.transform[5]:0,
-    width:Number(item.width)||0,
-    height:item.transform?Math.hypot(item.transform[2]||0,item.transform[3]||0):0,
-    hasEOL:!!item.hasEOL,
-    index
-  }));
- if(!items.length)return "";
-
- // PDF.js normally emits text in reading order. Sort visually by line (top to
- // bottom), then x-position within each line. Keep all items including headers,
- // footers, isolated numbers, and short text fragments.
- items.sort((a,b)=>{
-   const yDiff=b.y-a.y;
-   const tolerance=Math.max(2,Math.min(5,(a.height+b.height)/4||3));
-   if(Math.abs(yDiff)>tolerance)return yDiff;
-   return a.x-b.x||a.index-b.index;
- });
-
- const lines=[];
- for(const item of items){
-   let line=lines.find(row=>Math.abs(row.y-item.y)<=Math.max(2,Math.min(5,(row.height+item.height)/4||3)));
-   if(!line){line={y:item.y,height:item.height,items:[]};lines.push(line);}
-   line.items.push(item);
+ const viewport=pdfPage.getViewport({scale:1}),lines=[];
+ for(const item of (textContent.items||[])){
+  if(!item||typeof item.str!=="string"||!item.str.trim())continue;
+  const y=item.transform?item.transform[5]:null,x=item.transform?item.transform[4]:0;
+  if(y!==null&&viewport.height){const rel=y/viewport.height;if(rel>.965||rel<.035)continue;}
+  const ly=y===null?0:Math.round(y/3)*3;
+  let line=lines.find(v=>Math.abs(v.y-ly)<=3);
+  if(!line){line={y:ly,items:[]};lines.push(line);}
+  line.items.push({x,str:item.str});
  }
  lines.sort((a,b)=>b.y-a.y);
-
- return lines.map(line=>{
-   line.items.sort((a,b)=>a.x-b.x||a.index-b.index);
-   let output="",previous=null;
-   for(const item of line.items){
-     const part=item.str;
-     if(!part)continue;
-     if(previous){
-       const gap=item.x-(previous.x+previous.width);
-       const fontSize=Math.max(1,previous.height||item.height||10);
-       // Insert a space only when the PDF's geometry indicates a word gap.
-       if(gap>fontSize*0.12&&!/\s$/.test(output)&&!/^\s/.test(part))output+=" ";
-     }
-     output+=part;
-     previous=item;
-   }
-   return output;
- }).filter(line=>line.length>0).join("\n").trim();
+ return cleanOCR(lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(v=>v.str).join(" "))
+ .filter(s=>s&&!/^page\s*\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(s)).join("\n"));
 }
 function persistReadingSession(){
  const c=getCurrentChapter();if(!c)return;
@@ -3388,12 +3353,29 @@ window.resumeReadingSession=function(){
  const o=document.getElementById("inactivityOverlay");if(o)o.classList.remove("visible");
  sessionPausedByOverlay=false;resetInactivityTimer();if(sessionHasStarted)startRecognitionWithoutClearing();
 };
+// Guard against multiple automatic microphone starts. Several session handlers
+// may request a restart at once; only one recognition start may be pending.
+let speechStartPending=false;
+let microphonePermissionDenied=false;
+let speechRestartTimer=null;
 function startRecognitionWithoutClearing(){
- if(isRecording||sessionPausedByOverlay)return;
+ if(isRecording||speechStartPending||sessionPausedByOverlay||microphonePermissionDenied)return;
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SR){const s=document.getElementById("readingStatus");if(s)s.textContent="Speech recognition is not supported. Use Chrome or Edge.";return;}
  if(!recognition)recognition=createRecognition();if(!recognition)return;
- shouldCompareAfterStop=false;try{recognition.start();}catch(e){console.log("Recognition start/restart",e);}
+ shouldCompareAfterStop=false;
+ speechStartPending=true;
+ try{recognition.start();}
+ catch(e){
+  speechStartPending=false;
+  // InvalidStateError means the browser is already starting/listening; don't
+  // trigger another start or another microphone permission prompt.
+  if(e&&e.name==="NotAllowedError"){
+   microphonePermissionDenied=true;
+   const s=document.getElementById("readingStatus");
+   if(s)s.textContent="Microphone access is blocked. Allow it once in Chrome site settings, then reload and tap Start Reading.";
+  }else if(e&&e.name!=="InvalidStateError")console.warn("Recognition start/restart",e);
+ }
 }
 window.addEventListener("beforeunload",persistReadingSession);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")persistReadingSession();else if(sessionHasStarted&&!sessionPausedByOverlay&&!isRecording)startRecognitionWithoutClearing();});
@@ -3701,6 +3683,9 @@ window.stopRecording=function(){
  const status=document.getElementById("readingStatus");if(status)status.textContent="Reading paused and saved. Evaluation is available when you are ready.";
 };
 window.startRecording=function(){
+ microphonePermissionDenied=false;
+ speechStartPending=false;
+ if(speechRestartTimer){clearTimeout(speechRestartTimer);speechRestartTimer=null;}
  if(!continuousBookMode){originalContinuousStartRecording();return;}
  if(isRecording)return;
  const item=continuousPages[continuousPageIndex];if(!item)return;
@@ -4669,6 +4654,17 @@ createRecognition=function(){
  const r=finalContinuousRecognitionFactory();
  if(!r)return null;
  const priorResult=r.onresult;
+ const priorError=r.onerror;
+ r.onerror=function(event){
+  if(event&&(event.error==="not-allowed"||event.error==="service-not-allowed")){
+   microphonePermissionDenied=true;
+   speechStartPending=false;
+   sessionHasStarted=false;
+   const status=document.getElementById("readingStatus");
+   if(status)status.textContent="Microphone permission denied. Allow microphone access in Chrome site settings, then tap Start Reading.";
+  }
+  if(priorError)priorError.call(r,event);
+ };
  r.onresult=function(event){
   if(priorResult)priorResult.call(r,event);
   if(continuousBookMode){
@@ -4680,13 +4676,16 @@ createRecognition=function(){
  };
  const priorEnd=r.onend;
  r.onend=function(event){
+  speechStartPending=false;
   if(priorEnd)priorEnd.call(r,event);
-  if(sessionHasStarted&&!sessionPausedByOverlay){
-   setTimeout(()=>{
-    if(sessionHasStarted&&!sessionPausedByOverlay&&!isRecording){
-     try{startRecognitionWithoutClearing();}catch(e){console.warn("Speech recognition restart failed",e);}
+  if(sessionHasStarted&&!sessionPausedByOverlay&&!microphonePermissionDenied){
+   if(speechRestartTimer)clearTimeout(speechRestartTimer);
+   speechRestartTimer=setTimeout(()=>{
+    speechRestartTimer=null;
+    if(sessionHasStarted&&!sessionPausedByOverlay&&!isRecording&&!speechStartPending&&!microphonePermissionDenied){
+     startRecognitionWithoutClearing();
     }
-   },500);
+   },900);
   }
  };
  return r;

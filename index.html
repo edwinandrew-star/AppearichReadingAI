@@ -4219,6 +4219,76 @@ window.evaluateContinuousBook=function(){
 };
 
 /* =====================================================
+ALWAYS-ON MICROPHONE SESSION
+The microphone remains active throughout the child's reading session,
+including while Stop & Check results are displayed. Speech recognition may
+briefly end internally because of browser limits; onend restarts it while the
+reading session remains active. Browser permission is still required.
+===================================================== */
+function keepReadingMicrophoneAlive(){
+ sessionHasStarted=true;
+ sessionPausedByOverlay=false;
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ resetInactivityTimer();
+ if(!isRecording)startRecognitionWithoutClearing();
+}
+
+// Start listening directly from the child's Start Chapter click so the browser
+// can use that user gesture to request microphone permission when needed.
+const alwaysOnBaseStartChapter=window.startChapter;
+window.startChapter=function(){
+ const result=alwaysOnBaseStartChapter?alwaysOnBaseStartChapter.apply(this,arguments):undefined;
+ keepReadingMicrophoneAlive();
+ return result;
+};
+
+// The whole-book entry point also starts listening immediately after the click.
+const alwaysOnBaseStartContinuous=window.startContinuousBookReading;
+window.startContinuousBookReading=function(){
+ const result=alwaysOnBaseStartContinuous?alwaysOnBaseStartContinuous.apply(this,arguments):undefined;
+ keepReadingMicrophoneAlive();
+ return result;
+};
+
+// Stop & Check saves and displays the assessment without stopping speech
+// recognition. The child can keep reading; the transcript continues updating.
+window.stopRecording=function(){
+ sessionHasStarted=true;
+ sessionPausedByOverlay=false;
+ if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+ const overlay=document.getElementById("inactivityOverlay");
+ if(overlay)overlay.classList.remove("visible");
+ const status=document.getElementById("readingStatus");
+ if(continuousBookMode){
+  const item=continuousPages[continuousPageIndex];
+  if(item){item.page.transcript=(finalTranscript||item.page.transcript||"").trim();saveContinuousState();}
+ }else{
+  const chapter=getCurrentChapter();
+  const page=chapter&&chapter.pages&&chapter.pages[currentPageIndex];
+  if(page){page.transcript=(finalTranscript||page.transcript||"").trim();}
+  persistReadingSession();
+ }
+ renderStopCheckDashboard();
+ if(status){
+  status.className="status listening";
+  status.textContent=isRecording?"🎤 AI is listening... Reading progress saved.":"Reconnecting microphone...";
+ }
+ const stop=document.getElementById("stopButton");if(stop)stop.disabled=false;
+ const start=document.getElementById("startButton");if(start)start.disabled=!!isRecording;
+ if(!isRecording)startRecognitionWithoutClearing();
+};
+
+// Keep the microphone active when a chapter report is opened. Recognition is
+// restarted if the browser ended the current recognition instance.
+const alwaysOnBaseFinishChapter=window.finishChapter;
+window.finishChapter=function(){
+ const result=alwaysOnBaseFinishChapter?alwaysOnBaseFinishChapter.apply(this,arguments):undefined;
+ keepReadingMicrophoneAlive();
+ return result;
+};
+
+/* =====================================================
 INITIALIZE
 ===================================================== */
 

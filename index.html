@@ -434,6 +434,12 @@ BOOK
 <h2 id="bookTitleDisplay"></h2>
 
 <button class="yellow" onclick="startContinuousBookReading()">Read Entire Book</button>
+<button class="secondary" onclick="showAllBookExtractedText()">View All Extracted Text</button>
+<div id="allExtractedTextCard" class="card" style="display:none;margin-top:12px">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3>All Extracted Text</h3><button class="secondary" onclick="document.getElementById('allExtractedTextCard').style.display='none'">Close</button></div>
+ <p class="small">All OCR/extracted page text in original order. Original wording is preserved; no app-generated page or chapter headings are inserted.</p>
+ <div id="allExtractedTextContent" class="reference" style="white-space:pre-wrap;max-height:70vh;overflow:auto;line-height:1.8"></div>
+</div>
 <button class="secondary" onclick="openParentAssessment()">View Parent Assessment</button>
 
 <button class="yellow"
@@ -4388,17 +4394,29 @@ function ensureReferenceImageControls(){
  if(hint)hint.textContent="Original textbook images are reference only. Changing images will not affect reading or microphone.";
 }
 
+window.showAllBookExtractedText=function(){
+ const book=currentContinuousBook();
+ if(!book){alert("Open a book first.");return;}
+ const allText=buildContinuousReadingText(book);
+ const card=document.getElementById("allExtractedTextCard");
+ const content=document.getElementById("allExtractedTextContent");
+ if(!card||!content)return;
+ content.textContent=allText||"No readable text has been extracted from this book yet. Upload pages or documents and complete OCR first.";
+ card.style.display="block";
+ card.scrollIntoView({behavior:"smooth",block:"start"});
+};
+
 function renderContinuousBookText(){
  const host=document.getElementById("referenceText");
  const book=currentContinuousBook();
  if(!host||!book)return;
  continuousReferenceText=buildContinuousReadingText(book);
- host.style.maxHeight="none";
+ host.style.maxHeight="65vh";
  host.style.height="auto";
  host.style.minHeight="320px";
- host.style.overflow="visible";
- host.style.overflowX="visible";
- host.style.overflowY="visible";
+ host.style.overflow="auto";
+ host.style.overflowX="hidden";
+ host.style.overflowY="auto";
  host.style.whiteSpace="pre-wrap";
  host.style.wordBreak="normal";
  host.style.lineHeight="1.9";
@@ -4642,6 +4660,90 @@ window.addEventListener("beforeunload",()=>{
  }
 });
 
+
+
+/* =====================================================
+FIX: REFERENCE PAGE PREVIOUS/NEXT WORKS IN BOTH READER MODES
+===================================================== */
+function ensureReaderPageNavigation(){
+ const img=document.getElementById('readerImage');
+ if(!img)return;
+ let controls=document.getElementById('readerPageNavigation');
+ if(!controls){
+  controls=document.createElement('div');
+  controls.id='readerPageNavigation';
+  controls.style.cssText='display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0';
+  controls.innerHTML='<button id="readerPreviousPageButton" class="secondary" type="button" onclick="navigateReferencePage(-1)">← Previous Page</button><button id="readerNextPageButton" class="secondary" type="button" onclick="navigateReferencePage(1)">Next Page →</button>';
+  img.insertAdjacentElement('afterend',controls);
+ }
+ updateReaderPageNavigationButtons();
+}
+function updateReaderPageNavigationButtons(){
+ const prev=document.getElementById('readerPreviousPageButton');
+ const next=document.getElementById('readerNextPageButton');
+ if(!prev||!next)return;
+ if(continuousBookMode){
+  const pages=getAllBookPages(currentContinuousBook());
+  prev.disabled=readingReferenceImageIndex<=0;
+  next.disabled=readingReferenceImageIndex>=pages.length-1;
+ }else{
+  const chapter=getCurrentChapter();
+  const count=chapter?.pages?.length||0;
+  prev.disabled=currentPageIndex<=0;
+  next.disabled=currentPageIndex>=count-1;
+ }
+}
+window.navigateReferencePage=function(direction){
+ const step=Number(direction)||0;
+ if(!step)return;
+ if(continuousBookMode){
+  const pages=getAllBookPages(currentContinuousBook());
+  const target=readingReferenceImageIndex+step;
+  if(target<0||target>=pages.length)return;
+  readingReferenceImageIndex=target;
+  updateReferenceImage();
+  updateReaderPageNavigationButtons();
+  return;
+ }
+ const chapter=getCurrentChapter();
+ if(!chapter||!chapter.pages?.length)return;
+ const target=currentPageIndex+step;
+ if(target<0||target>=chapter.pages.length)return;
+ // Save the page's transcript before changing the reference image.
+ const current=chapter.pages[currentPageIndex];
+ if(current)current.transcript=(finalTranscript||current.transcript||'').trim();
+ chapter.currentPosition=currentPageIndex;
+ currentPageIndex=target;
+ const targetPage=chapter.pages[currentPageIndex];
+ finalTranscript=targetPage.transcript||'';
+ persistReadingSession();
+ loadReaderPage();
+ ensureReaderPageNavigation();
+ updateReaderPageNavigationButtons();
+ const status=document.getElementById('readingStatus');
+ if(status)status.textContent=`Reference page ${currentPageIndex+1} of ${chapter.pages.length}. You can move between pages freely.`;
+};
+// Wrap page loading and reader entry so navigation controls exist in normal
+// chapter mode as well as continuous whole-book mode.
+const appearichBaseLoadReaderPage=window.loadReaderPage||loadReaderPage;
+window.loadReaderPage=function(){
+ const result=appearichBaseLoadReaderPage.apply(this,arguments);
+ ensureReaderPageNavigation();
+ updateReaderPageNavigationButtons();
+ return result;
+};
+const appearichBaseStartChapterForNavigation=window.startChapter;
+window.startChapter=function(){
+ const result=appearichBaseStartChapterForNavigation?appearichBaseStartChapterForNavigation.apply(this,arguments):undefined;
+ setTimeout(()=>{ensureReaderPageNavigation();updateReaderPageNavigationButtons();},0);
+ return result;
+};
+const appearichBaseStartContinuousForNavigation=window.startContinuousBookReading;
+window.startContinuousBookReading=function(){
+ const result=appearichBaseStartContinuousForNavigation?appearichBaseStartContinuousForNavigation.apply(this,arguments):undefined;
+ setTimeout(()=>{ensureReaderPageNavigation();updateReaderPageNavigationButtons();},0);
+ return result;
+};
 
 /* =====================================================
 INITIALIZE

@@ -783,8 +783,6 @@ let isRecording = false;
 let finalTranscript = "";
 
 let shouldCompareAfterStop = false;
-let isRetryReading = false;
-let retryWords = [];
 
 
 /* =====================================================
@@ -1836,9 +1834,6 @@ document.getElementById(
 ).textContent=
 page.text || "No text detected.";
 
-isRetryReading=false;
-retryWords=[];
-
 document.getElementById(
 "liveTranscript"
 ).textContent=
@@ -2070,18 +2065,18 @@ getCurrentChapter();
 const page =
 chapter.pages[currentPageIndex];
 
-if(!isRetryReading){
-    page.transcript="";
-    page.result=null;
-    document.getElementById("pageResult").innerHTML="";
-}
+page.transcript="";
+
+page.result=null;
+
+document.getElementById(
+"pageResult"
+).innerHTML="";
 
 document.getElementById(
 "liveTranscript"
 ).textContent=
-isRetryReading
-? "Listening to the missed words..."
-: "Listening...";
+"Listening...";
 
 recognition =
 createRecognition();
@@ -2178,7 +2173,7 @@ READING POSITION
 
 function updateReadingPosition(spoken){
 
-if(isRetryReading || !spoken)return;
+if(!spoken)return;
 
 const chapter =
 getCurrentChapter();
@@ -2364,13 +2359,6 @@ if(!page)return;
 
 const spoken =
 finalTranscript.trim();
-
-/* A second reading checks only the words the child missed.
-   It never blocks the child from moving forward. */
-if(isRetryReading){
-    compareRetryWords(spoken);
-    return;
-}
 
 page.transcript=spoken;
 
@@ -2990,16 +2978,6 @@ Finish Chapter
 </button>
 `
 :
-result.score < 90
-?
-`
-<p class="warning"><strong>Let's practise the missed words once more.</strong></p>
-<button class="yellow"
-onclick="startRetryReading()">
-🎤 Read Missed Words Again
-</button>
-`
-:
 `
 <button class="yellow"
 onclick="nextPage()">
@@ -3012,110 +2990,6 @@ Continue to Page ${page.pageNumber+1} →
 
 `;
 
-}
-
-
-/* =====================================================
-MISSED-WORD PRACTICE
-===================================================== */
-
-window.startRetryReading = function(){
-
-    const chapter=getCurrentChapter();
-    const page=chapter?.pages[currentPageIndex];
-    if(!page || !page.result) return;
-
-    const operations=alignWords(
-        tokenize(page.text),
-        tokenize(page.transcript || "")
-    );
-
-    // Include both omitted words and words read incorrectly.
-    retryWords=operations
-        .filter(op=>op.type==="missing" || op.type==="changed")
-        .map(op=>op.reference)
-        .filter(Boolean);
-
-    if(!retryWords.length){
-        // Fallback for a low score where alignment did not isolate words.
-        retryWords=tokenize(page.text);
-    }
-
-    isRetryReading=true;
-    finalTranscript="";
-
-    document.getElementById("referenceText").textContent=
-        retryWords.join(" ");
-
-    document.getElementById("liveTranscript").textContent=
-        "Read these words aloud again.";
-
-    document.getElementById("readingStatus").className="status";
-    document.getElementById("readingStatus").textContent=
-        "Practise the highlighted missed words.";
-
-    document.getElementById("pageResult").innerHTML=`
-        <div class="resultBox">
-            <h3>Try these words again</h3>
-            <p>Read the words below aloud. It is okay if some are still difficult.</p>
-            <div class="wordResults">
-                ${retryWords.map(word=>`<span class="word missing">${escapeHTML(word)}</span>`).join(" ")}
-            </div>
-            <p class="small">Press Start Reading, then Stop & Check when you finish.</p>
-        </div>
-    `;
-
-    resetRecordingUI();
-    document.getElementById("readingStatus").textContent=
-        "Ready for missed-word practice.";
-};
-
-function compareRetryWords(spoken){
-
-    const operations=alignWords(retryWords,tokenize(spoken));
-    const result=calculateResult(operations,retryWords,tokenize(spoken));
-
-    let html="";
-    operations.forEach(op=>{
-        if(op.type==="correct"){
-            html+=`<span class="word correct">${escapeHTML(op.reference)}</span> `;
-        }else if(op.type==="missing"){
-            html+=`<span class="word missing">${escapeHTML(op.reference)}</span> `;
-        }else if(op.type==="changed"){
-            html+=`<span class="word changed">${escapeHTML(op.spoken)} <small>(${escapeHTML(op.reference)})</small></span> `;
-        }else if(op.type==="extra"){
-            html+=`<span class="word extra">+${escapeHTML(op.spoken)}</span> `;
-        }
-    });
-
-    isRetryReading=false;
-
-    const chapter=getCurrentChapter();
-    const isLast=currentPageIndex===chapter.pages.length-1;
-
-    document.getElementById("pageResult").innerHTML=`
-        <div class="resultBox">
-            <h2>Practice Result</h2>
-            <div class="score ${result.score>=90?'good':'warning'}">${result.score}%</div>
-            <p>Accuracy on the missed words</p>
-            <div class="wordResults">${html || "No words were recognised."}</div>
-            <p>You have completed the practice. You can continue even if some words are still difficult.</p>
-            ${
-                isLast
-                ? `<button class="yellow" onclick="finishChapter()">Finish Chapter</button>`
-                : `<button class="yellow" onclick="nextPage()">Continue to Page ${chapter.pages[currentPageIndex+1].pageNumber} →</button>`
-            }
-        </div>
-    `;
-
-    document.getElementById("referenceText").textContent=
-        chapter.pages[currentPageIndex].text || "No text detected.";
-
-    document.getElementById("readingStatus").className="status";
-    document.getElementById("readingStatus").textContent=
-        "Practice checked — you may continue.";
-
-    resetRecordingUI();
 }
 
 
@@ -3141,9 +3015,6 @@ return;
 }
 
 currentPageIndex++;
-
-isRetryReading=false;
-retryWords=[];
 
 chapter.currentPosition=
 currentPageIndex;
